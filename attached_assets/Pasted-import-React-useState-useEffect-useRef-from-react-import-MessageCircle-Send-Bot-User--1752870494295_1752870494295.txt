@@ -1,0 +1,121 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { MessageCircle, Send, Bot, User, Settings, Zap, TrendingUp, Calendar, DollarSign, Package, Users, FileText, Camera, Image, BarChart3, Brain, Sparkles } from 'lucide-react';
+import { useAI } from '../../contexts/AIContext';
+import { useApp } from '../../contexts/AppContext';
+import { aiService } from '../../services/ai/aiService';
+import { formatCurrency, formatDate } from '../../utils/formatting';
+import './AIAssistant.css';
+
+interface Message {
+  id: string;
+  type: 'user' | 'assistant';
+  content: string;
+  timestamp: Date;
+  metadata?: {
+    intent?: string;
+    confidence?: number;
+    context?: any;
+    tools_used?: string[];
+  };
+}
+
+interface AICapability {
+  id: string;
+  name: string;
+  description: string;
+  icon: React.ComponentType;
+  enabled: boolean;
+  category: 'business' | 'production' | 'customer' | 'analytics' | 'creative';
+}
+
+const AIAssistant: React.FC = () => {
+  const { aiCapabilities, conversationHistory, currentContext } = useAI();
+  const { frameData, user, businessMetrics } = useApp();
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [inputMessage, setInputMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [selectedCapability, setSelectedCapability] = useState<string | null>(null);
+  const [showCapabilities, setShowCapabilities] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const capabilities: AICapability[] = [
+    {
+      id: 'business-manager',
+      name: 'Business Manager',
+      description: 'Analyze business performance, suggest improvements, and provide strategic insights',
+      icon: TrendingUp,
+      enabled: true,
+      category: 'business',
+    },
+    {
+      id: 'production-manager',
+      name: 'Production Manager',
+      description: 'Optimize production workflow, manage schedules, and track progress',
+      icon: Package,
+      enabled: true,
+      category: 'production',
+    },
+    {
+      id: 'customer-advisor',
+      name: 'Customer Advisor',
+      description: 'Provide framing recommendations, pricing, and customer service support',
+      icon: Users,
+      enabled: true,
+      category: 'customer',
+    },
+    {
+      id: 'financial-analyst',
+      name: 'Financial Analyst',
+      description: 'Track expenses, analyze profitability, and provide financial forecasts',
+      icon: DollarSign,
+      enabled: true,
+      category: 'analytics',
+    },
+    {
+      id: 'design-consultant',
+      name: 'Design Consultant',
+      description: 'Suggest frame styles, mat colors, and design combinations',
+      icon: Sparkles,
+      enabled: true,
+      category: 'creative',
+    },
+    {
+      id: 'content-creator',
+      name: 'Content Creator',
+      description: 'Generate marketing content, blog posts, and social media updates',
+      icon: FileText,
+      enabled: true,
+      category: 'creative',
+    },
+    {
+      id: 'quality-inspector',
+      name: 'Quality Inspector',
+      description: 'Analyze artwork quality, detect issues, and ensure standards',
+      icon: Camera,
+      enabled: true,
+      category: 'production',
+    },
+    {
+      id: 'data-analyst',
+      name: 'Data Analyst',
+      description: 'Analyze trends, generate reports, and provide business intelligence',
+      icon: BarChart3,
+      enabled: true,
+      category: 'analytics',
+    },
+  ];
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  useEffect(() => {
+    // Initialize with welcome message
+    if (messages.length === 0) {
+      setMessages([
+        {
+          id: 'welcome',
+          type: 'assistant',
+          content: `Hello ${user?.name || 'there'}! I'm your AI Assistant for The FrameCraft. I can help you with:\n\n• Business analysis and strategy\n• Production optimization\n• Customer service and recommendations\n• Financial tracking and forecasting\n• Content creation and marketing\n• Quality control and inspection\n\nWhat would you like to work on today?`,
+          timestamp: new Date(),
+          metadata: {

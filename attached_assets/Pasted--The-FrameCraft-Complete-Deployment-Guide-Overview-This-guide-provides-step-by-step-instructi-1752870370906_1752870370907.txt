@@ -1,0 +1,176 @@
+# The FrameCraft - Complete Deployment Guide
+
+## Overview
+This guide provides step-by-step instructions for deploying The FrameCraft to production environments including Netlify, Vercel, and custom cloud infrastructure.
+
+## Prerequisites
+- Node.js 16+ and npm 8+
+- Git repository set up
+- Domain name (optional but recommended)
+- Cloud storage account (AWS S3, Google Cloud, etc.)
+- Database service (MongoDB Atlas, PostgreSQL, etc.)
+- API keys for integrations
+
+## Environment Setup
+
+### 1. Clone and Setup Repository
+```bash
+git clone https://github.com/yourusername/the-framecraft.git
+cd the-framecraft
+npm install
+```
+
+### 2. Environment Variables
+Create `.env.production` file:
+
+```env
+# App Configuration
+REACT_APP_NAME="The FrameCraft"
+REACT_APP_VERSION="1.0.0"
+REACT_APP_API_URL="https://api.yourframecraft.com"
+REACT_APP_FRONTEND_URL="https://yourframecraft.com"
+
+# Claude AI Configuration
+REACT_APP_CLAUDE_API_KEY="your_claude_api_key"
+REACT_APP_CLAUDE_MODEL="claude-sonnet-4-20250514"
+
+# Database
+DATABASE_URL="mongodb+srv://username:password@cluster.mongodb.net/framecraft"
+REDIS_URL="redis://username:password@host:port"
+
+# Authentication
+JWT_SECRET="your_super_secure_jwt_secret"
+JWT_EXPIRES_IN="7d"
+BCRYPT_ROUNDS=12
+
+# File Storage
+AWS_ACCESS_KEY_ID="your_aws_access_key"
+AWS_SECRET_ACCESS_KEY="your_aws_secret_key"
+AWS_S3_BUCKET_NAME="framecraft-storage"
+AWS_REGION="us-east-1"
+
+# Email Service
+SENDGRID_API_KEY="your_sendgrid_api_key"
+SMTP_HOST="smtp.sendgrid.net"
+SMTP_PORT=587
+FROM_EMAIL="noreply@yourframecraft.com"
+
+# SMS Service
+TWILIO_ACCOUNT_SID="your_twilio_account_sid"
+TWILIO_AUTH_TOKEN="your_twilio_auth_token"
+TWILIO_PHONE_NUMBER="+1234567890"
+
+# Payment Processing
+STRIPE_PUBLISHABLE_KEY="pk_live_your_stripe_key"
+STRIPE_SECRET_KEY="sk_live_your_stripe_secret"
+STRIPE_WEBHOOK_SECRET="whsec_your_webhook_secret"
+
+# Analytics
+GOOGLE_ANALYTICS_ID="GA_MEASUREMENT_ID"
+FACEBOOK_PIXEL_ID="your_facebook_pixel_id"
+HOTJAR_ID="your_hotjar_id"
+
+# Integrations
+LARSON_JUHL_API_KEY="your_larson_juhl_api_key"
+LARSON_JUHL_API_URL="https://api.larsonjuhl.com"
+QUICKBOOKS_CLIENT_ID="your_quickbooks_client_id"
+QUICKBOOKS_CLIENT_SECRET="your_quickbooks_client_secret"
+GOOGLE_CALENDAR_CLIENT_ID="your_google_calendar_client_id"
+GOOGLE_CALENDAR_CLIENT_SECRET="your_google_calendar_client_secret"
+MAILCHIMP_API_KEY="your_mailchimp_api_key"
+SHOPIFY_API_KEY="your_shopify_api_key"
+
+# Security
+CORS_ORIGIN="https://yourframecraft.com"
+RATE_LIMIT_WINDOW_MS=900000
+RATE_LIMIT_MAX_REQUESTS=100
+SESSION_SECRET="your_session_secret"
+
+# Monitoring
+SENTRY_DSN="your_sentry_dsn"
+LOG_LEVEL="info"
+```
+
+## Deployment Options
+
+### Option 1: Netlify Deployment (Recommended for Frontend)
+
+#### Step 1: Build Configuration
+Create `netlify.toml`:
+
+```toml
+[build]
+  publish = "build"
+  command = "npm run build"
+
+[build.environment]
+  NODE_VERSION = "18"
+  NPM_VERSION = "8"
+
+[[redirects]]
+  from = "/api/*"
+  to = "https://your-backend-api.herokuapp.com/api/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-XSS-Protection = "1; mode=block"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://api.anthropic.com https://api.yourframecraft.com"
+
+[[plugins]]
+  package = "netlify-plugin-lighthouse"
+
+  [plugins.inputs]
+    output_path = "reports/lighthouse.html"
+    
+[[plugins]]
+  package = "netlify-plugin-checklinks"
+  
+[[plugins]]
+  package = "netlify-plugin-sitemap"
+```
+
+#### Step 2: Deploy to Netlify
+```bash
+# Install Netlify CLI
+npm install -g netlify-cli
+
+# Login to Netlify
+netlify login
+
+# Initialize site
+netlify init
+
+# Deploy to production
+npm run deploy
+```
+
+### Option 2: Vercel Deployment
+
+#### Step 1: Install Vercel CLI
+```bash
+npm install -g vercel
+```
+
+#### Step 2: Configure vercel.json
+```json
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "build"
+      }
+    }

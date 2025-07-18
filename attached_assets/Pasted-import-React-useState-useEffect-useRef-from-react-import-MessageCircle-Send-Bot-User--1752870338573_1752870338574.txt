@@ -1,0 +1,410 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { MessageCircle, Send, Bot, User, Settings, Zap, TrendingUp, Calendar, DollarSign, Package, Users, FileText, Camera, Image, BarChart3, Brain, Sparkles } from 'lucide-react';
+import { useAI } from '../../contexts/AIContext';
+import { useApp } from '../../contexts/AppContext';
+import { aiService } from '../../services/ai/aiService';
+import { formatCurrency, formatDate } from '../../utils/formatting';
+import './AIAssistant.css';
+
+interface Message {
+  id: string;
+  type: 'user' | 'assistant';
+  content: string;
+  timestamp: Date;
+  metadata?: {
+    intent?: string;
+    confidence?: number;
+    context?: any;
+    tools_used?: string[];
+  };
+}
+
+interface AICapability {
+  id: string;
+  name: string;
+  description: string;
+  icon: React.ComponentType;
+  enabled: boolean;
+  category: 'business' | 'production' | 'customer' | 'analytics' | 'creative';
+}
+
+const AIAssistant: React.FC = () => {
+  const { aiCapabilities, conversationHistory, currentContext } = useAI();
+  const { frameData, user, businessMetrics } = useApp();
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [inputMessage, setInputMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [selectedCapability, setSelectedCapability] = useState<string | null>(null);
+  const [showCapabilities, setShowCapabilities] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const capabilities: AICapability[] = [
+    {
+      id: 'business-manager',
+      name: 'Business Manager',
+      description: 'Analyze business performance, suggest improvements, and provide strategic insights',
+      icon: TrendingUp,
+      enabled: true,
+      category: 'business',
+    },
+    {
+      id: 'production-manager',
+      name: 'Production Manager',
+      description: 'Optimize production workflow, manage schedules, and track progress',
+      icon: Package,
+      enabled: true,
+      category: 'production',
+    },
+    {
+      id: 'customer-advisor',
+      name: 'Customer Advisor',
+      description: 'Provide framing recommendations, pricing, and customer service support',
+      icon: Users,
+      enabled: true,
+      category: 'customer',
+    },
+    {
+      id: 'financial-analyst',
+      name: 'Financial Analyst',
+      description: 'Track expenses, analyze profitability, and provide financial forecasts',
+      icon: DollarSign,
+      enabled: true,
+      category: 'analytics',
+    },
+    {
+      id: 'design-consultant',
+      name: 'Design Consultant',
+      description: 'Suggest frame styles, mat colors, and design combinations',
+      icon: Sparkles,
+      enabled: true,
+      category: 'creative',
+    },
+    {
+      id: 'content-creator',
+      name: 'Content Creator',
+      description: 'Generate marketing content, blog posts, and social media updates',
+      icon: FileText,
+      enabled: true,
+      category: 'creative',
+    },
+    {
+      id: 'quality-inspector',
+      name: 'Quality Inspector',
+      description: 'Analyze artwork quality, detect issues, and ensure standards',
+      icon: Camera,
+      enabled: true,
+      category: 'production',
+    },
+    {
+      id: 'data-analyst',
+      name: 'Data Analyst',
+      description: 'Analyze trends, generate reports, and provide business intelligence',
+      icon: BarChart3,
+      enabled: true,
+      category: 'analytics',
+    },
+  ];
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  useEffect(() => {
+    // Initialize with welcome message
+    if (messages.length === 0) {
+      setMessages([
+        {
+          id: 'welcome',
+          type: 'assistant',
+          content: `Hello ${user?.name || 'there'}! I'm your AI Assistant for The FrameCraft. I can help you with:\n\n• Business analysis and strategy\n• Production optimization\n• Customer service and recommendations\n• Financial tracking and forecasting\n• Content creation and marketing\n• Quality control and inspection\n\nWhat would you like to work on today?`,
+          timestamp: new Date(),
+          metadata: {
+            intent: 'greeting',
+            confidence: 1.0,
+            context: 'initialization',
+          },
+        },
+      ]);
+    }
+  }, [user, messages.length]);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const handleSendMessage = async () => {
+    if (!inputMessage.trim() || isLoading) return;
+
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      type: 'user',
+      content: inputMessage,
+      timestamp: new Date(),
+    };
+
+    setMessages(prev => [...prev, userMessage]);
+    setInputMessage('');
+    setIsLoading(true);
+
+    try {
+      // Prepare context for AI
+      const context = {
+        user: user,
+        businessMetrics: businessMetrics,
+        frameData: frameData?.slice(-10) || [], // Recent orders
+        currentCapability: selectedCapability,
+        conversationHistory: messages.slice(-5), // Last 5 messages for context
+        timestamp: new Date().toISOString(),
+      };
+
+      // Call Claude API through our AI service
+      const response = await aiService.sendMessage(inputMessage, context);
+
+      const assistantMessage: Message = {
+        id: Date.now().toString() + '_ai',
+        type: 'assistant',
+        content: response.content,
+        timestamp: new Date(),
+        metadata: {
+          intent: response.intent,
+          confidence: response.confidence,
+          context: response.context,
+          tools_used: response.tools_used,
+        },
+      };
+
+      setMessages(prev => [...prev, assistantMessage]);
+    } catch (error) {
+      console.error('Error sending message:', error);
+      const errorMessage: Message = {
+        id: Date.now().toString() + '_error',
+        type: 'assistant',
+        content: 'I apologize, but I encountered an error processing your request. Please try again.',
+        timestamp: new Date(),
+        metadata: {
+          intent: 'error',
+          confidence: 0,
+        },
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
+  };
+
+  const selectCapability = (capabilityId: string) => {
+    setSelectedCapability(capabilityId);
+    setShowCapabilities(false);
+    
+    const capability = capabilities.find(c => c.id === capabilityId);
+    if (capability) {
+      const contextMessage: Message = {
+        id: Date.now().toString() + '_context',
+        type: 'assistant',
+        content: `I'm now in ${capability.name} mode. ${capability.description}. How can I help you with this?`,
+        timestamp: new Date(),
+        metadata: {
+          intent: 'capability_switch',
+          confidence: 1.0,
+          context: capabilityId,
+        },
+      };
+      setMessages(prev => [...prev, contextMessage]);
+    }
+  };
+
+  const renderMessage = (message: Message) => (
+    <div key={message.id} className={`message ${message.type}`}>
+      <div className="message-header">
+        <div className="message-avatar">
+          {message.type === 'user' ? <User size={20} /> : <Bot size={20} />}
+        </div>
+        <div className="message-info">
+          <span className="message-sender">
+            {message.type === 'user' ? user?.name || 'You' : 'AI Assistant'}
+          </span>
+          <span className="message-time">
+            {formatDate(message.timestamp, 'time')}
+          </span>
+        </div>
+      </div>
+      <div className="message-content">
+        {message.content}
+        {message.metadata?.tools_used && (
+          <div className="tools-used">
+            <span className="tools-label">Tools used:</span>
+            {message.metadata.tools_used.map((tool, index) => (
+              <span key={index} className="tool-badge">{tool}</span>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  const renderCapabilityGrid = () => (
+    <div className="capabilities-grid">
+      {capabilities.map(capability => {
+        const Icon = capability.icon;
+        return (
+          <div
+            key={capability.id}
+            className={`capability-card ${selectedCapability === capability.id ? 'selected' : ''}`}
+            onClick={() => selectCapability(capability.id)}
+          >
+            <div className="capability-icon">
+              <Icon size={24} />
+            </div>
+            <div className="capability-info">
+              <h4>{capability.name}</h4>
+              <p>{capability.description}</p>
+            </div>
+            <div className={`capability-status ${capability.enabled ? 'enabled' : 'disabled'}`}>
+              {capability.enabled ? 'Active' : 'Disabled'}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+
+  return (
+    <div className="ai-assistant">
+      <div className="ai-assistant-header">
+        <div className="header-left">
+          <Brain className="ai-icon" size={32} />
+          <div>
+            <h1>AI Assistant</h1>
+            <p className="subtitle">
+              {selectedCapability 
+                ? `${capabilities.find(c => c.id === selectedCapability)?.name} Mode`
+                : 'General Business Assistant'
+              }
+            </p>
+          </div>
+        </div>
+        <div className="header-actions">
+          <button
+            className="btn btn-secondary"
+            onClick={() => setShowCapabilities(!showCapabilities)}
+          >
+            <Zap size={20} />
+            Capabilities
+          </button>
+          <button className="btn btn-ghost">
+            <Settings size={20} />
+          </button>
+        </div>
+      </div>
+
+      {showCapabilities && (
+        <div className="capabilities-section">
+          <h3>Available AI Capabilities</h3>
+          {renderCapabilityGrid()}
+        </div>
+      )}
+
+      <div className="chat-container">
+        <div className="messages-container">
+          {messages.map(renderMessage)}
+          {isLoading && (
+            <div className="message assistant loading">
+              <div className="message-header">
+                <div className="message-avatar">
+                  <Bot size={20} />
+                </div>
+                <div className="message-info">
+                  <span className="message-sender">AI Assistant</span>
+                  <span className="message-time">Thinking...</span>
+                </div>
+              </div>
+              <div className="message-content">
+                <div className="typing-indicator">
+                  <span></span>
+                  <span></span>
+                  <span></span>
+                </div>
+              </div>
+            </div>
+          )}
+          <div ref={messagesEndRef} />
+        </div>
+
+        <div className="input-container">
+          <div className="input-wrapper">
+            <textarea
+              value={inputMessage}
+              onChange={(e) => setInputMessage(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder="Ask me anything about your business, orders, customers, or how I can help optimize your operations..."
+              className="message-input"
+              rows={1}
+              disabled={isLoading}
+            />
+            <button
+              onClick={handleSendMessage}
+              disabled={!inputMessage.trim() || isLoading}
+              className="send-button"
+            >
+              <Send size={20} />
+            </button>
+          </div>
+          <div className="input-suggestions">
+            <button
+              className="suggestion-chip"
+              onClick={() => setInputMessage("What's my business performance this month?")}
+            >
+              📈 Business Performance
+            </button>
+            <button
+              className="suggestion-chip"
+              onClick={() => setInputMessage("Help me optimize my production workflow")}
+            >
+              ⚙️ Production Optimization
+            </button>
+            <button
+              className="suggestion-chip"
+              onClick={() => setInputMessage("Generate content for my social media")}
+            >
+              📱 Marketing Content
+            </button>
+            <button
+              className="suggestion-chip"
+              onClick={() => setInputMessage("Analyze my customer trends")}
+            >
+              👥 Customer Analysis
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="ai-stats">
+        <div className="stat-item">
+          <span className="stat-label">Messages Today</span>
+          <span className="stat-value">{messages.length}</span>
+        </div>
+        <div className="stat-item">
+          <span className="stat-label">AI Confidence</span>
+          <span className="stat-value">
+            {messages.length > 0 
+              ? Math.round((messages.filter(m => m.metadata?.confidence && m.metadata.confidence > 0.8).length / messages.length) * 100)
+              : 0}%
+          </span>
+        </div>
+        <div className="stat-item">
+          <span className="stat-label">Active Capabilities</span>
+          <span className="stat-value">{capabilities.filter(c => c.enabled).length}</span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default AIAssistant;

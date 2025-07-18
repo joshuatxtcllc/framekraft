@@ -1,0 +1,355 @@
+// src/services/ai/aiService.ts
+import { FrameData, BusinessMetrics, User, AIResponse, AICapabilities } from '../../types';
+
+interface AIContext {
+  user: User;
+  businessMetrics: BusinessMetrics;
+  frameData: FrameData[];
+  currentCapability?: string;
+  conversationHistory: any[];
+  timestamp: string;
+}
+
+interface ClaudeResponse {
+  content: Array<{
+    type: string;
+    text: string;
+  }>;
+  usage?: {
+    input_tokens: number;
+    output_tokens: number;
+  };
+}
+
+class AIService {
+  private apiEndpoint = 'https://api.anthropic.com/v1/messages';
+  private model = 'claude-sonnet-4-20250514';
+
+  async sendMessage(message: string, context: AIContext): Promise<AIResponse> {
+    try {
+      const systemPrompt = this.buildSystemPrompt(context);
+      const userPrompt = this.buildUserPrompt(message, context);
+
+      const response = await fetch(this.apiEndpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: this.model,
+          max_tokens: 4000,
+          messages: [
+            { role: 'user', content: userPrompt }
+          ],
+          system: systemPrompt,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`API request failed: ${response.status}`);
+      }
+
+      const data: ClaudeResponse = await response.json();
+      const aiResponse = this.parseClaudeResponse(data);
+
+      return aiResponse;
+    } catch (error) {
+      console.error('AI Service Error:', error);
+      throw new Error('Failed to process AI request');
+    }
+  }
+
+  private buildSystemPrompt(context: AIContext): string {
+    const { user, businessMetrics, frameData, currentCapability } = context;
+    
+    return `You are an expert AI assistant for "The FrameCraft", a comprehensive business management platform for custom framing businesses. You're specifically helping ${user.name || 'the user'} optimize their custom framing business "Jay's Frames".
+
+CURRENT CONTEXT:
+- Business Name: Jay's Frames
+- User: ${user.name || 'Business Owner'} (${user.role || 'Owner'})
+- Current Date: ${new Date().toLocaleDateString()}
+- Active Capability: ${currentCapability || 'General Business Assistant'}
+
+BUSINESS METRICS:
+- Total Orders: ${businessMetrics?.totalOrders || 0}
+- Monthly Revenue: $${businessMetrics?.monthlyRevenue || 0}
+- Completion Rate: ${businessMetrics?.completionRate || 0}%
+- Customer Satisfaction: ${businessMetrics?.customerSatisfaction || 0}%
+- Average Order Value: $${businessMetrics?.averageOrderValue || 0}
+
+RECENT ORDERS DATA:
+${frameData?.map(order => `- Order #${order.orderID}: ${order.customerName} - ${order.material} frame, ${order.frameSize} - Status: ${order.orderProgress} - Due: ${order.dueDate}`).join('\n') || 'No recent orders'}
+
+CAPABILITIES & EXPERTISE:
+1. **Business Manager**: Analyze performance, suggest improvements, strategic planning
+2. **Production Manager**: Optimize workflows, schedule management, quality control
+3. **Customer Advisor**: Framing recommendations, pricing guidance, customer service
+4. **Financial Analyst**: Cost analysis, profitability tracking, financial forecasting
+5. **Design Consultant**: Frame styles, mat combinations, aesthetic recommendations
+6. **Content Creator**: Marketing content, blog posts, social media, SEO optimization
+7. **Quality Inspector**: Artwork analysis, defect detection, quality standards
+8. **Data Analyst**: Trend analysis, reporting, business intelligence
+
+INSTRUCTIONS:
+- Be conversational, professional, and helpful
+- Provide specific, actionable advice based on the business data
+- Use the framing industry expertise in your responses
+- Suggest concrete next steps when appropriate
+- If asked about technical framing processes, reference the production workflow
+- Always consider the business context and financial implications
+- Offer to use specific tools or features when relevant
+- Be proactive in suggesting optimizations and improvements
+
+RESPONSE FORMAT:
+- Keep responses concise but comprehensive
+- Use bullet points for lists and recommendations
+- Include relevant metrics and data when helpful
+- Suggest follow-up actions or questions
+- Maintain a helpful, expert tone
+
+Remember: You're not just an AI assistant, you're a business partner helping optimize and grow Jay's Frames through intelligent automation and expert guidance.`;
+  }
+
+  private buildUserPrompt(message: string, context: AIContext): string {
+    const { conversationHistory } = context;
+    
+    let prompt = `User Question: ${message}\n\n`;
+    
+    if (conversationHistory.length > 0) {
+      prompt += `RECENT CONVERSATION:\n`;
+      conversationHistory.forEach(msg => {
+        prompt += `${msg.type === 'user' ? 'User' : 'Assistant'}: ${msg.content}\n`;
+      });
+      prompt += `\n`;
+    }
+    
+    prompt += `Please provide a helpful response based on the context provided in the system prompt. Consider the current business state, recent orders, and available capabilities. If you can help with specific tasks like generating content, analyzing data, or providing recommendations, please offer to do so.`;
+    
+    return prompt;
+  }
+
+  private parseClaudeResponse(data: ClaudeResponse): AIResponse {
+    const content = data.content?.[0]?.text || 'I apologize, but I encountered an error processing your request.';
+    
+    // Extract intent and confidence from response
+    const intent = this.extractIntent(content);
+    const confidence = this.calculateConfidence(content);
+    const tools_used = this.extractToolsUsed(content);
+    
+    return {
+      content,
+      intent,
+      confidence,
+      context: {},
+      tools_used,
+      usage: data.usage,
+    };
+  }
+
+  private extractIntent(content: string): string {
+    // Simple intent extraction based on content keywords
+    const intents = {
+      'business_analysis': ['performance', 'metrics', 'revenue', 'profit', 'growth'],
+      'production_optimization': ['workflow', 'production', 'optimize', 'schedule', 'efficiency'],
+      'customer_service': ['customer', 'service', 'satisfaction', 'feedback', 'support'],
+      'financial_analysis': ['financial', 'cost', 'price', 'budget', 'expense'],
+      'design_advice': ['design', 'frame', 'mat', 'color', 'style', 'aesthetic'],
+      'content_creation': ['content', 'marketing', 'blog', 'social', 'seo'],
+      'quality_control': ['quality', 'inspect', 'defect', 'standard', 'check'],
+      'data_analysis': ['data', 'trend', 'analysis', 'report', 'insight'],
+    };
+
+    const lowerContent = content.toLowerCase();
+    
+    for (const [intent, keywords] of Object.entries(intents)) {
+      if (keywords.some(keyword => lowerContent.includes(keyword))) {
+        return intent;
+      }
+    }
+    
+    return 'general_assistance';
+  }
+
+  private calculateConfidence(content: string): number {
+    // Simple confidence calculation based on response characteristics
+    if (content.includes('I apologize') || content.includes('I cannot') || content.includes('I don\'t know')) {
+      return 0.3;
+    }
+    
+    if (content.includes('specifically') || content.includes('recommend') || content.includes('suggest')) {
+      return 0.9;
+    }
+    
+    if (content.length > 200) {
+      return 0.8;
+    }
+    
+    return 0.7;
+  }
+
+  private extractToolsUsed(content: string): string[] {
+    const tools = [];
+    
+    if (content.includes('analy') || content.includes('data')) {
+      tools.push('Data Analysis');
+    }
+    
+    if (content.includes('recommend') || content.includes('suggest')) {
+      tools.push('Recommendation Engine');
+    }
+    
+    if (content.includes('calculat') || content.includes('estimate')) {
+      tools.push('Calculator');
+    }
+    
+    if (content.includes('forecast') || content.includes('predict')) {
+      tools.push('Forecasting');
+    }
+    
+    return tools;
+  }
+
+  // AI-powered business analysis
+  async analyzeBusinessPerformance(businessData: any): Promise<AIResponse> {
+    const message = `Please analyze my business performance based on the current metrics and provide specific recommendations for improvement. Include analysis of revenue trends, order completion rates, customer satisfaction, and operational efficiency.`;
+    
+    const context: AIContext = {
+      user: businessData.user,
+      businessMetrics: businessData.businessMetrics,
+      frameData: businessData.frameData,
+      currentCapability: 'business-manager',
+      conversationHistory: [],
+      timestamp: new Date().toISOString(),
+    };
+
+    return await this.sendMessage(message, context);
+  }
+
+  // AI-powered production optimization
+  async optimizeProduction(productionData: any): Promise<AIResponse> {
+    const message = `Analyze my current production workflow and suggest optimizations to improve efficiency, reduce bottlenecks, and increase throughput. Consider the current order queue, production stages, and resource allocation.`;
+    
+    const context: AIContext = {
+      user: productionData.user,
+      businessMetrics: productionData.businessMetrics,
+      frameData: productionData.frameData,
+      currentCapability: 'production-manager',
+      conversationHistory: [],
+      timestamp: new Date().toISOString(),
+    };
+
+    return await this.sendMessage(message, context);
+  }
+
+  // AI-powered price analysis
+  async analyzePricing(pricingData: any): Promise<AIResponse> {
+    const message = `Analyze my current pricing strategy and compare it with market rates. Provide recommendations for pricing optimization to maximize profitability while remaining competitive. Consider material costs, labor, and regional market factors.`;
+    
+    const context: AIContext = {
+      user: pricingData.user,
+      businessMetrics: pricingData.businessMetrics,
+      frameData: pricingData.frameData,
+      currentCapability: 'financial-analyst',
+      conversationHistory: [],
+      timestamp: new Date().toISOString(),
+    };
+
+    return await this.sendMessage(message, context);
+  }
+
+  // AI-powered design recommendations
+  async getDesignRecommendations(designData: any): Promise<AIResponse> {
+    const message = `Based on the artwork description and customer preferences, provide specific frame and mat recommendations. Consider color theory, style compatibility, and current design trends. Include alternative options and explain the reasoning behind each recommendation.`;
+    
+    const context: AIContext = {
+      user: designData.user,
+      businessMetrics: designData.businessMetrics,
+      frameData: designData.frameData,
+      currentCapability: 'design-consultant',
+      conversationHistory: [],
+      timestamp: new Date().toISOString(),
+    };
+
+    return await this.sendMessage(message, context);
+  }
+
+  // AI-powered content generation
+  async generateContent(contentRequest: any): Promise<AIResponse> {
+    const message = `Generate ${contentRequest.type} content for my custom framing business. Topic: ${contentRequest.topic}. Target audience: ${contentRequest.audience}. Please create engaging, SEO-optimized content that highlights our expertise and encourages customer engagement.`;
+    
+    const context: AIContext = {
+      user: contentRequest.user,
+      businessMetrics: contentRequest.businessMetrics,
+      frameData: contentRequest.frameData,
+      currentCapability: 'content-creator',
+      conversationHistory: [],
+      timestamp: new Date().toISOString(),
+    };
+
+    return await this.sendMessage(message, context);
+  }
+
+  // AI-powered forecasting
+  async generateForecast(forecastData: any): Promise<AIResponse> {
+    const message = `Generate business forecasts for the next 3, 6, and 12 months based on historical data and current trends. Include revenue projections, order volume estimates, seasonal adjustments, and identify potential risks and opportunities.`;
+    
+    const context: AIContext = {
+      user: forecastData.user,
+      businessMetrics: forecastData.businessMetrics,
+      frameData: forecastData.frameData,
+      currentCapability: 'financial-analyst',
+      conversationHistory: [],
+      timestamp: new Date().toISOString(),
+    };
+
+    return await this.sendMessage(message, context);
+  }
+
+  // Initialize AI capabilities
+  async initializeAI(): Promise<void> {
+    try {
+      // Test connection to Claude API
+      const testResponse = await fetch(this.apiEndpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: this.model,
+          max_tokens: 100,
+          messages: [
+            { role: 'user', content: 'Hello, this is a connection test.' }
+          ],
+        }),
+      });
+
+      if (!testResponse.ok) {
+        throw new Error('AI service connection failed');
+      }
+
+      console.log('AI service initialized successfully');
+    } catch (error) {
+      console.error('Failed to initialize AI service:', error);
+      throw error;
+    }
+  }
+
+  // Get AI capabilities
+  async getAICapabilities(): Promise<AICapabilities> {
+    return {
+      priceAnalysis: true,
+      designRecommendations: true,
+      productionOptimization: true,
+      qualityChecking: true,
+      contentGeneration: true,
+      forecasting: true,
+      workflowBuilder: true,
+      chatAssistant: true,
+      imageGeneration: true,
+      seoAnalysis: true,
+      businessIntelligence: true,
+    };
+  }
+}
+
+export const aiService = new AIService();

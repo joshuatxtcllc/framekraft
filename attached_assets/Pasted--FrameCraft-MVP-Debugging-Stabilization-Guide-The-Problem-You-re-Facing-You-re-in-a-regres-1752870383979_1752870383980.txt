@@ -1,0 +1,571 @@
+# FrameCraft MVP Debugging & Stabilization Guide
+
+## The Problem You're Facing
+
+You're in a **regression loop** - common with complex applications where fixes create new issues. Here's how to break the cycle systematically.
+
+## Phase 1: Emergency Stabilization (Week 1)
+
+### Step 1: Create a Stable Baseline
+```bash
+# 1. Create a new branch for stabilization
+git checkout -b stable-mvp
+
+# 2. Identify your last working version
+git log --oneline -20
+# Find the commit where basic functionality worked
+
+# 3. Create a rollback point
+git tag stable-baseline
+```
+
+### Step 2: Core Features Only Approach
+Focus on ONLY these 5 core features:
+1. **User Login/Auth**
+2. **Order Creation**
+3. **Order List/View**
+4. **Basic Customer Management**
+5. **Simple Dashboard**
+
+**Temporarily disable ALL other features:**
+
+```javascript
+// src/config/features.js
+export const FEATURE_FLAGS = {
+  // Core features (keep enabled)
+  auth: true,
+  orders: true,
+  customers: true,
+  dashboard: true,
+  
+  // Advanced features (disable for now)
+  aiAssistant: false,
+  priceAnalyzer: false,
+  designRecommender: false,
+  productionOptimizer: false,
+  qualityChecker: false,
+  contentGenerator: false,
+  forecasting: false,
+  workflowBuilder: false,
+  inventoryManagement: false,
+  financeTracker: false,
+  crmSystem: false,
+  marketingHub: false,
+  customFramingTool: false,
+  productionBoard: false,
+};
+```
+
+```javascript
+// src/components/layout/Sidebar.jsx
+import { FEATURE_FLAGS } from '../../config/features';
+
+const navigationItems = [
+  { name: 'Dashboard', path: '/dashboard', enabled: FEATURE_FLAGS.dashboard },
+  { name: 'Orders', path: '/orders', enabled: FEATURE_FLAGS.orders },
+  { name: 'Customers', path: '/customers', enabled: FEATURE_FLAGS.customers },
+  // Only show enabled features
+].filter(item => item.enabled);
+```
+
+### Step 3: Fix Data Persistence Issues
+
+**Common Order Saving Problems & Solutions:**
+
+```javascript
+// src/services/orderService.js
+class OrderService {
+  constructor() {
+    this.orders = this.loadOrders();
+    this.isLoading = false;
+    this.saveTimeout = null;
+  }
+
+  loadOrders() {
+    try {
+      const stored = localStorage.getItem('framecraft_orders');
+      return stored ? JSON.parse(stored) : [];
+    } catch (error) {
+      console.error('Error loading orders:', error);
+      return [];
+    }
+  }
+
+  saveOrders(orders) {
+    // Debounced save to prevent too many writes
+    clearTimeout(this.saveTimeout);
+    this.saveTimeout = setTimeout(() => {
+      try {
+        localStorage.setItem('framecraft_orders', JSON.stringify(orders));
+        console.log('Orders saved successfully');
+      } catch (error) {
+        console.error('Error saving orders:', error);
+      }
+    }, 500);
+  }
+
+  async createOrder(orderData) {
+    if (this.isLoading) return null;
+    
+    this.isLoading = true;
+    
+    try {
+      const newOrder = {
+        id: Date.now().toString(),
+        ...orderData,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        status: 'pending'
+      };
+
+      this.orders.push(newOrder);
+      this.saveOrders(this.orders);
+      
+      return newOrder;
+    } catch (error) {
+      console.error('Error creating order:', error);
+      return null;
+    } finally {
+      this.isLoading = false;
+    }
+  }
+
+  async getOrders() {
+    return new Promise((resolve) => {
+      // Simulate loading delay
+      setTimeout(() => {
+        resolve([...this.orders]);
+      }, 100);
+    });
+  }
+
+  async updateOrder(orderId, updates) {
+    if (this.isLoading) return null;
+    
+    this.isLoading = true;
+    
+    try {
+      const orderIndex = this.orders.findIndex(order => order.id === orderId);
+      if (orderIndex === -1) throw new Error('Order not found');
+
+      this.orders[orderIndex] = {
+        ...this.orders[orderIndex],
+        ...updates,
+        updatedAt: new Date().toISOString()
+      };
+
+      this.saveOrders(this.orders);
+      return this.orders[orderIndex];
+    } catch (error) {
+      console.error('Error updating order:', error);
+      return null;
+    } finally {
+      this.isLoading = false;
+    }
+  }
+}
+
+export const orderService = new OrderService();
+```
+
+### Step 4: Fix Infinite Loading Issues
+
+**Common Loading State Problems:**
+
+```javascript
+// src/hooks/useOrders.js
+import { useState, useEffect } from 'react';
+import { orderService } from '../services/orderService';
+
+export const useOrders = () => {
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const loadOrders = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const ordersData = await orderService.getOrders();
+      setOrders(ordersData);
+    } catch (err) {
+      setError(err.message);
+      console.error('Error loading orders:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadOrders();
+  }, []); // Only run once
+
+  const createOrder = async (orderData) => {
+    try {
+      setError(null);
+      const newOrder = await orderService.createOrder(orderData);
+      if (newOrder) {
+        setOrders(prev => [...prev, newOrder]);
+      }
+      return newOrder;
+    } catch (err) {
+      setError(err.message);
+      return null;
+    }
+  };
+
+  const updateOrder = async (orderId, updates) => {
+    try {
+      setError(null);
+      const updatedOrder = await orderService.updateOrder(orderId, updates);
+      if (updatedOrder) {
+        setOrders(prev => 
+          prev.map(order => 
+            order.id === orderId ? updatedOrder : order
+          )
+        );
+      }
+      return updatedOrder;
+    } catch (err) {
+      setError(err.message);
+      return null;
+    }
+  };
+
+  return {
+    orders,
+    loading,
+    error,
+    createOrder,
+    updateOrder,
+    refreshOrders: loadOrders
+  };
+};
+```
+
+### Step 5: Simplified Order Component
+
+```javascript
+// src/features/orders/OrderManagement.jsx
+import React, { useState } from 'react';
+import { useOrders } from '../../hooks/useOrders';
+
+const OrderManagement = () => {
+  const { orders, loading, error, createOrder, updateOrder } = useOrders();
+  const [showCreateForm, setShowCreateForm] = useState(false);
+
+  if (loading) {
+    return (
+      <div className="loading-container">
+        <div className="spinner"></div>
+        <p>Loading orders...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="error-container">
+        <p>Error: {error}</p>
+        <button onClick={() => window.location.reload()}>
+          Retry
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="order-management">
+      <div className="header">
+        <h1>Order Management</h1>
+        <button 
+          onClick={() => setShowCreateForm(true)}
+          className="btn btn-primary"
+        >
+          New Order
+        </button>
+      </div>
+
+      {showCreateForm && (
+        <CreateOrderForm 
+          onSubmit={createOrder}
+          onCancel={() => setShowCreateForm(false)}
+        />
+      )}
+
+      <div className="orders-list">
+        {orders.length === 0 ? (
+          <p>No orders yet. Create your first order!</p>
+        ) : (
+          orders.map(order => (
+            <OrderCard 
+              key={order.id} 
+              order={order}
+              onUpdate={updateOrder}
+            />
+          ))
+        )}
+      </div>
+    </div>
+  );
+};
+
+const CreateOrderForm = ({ onSubmit, onCancel }) => {
+  const [formData, setFormData] = useState({
+    customerName: '',
+    description: '',
+    dueDate: '',
+    status: 'pending'
+  });
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const result = await onSubmit(formData);
+    if (result) {
+      onCancel(); // Close form on success
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="create-order-form">
+      <div className="form-group">
+        <label>Customer Name:</label>
+        <input
+          type="text"
+          value={formData.customerName}
+          onChange={(e) => setFormData({...formData, customerName: e.target.value})}
+          required
+        />
+      </div>
+      
+      <div className="form-group">
+        <label>Description:</label>
+        <textarea
+          value={formData.description}
+          onChange={(e) => setFormData({...formData, description: e.target.value})}
+          required
+        />
+      </div>
+      
+      <div className="form-group">
+        <label>Due Date:</label>
+        <input
+          type="date"
+          value={formData.dueDate}
+          onChange={(e) => setFormData({...formData, dueDate: e.target.value})}
+          required
+        />
+      </div>
+
+      <div className="form-actions">
+        <button type="submit" className="btn btn-primary">
+          Create Order
+        </button>
+        <button type="button" onClick={onCancel} className="btn btn-secondary">
+          Cancel
+        </button>
+      </div>
+    </form>
+  );
+};
+
+const OrderCard = ({ order, onUpdate }) => {
+  const [isEditing, setIsEditing] = useState(false);
+
+  const updateStatus = async (newStatus) => {
+    await onUpdate(order.id, { status: newStatus });
+  };
+
+  return (
+    <div className="order-card">
+      <div className="order-header">
+        <h3>Order #{order.id}</h3>
+        <span className={`status ${order.status}`}>{order.status}</span>
+      </div>
+      
+      <div className="order-details">
+        <p><strong>Customer:</strong> {order.customerName}</p>
+        <p><strong>Description:</strong> {order.description}</p>
+        <p><strong>Due Date:</strong> {order.dueDate}</p>
+        <p><strong>Created:</strong> {new Date(order.createdAt).toLocaleDateString()}</p>
+      </div>
+
+      <div className="order-actions">
+        <select 
+          value={order.status} 
+          onChange={(e) => updateStatus(e.target.value)}
+        >
+          <option value="pending">Pending</option>
+          <option value="in-progress">In Progress</option>
+          <option value="completed">Completed</option>
+        </select>
+      </div>
+    </div>
+  );
+};
+
+export default OrderManagement;
+```
+
+## Phase 2: Testing & Validation (Week 2)
+
+### Step 1: Create Test Checklist
+```markdown
+## Core Functionality Tests
+
+### Authentication
+- [ ] User can log in
+- [ ] User stays logged in after refresh
+- [ ] User can log out
+
+### Orders
+- [ ] Can create new order
+- [ ] Order appears in list immediately
+- [ ] Order persists after page refresh
+- [ ] Can update order status
+- [ ] Changes save automatically
+
+### UI/UX
+- [ ] No infinite loading states
+- [ ] Error messages display properly
+- [ ] Forms reset after submission
+- [ ] Navigation works correctly
+
+### Data Persistence
+- [ ] Orders save to localStorage
+- [ ] Data loads on app startup
+- [ ] No data corruption
+- [ ] Handles empty states gracefully
+```
+
+### Step 2: Error Boundary Implementation
+```javascript
+// src/components/ErrorBoundary.jsx
+import React from 'react';
+
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error('Error caught by boundary:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="error-boundary">
+          <h2>Something went wrong</h2>
+          <p>{this.state.error?.message}</p>
+          <button onClick={() => window.location.reload()}>
+            Reload Page
+          </button>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
+export default ErrorBoundary;
+```
+
+## Phase 3: Gradual Feature Re-enablement (Weeks 3-4)
+
+### Step 1: One Feature at a Time
+```javascript
+// Week 3: Enable AI Assistant only
+FEATURE_FLAGS.aiAssistant = true;
+
+// Test thoroughly for 2-3 days, fix any issues
+
+// Week 4: Enable Inventory
+FEATURE_FLAGS.inventoryManagement = true;
+
+// Continue pattern...
+```
+
+### Step 2: Integration Testing
+Before enabling each feature:
+1. Test core functionality still works
+2. Test new feature in isolation
+3. Test interactions between features
+4. Monitor for performance issues
+
+## Emergency Debugging Toolkit
+
+### Quick Debug Commands
+```javascript
+// Add to browser console for quick debugging
+
+// Check orders data
+console.log('Orders:', JSON.parse(localStorage.getItem('framecraft_orders') || '[]'));
+
+// Clear all data (fresh start)
+localStorage.clear();
+
+// Check for memory leaks
+console.log('React DevTools recommended for component inspection');
+
+// Force re-render
+window.location.reload();
+```
+
+### Common Issues & Quick Fixes
+
+**Issue: Orders not saving**
+```javascript
+// Check localStorage quota
+try {
+  localStorage.setItem('test', 'test');
+  localStorage.removeItem('test');
+} catch (e) {
+  console.log('localStorage full or disabled');
+}
+```
+
+**Issue: Infinite loading**
+```javascript
+// Add timeout to prevent infinite loops
+const loadWithTimeout = async () => {
+  return Promise.race([
+    actualLoadFunction(),
+    new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Timeout')), 5000)
+    )
+  ]);
+};
+```
+
+**Issue: State not updating**
+```javascript
+// Use functional updates to avoid stale closures
+setOrders(prevOrders => [...prevOrders, newOrder]);
+// Instead of: setOrders([...orders, newOrder]);
+```
+
+## Success Metrics
+
+Track these to ensure stability:
+- **Zero** infinite loading states
+- **100%** order save success rate
+- **< 3 seconds** page load time
+- **Zero** JavaScript errors in console
+- **5+ minutes** app usage without crashes
+
+## Next Steps After Stabilization
+
+1. **Week 5-6**: Add comprehensive error handling
+2. **Week 7-8**: Implement proper state management (Redux/Zustand)
+3. **Week 9-10**: Add unit tests for core features
+4. **Week 11-12**: Re-enable advanced features one by one
+
+Remember: **A working MVP with 5 features is infinitely more valuable than a broken app with 50 features.** Get the core stable first, then build from there.

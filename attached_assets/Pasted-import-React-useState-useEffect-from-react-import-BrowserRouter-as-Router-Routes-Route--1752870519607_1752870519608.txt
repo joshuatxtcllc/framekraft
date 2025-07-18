@@ -1,0 +1,252 @@
+import React, { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { ThemeProvider } from './contexts/ThemeContext';
+import { AppProvider } from './contexts/AppContext';
+import { AuthProvider } from './contexts/AuthContext';
+import { NotificationProvider } from './contexts/NotificationContext';
+import { AIProvider } from './contexts/AIContext';
+
+// Layout Components
+import MainLayout from './components/layout/MainLayout';
+import Header from './components/layout/Header';
+import Sidebar from './components/layout/Sidebar';
+import Footer from './components/layout/Footer';
+
+// Page Components
+import Dashboard from './features/dashboard/Dashboard';
+import OrderManagement from './features/orders/OrderManagement';
+import CustomerManagement from './features/customers/CustomerManagement';
+import InventoryManagement from './features/inventory/InventoryManagement';
+import CustomFramingTool from './features/framing-tool/CustomFramingTool';
+import AIAssistant from './features/ai-features/AIAssistant';
+import ProductionBoard from './features/production/ProductionBoard';
+import FinanceTracker from './features/finance/FinanceTracker';
+import CRMSystem from './features/crm/CRMSystem';
+import MarketingHub from './features/marketing/MarketingHub';
+import Settings from './features/settings/Settings';
+import Login from './features/auth/Login';
+import Register from './features/auth/Register';
+
+// AI Feature Components
+import PriceAnalyzer from './features/ai-features/PriceAnalyzer';
+import DesignRecommender from './features/ai-features/DesignRecommender';
+import ProductionOptimizer from './features/ai-features/ProductionOptimizer';
+import QualityChecker from './features/ai-features/QualityChecker';
+import ContentGenerator from './features/ai-features/ContentGenerator';
+import Forecasting from './features/ai-features/Forecasting';
+import WorkflowBuilder from './features/ai-features/WorkflowBuilder';
+
+// Services
+import { apiService } from './services/api/apiService';
+import { authService } from './services/auth/authService';
+import { notificationService } from './services/notifications/notificationService';
+
+// Styles
+import './styles/globals.css';
+import './styles/themes.css';
+import './styles/animations.css';
+
+// Types
+import { User, AppState, FrameData, AICapabilities } from './types';
+
+interface AppProps {}
+
+const App: React.FC<AppProps> = () => {
+  const [isInitialized, setIsInitialized] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [appState, setAppState] = useState<AppState>({
+    isLoading: true,
+    error: null,
+    darkMode: false,
+    sidebarOpen: true,
+    notifications: [],
+    frameData: [],
+    aiCapabilities: {
+      priceAnalysis: true,
+      designRecommendations: true,
+      productionOptimization: true,
+      qualityChecking: true,
+      contentGeneration: true,
+      forecasting: true,
+      workflowBuilder: true,
+      chatAssistant: true,
+      imageGeneration: true,
+      seoAnalysis: true,
+      businessIntelligence: true,
+    },
+  });
+
+  // Initialize application
+  useEffect(() => {
+    const initializeApp = async () => {
+      try {
+        // Check authentication
+        const token = localStorage.getItem('authToken');
+        if (token) {
+          const userData = await authService.validateToken(token);
+          setUser(userData);
+        }
+
+        // Load initial data
+        const frameData = await apiService.getFrameData();
+        
+        // Initialize AI services
+        await initializeAIServices();
+
+        // Set up real-time notifications
+        notificationService.initialize();
+
+        setAppState(prev => ({
+          ...prev,
+          isLoading: false,
+          frameData,
+        }));
+
+        setIsInitialized(true);
+      } catch (error) {
+        console.error('Failed to initialize app:', error);
+        setAppState(prev => ({
+          ...prev,
+          isLoading: false,
+          error: 'Failed to initialize application',
+        }));
+      }
+    };
+
+    initializeApp();
+  }, []);
+
+  // Initialize AI services
+  const initializeAIServices = async () => {
+    try {
+      // Initialize Claude API connection
+      await apiService.initializeAI();
+      
+      // Load AI models and capabilities
+      const capabilities = await apiService.getAICapabilities();
+      
+      setAppState(prev => ({
+        ...prev,
+        aiCapabilities: capabilities,
+      }));
+    } catch (error) {
+      console.error('Failed to initialize AI services:', error);
+    }
+  };
+
+  // Handle theme toggle
+  const toggleTheme = () => {
+    setAppState(prev => ({
+      ...prev,
+      darkMode: !prev.darkMode,
+    }));
+    
+    document.body.className = appState.darkMode ? 'light-theme' : 'dark-theme';
+  };
+
+  // Handle sidebar toggle
+  const toggleSidebar = () => {
+    setAppState(prev => ({
+      ...prev,
+      sidebarOpen: !prev.sidebarOpen,
+    }));
+  };
+
+  // Protected route wrapper
+  const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+    if (!user) {
+      return <Login />;
+    }
+    return <>{children}</>;
+  };
+
+  if (!isInitialized) {
+    return (
+      <div className="app-loading">
+        <div className="loading-spinner">
+          <div className="spinner"></div>
+          <p>Initializing The FrameCraft...</p>
+          <p className="loading-subtext">Starting AI services and loading your data</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <ThemeProvider>
+      <AuthProvider>
+        <AppProvider>
+          <NotificationProvider>
+            <AIProvider>
+              <Router>
+                <div className={`app ${appState.darkMode ? 'dark-theme' : 'light-theme'}`}>
+                  <Routes>
+                    {/* Public Routes */}
+                    <Route path="/login" element={<Login />} />
+                    <Route path="/register" element={<Register />} />
+                    
+                    {/* Protected Routes */}
+                    <Route
+                      path="/*"
+                      element={
+                        <ProtectedRoute>
+                          <MainLayout>
+                            <Header
+                              user={user}
+                              darkMode={appState.darkMode}
+                              toggleTheme={toggleTheme}
+                              toggleSidebar={toggleSidebar}
+                            />
+                            
+                            <div className="app-content">
+                              <Sidebar
+                                isOpen={appState.sidebarOpen}
+                                darkMode={appState.darkMode}
+                                aiCapabilities={appState.aiCapabilities}
+                              />
+                              
+                              <main className="main-content">
+                                <Routes>
+                                  <Route path="/" element={<Dashboard />} />
+                                  <Route path="/dashboard" element={<Dashboard />} />
+                                  <Route path="/orders" element={<OrderManagement />} />
+                                  <Route path="/customers" element={<CustomerManagement />} />
+                                  <Route path="/inventory" element={<InventoryManagement />} />
+                                  <Route path="/framing-tool" element={<CustomFramingTool />} />
+                                  <Route path="/production" element={<ProductionBoard />} />
+                                  <Route path="/finance" element={<FinanceTracker />} />
+                                  <Route path="/crm" element={<CRMSystem />} />
+                                  <Route path="/marketing" element={<MarketingHub />} />
+                                  
+                                  {/* AI Features */}
+                                  <Route path="/ai-assistant" element={<AIAssistant />} />
+                                  <Route path="/price-analyzer" element={<PriceAnalyzer />} />
+                                  <Route path="/design-recommender" element={<DesignRecommender />} />
+                                  <Route path="/production-optimizer" element={<ProductionOptimizer />} />
+                                  <Route path="/quality-checker" element={<QualityChecker />} />
+                                  <Route path="/content-generator" element={<ContentGenerator />} />
+                                  <Route path="/forecasting" element={<Forecasting />} />
+                                  <Route path="/workflow-builder" element={<WorkflowBuilder />} />
+                                  
+                                  <Route path="/settings" element={<Settings />} />
+                                </Routes>
+                              </main>
+                            </div>
+                            
+                            <Footer />
+                          </MainLayout>
+                        </ProtectedRoute>
+                      }
+                    />
+                  </Routes>
+                </div>
+              </Router>
+            </AIProvider>
+          </NotificationProvider>
+        </AppProvider>
+      </AuthProvider>
+    </ThemeProvider>
+  );
+};
+
+export default App;
