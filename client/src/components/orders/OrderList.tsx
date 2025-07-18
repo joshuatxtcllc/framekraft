@@ -43,9 +43,9 @@ export default function OrderList({
   onPrintInvoice,
   onEmailInvoice
 }: OrderListProps) {
-  const [filteredOrders, setFilteredOrders] = useState<Order[]>(orders);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [priorityFilter, setPriorityFilter] = useState("all");
 
   // Default handlers if not provided
   const handleGenerateInvoice = onGenerateInvoice || ((order: Order) => {
