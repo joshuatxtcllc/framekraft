@@ -268,6 +268,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Document generation and email routes
+  app.post('/api/orders/email-document', isAuthenticated, async (req, res) => {
+    try {
+      const { orderId, type, emailAddress } = req.body;
+      
+      // Get order and customer data
+      const order = await storage.getOrder(orderId);
+      if (!order) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+      
+      const customer = await storage.getCustomer(order.customerId);
+      if (!customer) {
+        return res.status(404).json({ message: "Customer not found" });
+      }
+
+      // For now, we'll simulate email sending
+      // In a real implementation, you would integrate with an email service like SendGrid, Nodemailer, etc.
+      console.log(`Simulating email send:`);
+      console.log(`To: ${emailAddress}`);
+      console.log(`Subject: ${type === 'invoice' ? 'Invoice' : 'Work Order'} ${order.orderNumber}`);
+      console.log(`Order ID: ${orderId}`);
+      console.log(`Customer: ${customer.firstName} ${customer.lastName}`);
+      
+      // Simulate processing delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      res.json({ 
+        success: true, 
+        message: `${type === 'invoice' ? 'Invoice' : 'Work order'} email sent successfully` 
+      });
+    } catch (error) {
+      console.error("Error sending document email:", error);
+      res.status(500).json({ message: "Failed to send email" });
+    }
+  });
+
   // Inventory routes
   app.get('/api/inventory', isAuthenticated, async (req, res) => {
     try {

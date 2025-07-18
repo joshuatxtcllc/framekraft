@@ -25,11 +25,22 @@ export default function Orders() {
   });
 
   const createOrderMutation = useMutation({
-    mutationFn: async (orderData: any) => {
-      const response = await apiRequest("POST", "/api/orders", orderData);
-      return response.json();
+    mutationFn: (data: any) => {
+      // Ensure required fields are present
+      const orderData = {
+        ...data,
+        customerId: parseInt(data.customerId),
+        totalAmount: data.totalAmount,
+        status: data.status || 'pending',
+        priority: data.priority || 'normal',
+      };
+
+      return apiRequest("/api/orders", {
+        method: "POST",
+        body: orderData,
+      });
     },
-    onSuccess: () => {
+    onSuccess: (newOrder) => {
       queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
       queryClient.invalidateQueries({ queryKey: ["/api/customers"] });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard/metrics"] });
@@ -37,37 +48,47 @@ export default function Orders() {
       setEditingOrder(null);
       toast({
         title: "Success",
-        description: "Order created successfully",
+        description: `Order #${newOrder.orderNumber} created successfully!`,
       });
     },
-    onError: (error) => {
+    onError: (error: any) => {
+      console.error("Order creation error:", error);
       toast({
         title: "Error",
-        description: "Failed to create order",
+        description: error.message || "Failed to create order. Please try again.",
         variant: "destructive",
       });
     },
   });
 
   const updateOrderMutation = useMutation({
-    mutationFn: async ({ id, ...orderData }: any) => {
-      const response = await apiRequest("PUT", `/api/orders/${id}`, orderData);
-      return response.json();
+    mutationFn: ({ id, ...data }: any) => {
+      const orderData = {
+        ...data,
+        customerId: parseInt(data.customerId),
+      };
+
+      return apiRequest(`/api/orders/${id}`, {
+        method: "PUT",
+        body: orderData,
+      });
     },
-    onSuccess: () => {
+    onSuccess: (updatedOrder) => {
       queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/customers"] });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard/metrics"] });
       setIsFormOpen(false);
       setEditingOrder(null);
       toast({
         title: "Success",
-        description: "Order updated successfully",
+        description: `Order #${updatedOrder.orderNumber} updated successfully!`,
       });
     },
-    onError: (error) => {
+    onError: (error: any) => {
+      console.error("Order update error:", error);
       toast({
         title: "Error",
-        description: "Failed to update order",
+        description: error.message || "Failed to update order. Please try again.",
         variant: "destructive",
       });
     },
@@ -89,10 +110,10 @@ export default function Orders() {
   return (
     <div className="min-h-screen flex bg-background">
       <Sidebar />
-      
+
       <div className="lg:pl-64 flex flex-col flex-1">
         <Header />
-        
+
         <main className="flex-1">
           <div className="py-6">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">

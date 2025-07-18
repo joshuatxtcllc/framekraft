@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Edit, Search, Filter, Eye } from "lucide-react";
+import { Edit, Search, Filter, Eye, FileText, Printer, Mail } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface Order {
@@ -28,9 +28,21 @@ interface OrderListProps {
   orders: Order[];
   isLoading: boolean;
   onEdit: (order: Order) => void;
+  onGenerateInvoice: (order: Order) => void;
+  onGenerateWorkOrder: (order: Order) => void;
+  onPrintInvoice: (order: Order) => void;
+  onEmailInvoice: (order: Order) => void;
 }
 
-export default function OrderList({ orders, isLoading, onEdit }: OrderListProps) {
+export default function OrderList({ 
+  orders, 
+  isLoading, 
+  onEdit, 
+  onGenerateInvoice, 
+  onGenerateWorkOrder, 
+  onPrintInvoice, 
+  onEmailInvoice 
+}: OrderListProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [priorityFilter, setPriorityFilter] = useState("all");
@@ -245,16 +257,53 @@ export default function OrderList({ orders, isLoading, onEdit }: OrderListProps)
                       {formatDate(order.createdAt)}
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center space-x-2">
+                      <div className="flex items-center space-x-1">
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => onEdit(order)}
+                          title="Edit Order"
                         >
                           <Edit className="w-4 h-4" />
                         </Button>
-                        <Button variant="ghost" size="sm">
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          title="View Details"
+                        >
                           <Eye className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => onGenerateInvoice(order)}
+                          title="Generate Invoice"
+                        >
+                          <FileText className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => onGenerateWorkOrder(order)}
+                          title="Generate Work Order"
+                        >
+                          <FileText className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => onPrintInvoice(order)}
+                          title="Print Invoice"
+                        >
+                          <Printer className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => onEmailInvoice(order)}
+                          title="Email Invoice"
+                        >
+                          <Mail className="w-4 h-4" />
                         </Button>
                       </div>
                     </TableCell>
