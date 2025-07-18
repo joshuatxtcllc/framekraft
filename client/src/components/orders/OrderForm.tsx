@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -5,6 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Check, ChevronsUpDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -44,6 +49,10 @@ export default function OrderForm({
   isLoading,
   onCancel,
 }: OrderFormProps) {
+  const [customerOpen, setCustomerOpen] = useState(false);
+  const [customerSearch, setCustomerSearch] = useState("");
+  const [newCustomerName, setNewCustomerName] = useState("");
+
   const form = useForm<OrderFormData>({
     resolver: zodResolver(orderSchema),
     defaultValues: {
@@ -114,6 +123,14 @@ export default function OrderForm({
     { value: "rush", label: "Rush" },
   ];
 
+  // Filter customers based on search
+  const filteredCustomers = customers.filter(customer =>
+    `${customer.firstName} ${customer.lastName}`.toLowerCase().includes(customerSearch.toLowerCase())
+  );
+
+  // Get selected customer for display
+  const selectedCustomer = customers.find(c => c.id.toString() === form.watch("customerId"));
+
   const handleFormSubmit = (data: OrderFormData) => {
     // Transform the data before sending
     const transformedData = {
@@ -134,25 +151,89 @@ export default function OrderForm({
             control={form.control}
             name="customerId"
             render={({ field }) => (
-              <FormItem>
+              <FormItem className="flex flex-col">
                 <FormLabel>Customer *</FormLabel>
-                <Select
-                  onValueChange={(value) => field.onChange(value)}
-                  value={field.value || ""}
-                >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a customer" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {customers.map((customer) => (
-                      <SelectItem key={customer.id} value={customer.id.toString()}>
-                        {customer.firstName} {customer.lastName}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Popover open={customerOpen} onOpenChange={setCustomerOpen}>
+                  <PopoverTrigger asChild>
+                    <FormControl>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={customerOpen}
+                        className="justify-between"
+                      >
+                        {selectedCustomer
+                          ? `${selectedCustomer.firstName} ${selectedCustomer.lastName}`
+                          : "Select or type customer name..."}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </FormControl>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-full p-0">
+                    <Command>
+                      <CommandInput
+                        placeholder="Search customers or type new name..."
+                        value={customerSearch}
+                        onValueChange={setCustomerSearch}
+                      />
+                      <CommandEmpty>
+                        {customerSearch && (
+                          <div className="p-2">
+                            <Button
+                              variant="ghost"
+                              className="w-full justify-start"
+                              onClick={() => {
+                                // Create a temporary customer ID (negative number)
+                                const tempId = -(Date.now());
+                                const newCustomer = {
+                                  id: tempId,
+                                  firstName: customerSearch.split(' ')[0] || customerSearch,
+                                  lastName: customerSearch.split(' ').slice(1).join(' ') || '',
+                                };
+                                
+                                // Add to customers list temporarily
+                                customers.push(newCustomer);
+                                
+                                // Set the form value
+                                field.onChange(tempId.toString());
+                                setCustomerOpen(false);
+                                setCustomerSearch("");
+                              }}
+                            >
+                              Create "{customerSearch}" as new customer
+                            </Button>
+                          </div>
+                        )}
+                      </CommandEmpty>
+                      <CommandGroup>
+                        {filteredCustomers.map((customer) => (
+                          <CommandItem
+                            key={customer.id}
+                            value={`${customer.firstName} ${customer.lastName}`}
+                            onSelect={() => {
+                              field.onChange(customer.id.toString());
+                              setCustomerOpen(false);
+                              setCustomerSearch("");
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                selectedCustomer?.id === customer.id ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            {customer.firstName} {customer.lastName}
+                            {customer.email && (
+                              <span className="ml-auto text-sm text-muted-foreground">
+                                {customer.email}
+                              </span>
+                            )}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
                 <FormMessage />
               </FormItem>
             )}

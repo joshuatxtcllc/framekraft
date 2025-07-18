@@ -94,7 +94,39 @@ export default function Orders() {
     },
   });
 
-  const handleSubmit = (data: any) => {
+  const handleSubmit = async (data: any) => {
+    // Check if we need to create a new customer first
+    if (data.customerId < 0) {
+      // This is a new customer, extract name and create customer first
+      const customer = customers?.find(c => c.id.toString() === data.customerId.toString());
+      if (customer) {
+        try {
+          const newCustomerData = {
+            firstName: customer.firstName,
+            lastName: customer.lastName,
+          };
+          
+          const newCustomer = await apiRequest("/api/customers", {
+            method: "POST",
+            body: newCustomerData,
+          });
+          
+          // Update the order data with the real customer ID
+          data.customerId = newCustomer.id;
+          
+          // Refresh customers list
+          queryClient.invalidateQueries({ queryKey: ["/api/customers"] });
+        } catch (error) {
+          toast({
+            title: "Error",
+            description: "Failed to create customer. Please try again.",
+            variant: "destructive",
+          });
+          return;
+        }
+      }
+    }
+
     if (editingOrder) {
       updateOrderMutation.mutate({ id: editingOrder.id, ...data });
     } else {
