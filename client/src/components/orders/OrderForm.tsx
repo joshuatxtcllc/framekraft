@@ -12,7 +12,7 @@ import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 
 const orderSchema = z.object({
-  customerId: z.number().min(1, "Customer is required"),
+  customerId: z.string().min(1, "Customer is required"),
   description: z.string().min(1, "Description is required"),
   artworkDescription: z.string().optional(),
   dimensions: z.string().optional(),
@@ -47,15 +47,15 @@ export default function OrderForm({
   const form = useForm<OrderFormData>({
     resolver: zodResolver(orderSchema),
     defaultValues: {
-      customerId: initialData?.customerId || 0,
+      customerId: initialData?.customerId ? initialData.customerId.toString() : "",
       description: initialData?.description || "",
       artworkDescription: initialData?.artworkDescription || "",
       dimensions: initialData?.dimensions || "",
       frameStyle: initialData?.frameStyle || "",
       matColor: initialData?.matColor || "",
       glazing: initialData?.glazing || "",
-      totalAmount: initialData?.totalAmount || "",
-      depositAmount: initialData?.depositAmount || "",
+      totalAmount: initialData?.totalAmount ? initialData.totalAmount.toString() : "",
+      depositAmount: initialData?.depositAmount ? initialData.depositAmount.toString() : "",
       status: initialData?.status || "pending",
       priority: initialData?.priority || "normal",
       dueDate: initialData?.dueDate ? new Date(initialData.dueDate) : undefined,
@@ -114,9 +114,20 @@ export default function OrderForm({
     { value: "rush", label: "Rush" },
   ];
 
+  const handleFormSubmit = (data: OrderFormData) => {
+    // Transform the data before sending
+    const transformedData = {
+      ...data,
+      customerId: parseInt(data.customerId),
+      totalAmount: parseFloat(data.totalAmount),
+      depositAmount: data.depositAmount ? parseFloat(data.depositAmount) : undefined,
+    };
+    onSubmit(transformedData);
+  };
+
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+      <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Customer Selection */}
           <FormField
@@ -126,8 +137,8 @@ export default function OrderForm({
               <FormItem>
                 <FormLabel>Customer *</FormLabel>
                 <Select
-                  onValueChange={(value) => field.onChange(parseInt(value))}
-                  value={field.value?.toString() || ""}
+                  onValueChange={(value) => field.onChange(value)}
+                  value={field.value || ""}
                 >
                   <FormControl>
                     <SelectTrigger>

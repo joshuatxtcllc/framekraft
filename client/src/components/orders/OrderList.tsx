@@ -28,24 +28,41 @@ interface OrderListProps {
   orders: Order[];
   isLoading: boolean;
   onEdit: (order: Order) => void;
-  onGenerateInvoice: (order: Order) => void;
-  onGenerateWorkOrder: (order: Order) => void;
-  onPrintInvoice: (order: Order) => void;
-  onEmailInvoice: (order: Order) => void;
+  onGenerateInvoice?: (order: Order) => void;
+  onGenerateWorkOrder?: (order: Order) => void;
+  onPrintInvoice?: (order: Order) => void;
+  onEmailInvoice?: (order: Order) => void;
 }
 
 export default function OrderList({ 
   orders, 
   isLoading, 
-  onEdit, 
-  onGenerateInvoice, 
-  onGenerateWorkOrder, 
-  onPrintInvoice, 
-  onEmailInvoice 
+  onEdit,
+  onGenerateInvoice,
+  onGenerateWorkOrder,
+  onPrintInvoice,
+  onEmailInvoice
 }: OrderListProps) {
+  const [filteredOrders, setFilteredOrders] = useState<Order[]>(orders);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [priorityFilter, setPriorityFilter] = useState("all");
+
+  // Default handlers if not provided
+  const handleGenerateInvoice = onGenerateInvoice || ((order: Order) => {
+    console.log("Generate invoice for order:", order.orderNumber);
+  });
+
+  const handleGenerateWorkOrder = onGenerateWorkOrder || ((order: Order) => {
+    console.log("Generate work order for order:", order.orderNumber);
+  });
+
+  const handlePrintInvoice = onPrintInvoice || ((order: Order) => {
+    console.log("Print invoice for order:", order.orderNumber);
+  });
+
+  const handleEmailInvoice = onEmailInvoice || ((order: Order) => {
+    console.log("Email invoice for order:", order.orderNumber);
+  });
 
   const formatCurrency = (amount: string) => {
     return new Intl.NumberFormat('en-US', {
@@ -109,10 +126,10 @@ export default function OrderList({
       order.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
       `${order.customer.firstName} ${order.customer.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
       order.description.toLowerCase().includes(searchTerm.toLowerCase());
-    
+
     const matchesStatus = statusFilter === "all" || order.status === statusFilter;
     const matchesPriority = priorityFilter === "all" || order.priority === priorityFilter;
-    
+
     return matchesSearch && matchesStatus && matchesPriority;
   });
 
@@ -155,7 +172,7 @@ export default function OrderList({
     <Card>
       <CardHeader>
         <CardTitle>Orders ({orders.length})</CardTitle>
-        
+
         {/* Filters */}
         <div className="flex flex-col sm:flex-row gap-4 pt-4">
           <div className="relative flex-1">
@@ -276,7 +293,7 @@ export default function OrderList({
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => onGenerateInvoice(order)}
+                          onClick={() => handleGenerateInvoice(order)}
                           title="Generate Invoice"
                         >
                           <FileText className="w-4 h-4" />
@@ -284,7 +301,7 @@ export default function OrderList({
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => onGenerateWorkOrder(order)}
+                          onClick={() => handleGenerateWorkOrder(order)}
                           title="Generate Work Order"
                         >
                           <FileText className="w-4 h-4" />
@@ -292,7 +309,7 @@ export default function OrderList({
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => onPrintInvoice(order)}
+                          onClick={() => handlePrintInvoice(order)}
                           title="Print Invoice"
                         >
                           <Printer className="w-4 h-4" />
@@ -300,7 +317,7 @@ export default function OrderList({
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => onEmailInvoice(order)}
+                          onClick={() => handleEmailInvoice(order)}
                           title="Email Invoice"
                         >
                           <Mail className="w-4 h-4" />

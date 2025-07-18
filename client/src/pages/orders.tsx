@@ -107,6 +107,38 @@ export default function Orders() {
     setIsFormOpen(true);
   };
 
+  const handleGenerateInvoice = (order: any) => {
+    // TODO: Implement invoice generation logic
+    toast({
+      title: "Invoice Generated",
+      description: `Invoice for order #${order.orderNumber} has been generated.`,
+    });
+  };
+
+  const handleGenerateWorkOrder = (order: any) => {
+    // TODO: Implement work order generation logic
+    toast({
+      title: "Work Order Generated",
+      description: `Work order for order #${order.orderNumber} has been generated.`,
+    });
+  };
+
+  const handlePrintInvoice = (order: any) => {
+    // TODO: Implement print functionality
+    toast({
+      title: "Print Invoice",
+      description: `Printing invoice for order #${order.orderNumber}.`,
+    });
+  };
+
+  const handleEmailInvoice = (order: any) => {
+    // TODO: Implement email functionality
+    toast({
+      title: "Email Invoice",
+      description: `Invoice for order #${order.orderNumber} has been emailed.`,
+    });
+  };
+
   return (
     <div className="min-h-screen flex bg-background">
       <Sidebar />
@@ -161,6 +193,10 @@ export default function Orders() {
                 orders={orders || []} 
                 isLoading={isLoading}
                 onEdit={handleEdit}
+                onGenerateInvoice={handleGenerateInvoice}
+                onGenerateWorkOrder={handleGenerateWorkOrder}
+                onPrintInvoice={handlePrintInvoice}
+                onEmailInvoice={handleEmailInvoice}
               />
             </div>
           </div>
