@@ -7,9 +7,13 @@ import AIRecommendations from "@/components/dashboard/AIRecommendations";
 import ProjectTracking from "@/components/dashboard/ProjectTracking";
 import { useAuth } from "@/hooks/useAuth";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import { Plus, FileDown } from "lucide-react";
+import { useLocation } from "wouter";
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const [, setLocation] = useLocation();
   
   const { data: metrics, isLoading: metricsLoading } = useQuery({
     queryKey: ["/api/dashboard/metrics"],
@@ -44,12 +48,14 @@ export default function Dashboard() {
                   </p>
                 </div>
                 <div className="mt-4 flex md:mt-0 md:ml-4 space-x-3">
-                  <button className="btn btn-secondary">
+                  <Button variant="outline" onClick={() => console.log("Export report functionality coming soon")}>
+                    <FileDown className="w-4 h-4 mr-2" />
                     Export Report
-                  </button>
-                  <button className="btn btn-primary">
+                  </Button>
+                  <Button onClick={() => setLocation("/orders")}>
+                    <Plus className="w-4 h-4 mr-2" />
                     New Order
-                  </button>
+                  </Button>
                 </div>
               </div>
 
