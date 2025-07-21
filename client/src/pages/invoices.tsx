@@ -4,18 +4,55 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, FileText, Mail, CreditCard, DollarSign, Eye, Download } from "lucide-react";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Separator } from "@/components/ui/separator";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { Plus, FileText, Mail, CreditCard, DollarSign, Eye, Download, UserPlus, Trash2 } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import Sidebar from "@/components/layout/Sidebar";
 import Header from "@/components/layout/Header";
 
+const customerSchema = z.object({
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().min(1, "Last name is required"),
+  email: z.string().email("Invalid email").optional().or(z.literal("")),
+  phone: z.string().optional(),
+  address: z.string().optional(),
+  notes: z.string().optional(),
+});
+
+const invoiceItemSchema = z.object({
+  description: z.string().min(1, "Description is required"),
+  quantity: z.string().min(1, "Quantity is required"),
+  unitPrice: z.string().min(1, "Unit price is required"),
+  total: z.string(),
+});
+
+const invoiceSchema = z.object({
+  customerId: z.string().optional(),
+  newCustomer: customerSchema.optional(),
+  orderId: z.string().optional(),
+  dueDate: z.string().min(1, "Due date is required"),
+  taxAmount: z.string().default("0.00"),
+  discountAmount: z.string().default("0.00"),
+  items: z.array(invoiceItemSchema).min(1, "At least one item is required"),
+  notes: z.string().optional(),
+});
+
+type InvoiceFormData = z.infer<typeof invoiceSchema>;
+type CustomerFormData = z.infer<typeof customerSchema>;
+
 export default function Invoices() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [showNewCustomer, setShowNewCustomer] = useState(false);
   const { toast } = useToast();
 
   const { data: invoices, isLoading } = useQuery({
@@ -28,6 +65,15 @@ export default function Invoices() {
 
   const { data: orders } = useQuery({
     queryKey: ["/api/orders"],
+  });
+
+  const form = useForm<InvoiceFormData>({
+    resolver: zodResolver(invoiceSchema),
+    defaultValues: {
+      taxAmount: "0.00",
+      discountAmount: "0.00",
+      items: [{ description: "", quantity: "1", unitPrice: "0.00", total: "0.00" }],
+    },
   });
 
   const createPaymentIntentMutation = useMutation({
@@ -67,6 +113,68 @@ export default function Invoices() {
       });
     },
   });
+
+  const createInvoiceMutation = useMutation({
+    mutationFn: (data: InvoiceFormData) => apiRequest("POST", "/api/invoices", data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/customers"] });
+      setCreateDialogOpen(false);
+      form.reset();
+      setShowNewCustomer(false);
+      toast({
+        title: "Success",
+        description: "Invoice created successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create invoice",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const addItem = () => {
+    const currentItems = form.getValues("items");
+    form.setValue("items", [...currentItems, { description: "", quantity: "1", unitPrice: "0.00", total: "0.00" }]);
+  };
+
+  const removeItem = (index: number) => {
+    const currentItems = form.getValues("items");
+    if (currentItems.length > 1) {
+      form.setValue("items", currentItems.filter((_, i) => i !== index));
+    }
+  };
+
+  const calculateItemTotal = (index: number) => {
+    const items = form.getValues("items");
+    const item = items[index];
+    const quantity = parseFloat(item.quantity || "0");
+    const unitPrice = parseFloat(item.unitPrice || "0");
+    const total = quantity * unitPrice;
+    
+    const updatedItems = [...items];
+    updatedItems[index] = { ...item, total: total.toFixed(2) };
+    form.setValue("items", updatedItems);
+  };
+
+  const calculateSubtotal = () => {
+    const items = form.watch("items");
+    return items.reduce((sum, item) => sum + parseFloat(item.total || "0"), 0);
+  };
+
+  const calculateTotal = () => {
+    const subtotal = calculateSubtotal();
+    const tax = parseFloat(form.watch("taxAmount") || "0");
+    const discount = parseFloat(form.watch("discountAmount") || "0");
+    return subtotal + tax - discount;
+  };
+
+  const onSubmit = (data: InvoiceFormData) => {
+    createInvoiceMutation.mutate(data);
+  };
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {
@@ -128,92 +236,368 @@ export default function Invoices() {
                     Create Invoice
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="max-w-2xl">
+                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
                     <DialogTitle>Create New Invoice</DialogTitle>
+                    <DialogDescription>
+                      Create a new invoice for an existing customer or add a new customer
+                    </DialogDescription>
                   </DialogHeader>
                   
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="customer">Customer</Label>
-                        <Select>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select customer" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {(customers as any[])?.map((customer: any) => (
-                              <SelectItem key={customer.id} value={customer.id.toString()}>
-                                {customer.firstName} {customer.lastName}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="order">Order (Optional)</Label>
-                        <Select>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select order" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {(orders as any[])?.map((order: any) => (
-                              <SelectItem key={order.id} value={order.id.toString()}>
-                                {order.orderNumber} - {order.description}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="dueDate">Due Date</Label>
-                        <Input type="date" />
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="taxAmount">Tax Amount ($)</Label>
-                        <Input type="number" step="0.01" placeholder="0.00" />
-                      </div>
-                    </div>
-
-                    <div className="space-y-4">
-                      <Label>Invoice Items</Label>
-                      <div className="border rounded-lg p-4 space-y-2">
-                        <div className="grid grid-cols-4 gap-2 text-sm font-medium text-muted-foreground">
-                          <div>Description</div>
-                          <div>Quantity</div>
-                          <div>Unit Price</div>
-                          <div>Total</div>
+                  <Form {...form}>
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                      {/* Customer Selection */}
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-base font-medium">Customer Information</Label>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setShowNewCustomer(!showNewCustomer)}
+                          >
+                            <UserPlus className="w-4 h-4 mr-2" />
+                            {showNewCustomer ? "Select Existing" : "Add New Customer"}
+                          </Button>
                         </div>
-                        <div className="grid grid-cols-4 gap-2">
-                          <Input placeholder="Frame labor" />
-                          <Input type="number" step="0.01" placeholder="1" />
-                          <Input type="number" step="0.01" placeholder="0.00" />
-                          <Input disabled placeholder="$0.00" />
+
+                        {!showNewCustomer ? (
+                          <FormField
+                            control={form.control}
+                            name="customerId"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Select Customer</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                  <FormControl>
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Choose a customer" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    {(customers as any[])?.map((customer: any) => (
+                                      <SelectItem key={customer.id} value={customer.id.toString()}>
+                                        {customer.firstName} {customer.lastName}
+                                        {customer.email && (
+                                          <span className="text-muted-foreground"> - {customer.email}</span>
+                                        )}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        ) : (
+                          <div className="grid grid-cols-2 gap-4 p-4 border rounded-lg">
+                            <FormField
+                              control={form.control}
+                              name="newCustomer.firstName"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>First Name *</FormLabel>
+                                  <FormControl>
+                                    <Input placeholder="John" {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            <FormField
+                              control={form.control}
+                              name="newCustomer.lastName"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Last Name *</FormLabel>
+                                  <FormControl>
+                                    <Input placeholder="Smith" {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            <FormField
+                              control={form.control}
+                              name="newCustomer.email"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Email</FormLabel>
+                                  <FormControl>
+                                    <Input type="email" placeholder="john@example.com" {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            <FormField
+                              control={form.control}
+                              name="newCustomer.phone"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Phone</FormLabel>
+                                  <FormControl>
+                                    <Input placeholder="(555) 123-4567" {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            <FormField
+                              control={form.control}
+                              name="newCustomer.address"
+                              render={({ field }) => (
+                                <FormItem className="col-span-2">
+                                  <FormLabel>Address</FormLabel>
+                                  <FormControl>
+                                    <Textarea placeholder="Customer address" {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                        )}
+                      </div>
+
+                      <Separator />
+
+                      {/* Invoice Details */}
+                      <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                          control={form.control}
+                          name="orderId"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Related Order (Optional)</FormLabel>
+                              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select order" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {(orders as any[])?.map((order: any) => (
+                                    <SelectItem key={order.id} value={order.id.toString()}>
+                                      {order.orderNumber} - {order.description}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="dueDate"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Due Date *</FormLabel>
+                              <FormControl>
+                                <Input type="date" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      {/* Invoice Items */}
+                      <div className="space-y-4">
+                        <Label className="text-base font-medium">Invoice Items</Label>
+                        <div className="border rounded-lg p-4 space-y-4">
+                          <div className="grid grid-cols-5 gap-2 text-sm font-medium text-muted-foreground">
+                            <div>Description</div>
+                            <div>Quantity</div>
+                            <div>Unit Price</div>
+                            <div>Total</div>
+                            <div>Actions</div>
+                          </div>
+                          
+                          {form.watch("items").map((item, index) => (
+                            <div key={index} className="grid grid-cols-5 gap-2 items-end">
+                              <FormField
+                                control={form.control}
+                                name={`items.${index}.description`}
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormControl>
+                                      <Input placeholder="Frame labor" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                              <FormField
+                                control={form.control}
+                                name={`items.${index}.quantity`}
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormControl>
+                                      <Input
+                                        type="number"
+                                        step="0.01"
+                                        placeholder="1"
+                                        {...field}
+                                        onChange={(e) => {
+                                          field.onChange(e);
+                                          setTimeout(() => calculateItemTotal(index), 100);
+                                        }}
+                                      />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                              <FormField
+                                control={form.control}
+                                name={`items.${index}.unitPrice`}
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormControl>
+                                      <Input
+                                        type="number"
+                                        step="0.01"
+                                        placeholder="0.00"
+                                        {...field}
+                                        onChange={(e) => {
+                                          field.onChange(e);
+                                          setTimeout(() => calculateItemTotal(index), 100);
+                                        }}
+                                      />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                              <FormField
+                                control={form.control}
+                                name={`items.${index}.total`}
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormControl>
+                                      <Input
+                                        disabled
+                                        placeholder="$0.00"
+                                        value={`$${field.value}`}
+                                        className="bg-muted"
+                                      />
+                                    </FormControl>
+                                  </FormItem>
+                                )}
+                              />
+                              <div className="flex gap-1">
+                                {form.watch("items").length > 1 && (
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => removeItem(index)}
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                          
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={addItem}
+                          >
+                            <Plus className="w-4 h-4 mr-2" />
+                            Add Item
+                          </Button>
                         </div>
-                        <Button variant="outline" size="sm">
-                          <Plus className="w-4 h-4 mr-2" />
-                          Add Item
+                      </div>
+
+                      {/* Totals */}
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-4">
+                          <FormField
+                            control={form.control}
+                            name="taxAmount"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Tax Amount ($)</FormLabel>
+                                <FormControl>
+                                  <Input type="number" step="0.01" placeholder="0.00" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name="discountAmount"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Discount Amount ($)</FormLabel>
+                                <FormControl>
+                                  <Input type="number" step="0.01" placeholder="0.00" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                        <div className="flex flex-col justify-end space-y-2 text-right">
+                          <div className="flex justify-between">
+                            <span>Subtotal:</span>
+                            <span>${calculateSubtotal().toFixed(2)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Tax:</span>
+                            <span>${parseFloat(form.watch("taxAmount") || "0").toFixed(2)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Discount:</span>
+                            <span>-${parseFloat(form.watch("discountAmount") || "0").toFixed(2)}</span>
+                          </div>
+                          <Separator />
+                          <div className="flex justify-between font-bold text-lg">
+                            <span>Total:</span>
+                            <span>${calculateTotal().toFixed(2)}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Notes */}
+                      <FormField
+                        control={form.control}
+                        name="notes"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Notes (Optional)</FormLabel>
+                            <FormControl>
+                              <Textarea placeholder="Additional notes for this invoice" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <div className="flex gap-2 pt-4">
+                        <Button type="submit" disabled={createInvoiceMutation.isPending}>
+                          Create Invoice
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => {
+                            setCreateDialogOpen(false);
+                            setShowNewCustomer(false);
+                            form.reset();
+                          }}
+                        >
+                          Cancel
                         </Button>
                       </div>
-                    </div>
-
-                    <div className="flex gap-2 pt-4">
-                      <Button>
-                        Create Invoice
-                      </Button>
-                      <Button
-                        variant="outline"
-                        onClick={() => setCreateDialogOpen(false)}
-                      >
-                        Cancel
-                      </Button>
-                    </div>
-                  </div>
+                    </form>
+                  </Form>
                 </DialogContent>
               </Dialog>
             </div>

@@ -166,6 +166,9 @@ export const wholesalers = pgTable("wholesalers", {
   paymentTerms: varchar("payment_terms"), // net30, net15, cod
   minOrderAmount: decimal("min_order_amount", { precision: 8, scale: 2 }),
   discountTiers: jsonb("discount_tiers"), // volume discounts
+  catalogFileName: varchar("catalog_file_name"), // uploaded catalog file name
+  catalogFileUrl: varchar("catalog_file_url"), // file storage URL
+  catalogUploadedAt: timestamp("catalog_uploaded_at"),
   isActive: boolean("is_active").default(true),
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow(),

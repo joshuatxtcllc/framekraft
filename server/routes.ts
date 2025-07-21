@@ -7,6 +7,7 @@ import { insertCustomerSchema, insertOrderSchema } from "@shared/schema";
 import { registerPricingRoutes } from "./routes/pricing";
 import { registerWholesalerRoutes } from "./routes/wholesalers";
 import { registerInvoiceRoutes } from "./routes/invoices";
+import { registerFileUploadRoutes } from "./routes/fileUpload";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
@@ -333,6 +334,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerPricingRoutes(app);
   registerWholesalerRoutes(app);
   registerInvoiceRoutes(app);
+  registerFileUploadRoutes(app);
 
   const httpServer = createServer(app);
   return httpServer;

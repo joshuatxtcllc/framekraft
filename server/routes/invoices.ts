@@ -40,15 +40,55 @@ export function registerInvoiceRoutes(app: Express) {
   // Create new invoice
   app.post("/api/invoices", isAuthenticated, async (req, res) => {
     try {
-      const { invoice, items } = req.body;
-      const validatedInvoice = insertInvoiceSchema.parse(invoice);
-      const validatedItems = items.map((item: any) => insertInvoiceItemSchema.parse(item));
+      const { customerId, newCustomer, orderId, dueDate, taxAmount, discountAmount, items, notes } = req.body;
       
-      const newInvoice = await storage.createInvoice(validatedInvoice, validatedItems);
-      res.status(201).json(newInvoice);
-    } catch (error) {
+      let finalCustomerId = customerId;
+      
+      // Create new customer if provided
+      if (newCustomer && !customerId) {
+        const createdCustomer = await storage.createCustomer(newCustomer);
+        finalCustomerId = createdCustomer.id;
+      }
+      
+      // Generate invoice number
+      const invoiceNumber = `INV-${Date.now()}`;
+      
+      // Calculate totals
+      const subtotal = items.reduce((sum: number, item: any) => sum + parseFloat(item.total), 0);
+      const tax = parseFloat(taxAmount || "0");
+      const discount = parseFloat(discountAmount || "0");
+      const total = subtotal + tax - discount;
+      
+      const invoiceData = {
+        invoiceNumber,
+        customerId: parseInt(finalCustomerId),
+        orderId: orderId ? parseInt(orderId) : null,
+        status: "draft",
+        subtotal: subtotal.toFixed(2),
+        taxAmount: tax.toFixed(2),
+        discountAmount: discount.toFixed(2),
+        totalAmount: total.toFixed(2),
+        dueDate: new Date(dueDate),
+        notes,
+      };
+      
+      const invoice = await storage.createInvoice(invoiceData);
+      
+      // Create invoice items
+      for (const item of items) {
+        await storage.createInvoiceItem({
+          invoiceId: invoice.id,
+          description: item.description,
+          quantity: parseFloat(item.quantity),
+          unitPrice: parseFloat(item.unitPrice),
+          totalPrice: parseFloat(item.total),
+        });
+      }
+      
+      res.status(201).json(invoice);
+    } catch (error: any) {
       console.error("Error creating invoice:", error);
-      res.status(500).json({ message: "Failed to create invoice" });
+      res.status(500).json({ message: error.message || "Failed to create invoice" });
     }
   });
 

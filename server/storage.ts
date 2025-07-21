@@ -47,7 +47,7 @@ import {
   insertPaymentSchema,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, sql, and, gte, lte } from "drizzle-orm";
+import { eq, desc, sql, and, gte, lte, inArray } from "drizzle-orm";
 
 export interface IStorage {
   // User operations (mandatory for Replit Auth)
@@ -404,8 +404,22 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(wholesalers).where(eq(wholesalers.isActive, true)).orderBy(wholesalers.companyName);
   }
 
+  async getWholesaler(id: number): Promise<Wholesaler | undefined> {
+    const [wholesaler] = await db.select().from(wholesalers).where(eq(wholesalers.id, id));
+    return wholesaler || undefined;
+  }
+
   async createWholesaler(wholesalerData: InsertWholesaler): Promise<Wholesaler> {
     const [wholesaler] = await db.insert(wholesalers).values(wholesalerData).returning();
+    return wholesaler;
+  }
+
+  async updateWholesaler(id: number, wholesalerData: Partial<InsertWholesaler>): Promise<Wholesaler> {
+    const [wholesaler] = await db
+      .update(wholesalers)
+      .set({ ...wholesalerData, updatedAt: new Date() })
+      .where(eq(wholesalers.id, id))
+      .returning();
     return wholesaler;
   }
 
@@ -428,15 +442,15 @@ export class DatabaseStorage implements IStorage {
 
     const invoiceIds = invoiceResults.map(r => r.invoices.id);
     
-    const items = await db
+    const items = invoiceIds.length > 0 ? await db
       .select()
       .from(invoiceItems)
-      .where(sql`${invoiceItems.invoiceId} = ANY(${invoiceIds})`);
+      .where(inArray(invoiceItems.invoiceId, invoiceIds)) : [];
       
-    const paymentsResult = await db
+    const paymentsResult = invoiceIds.length > 0 ? await db
       .select()
       .from(payments)
-      .where(sql`${payments.invoiceId} = ANY(${invoiceIds})`);
+      .where(inArray(payments.invoiceId, invoiceIds)) : [];
 
     return invoiceResults.map(result => ({
       ...result.invoices,

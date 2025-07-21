@@ -13,7 +13,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Plus, Building2, Package, Phone, Mail, Globe, MapPin } from "lucide-react";
+import { Plus, Building2, Package, Phone, Mail, Globe, MapPin, Upload, FileText, Download, Trash2 } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import Sidebar from "@/components/layout/Sidebar";
@@ -37,6 +37,7 @@ type WholesalerFormData = z.infer<typeof wholesalerSchema>;
 export default function Wholesalers() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedWholesaler, setSelectedWholesaler] = useState<number | null>(null);
+  const [uploadingCatalog, setUploadingCatalog] = useState<number | null>(null);
   const { toast } = useToast();
 
   const { data: wholesalers, isLoading } = useQuery({
@@ -78,6 +79,69 @@ export default function Wholesalers() {
 
   const onSubmit = (data: WholesalerFormData) => {
     createMutation.mutate(data);
+  };
+
+  const uploadCatalogMutation = useMutation({
+    mutationFn: ({ wholesalerId, file }: { wholesalerId: number; file: File }) => {
+      const formData = new FormData();
+      formData.append('catalog', file);
+      return fetch(`/api/wholesalers/${wholesalerId}/upload-catalog`, {
+        method: 'POST',
+        body: formData,
+      }).then(res => res.json());
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/wholesalers"] });
+      setUploadingCatalog(null);
+      toast({
+        title: "Success",
+        description: "Catalog uploaded successfully",
+      });
+    },
+    onError: () => {
+      setUploadingCatalog(null);
+      toast({
+        title: "Error",
+        description: "Failed to upload catalog",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteCatalogMutation = useMutation({
+    mutationFn: (wholesalerId: number) => 
+      apiRequest("DELETE", `/api/wholesalers/${wholesalerId}/catalog`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/wholesalers"] });
+      toast({
+        title: "Success",
+        description: "Catalog deleted successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to delete catalog",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleFileUpload = (wholesalerId: number, event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setUploadingCatalog(wholesalerId);
+      uploadCatalogMutation.mutate({ wholesalerId, file });
+    }
+  };
+
+  const downloadCatalog = (wholesalerId: number, fileName: string) => {
+    const link = document.createElement('a');
+    link.href = `/api/wholesalers/${wholesalerId}/download-catalog`;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const specialtyOptions = [
@@ -392,6 +456,78 @@ export default function Wholesalers() {
                                 )}
                                 {wholesaler.minOrderAmount && (
                                   <div>Min Order: {formatCurrency(wholesaler.minOrderAmount)}</div>
+                                )}
+                              </div>
+
+                              {/* Catalog Upload Section */}
+                              <div className="pt-3 border-t">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-sm font-medium text-muted-foreground">
+                                    Price Catalog
+                                  </span>
+                                  {wholesaler.catalogFileName ? (
+                                    <div className="flex gap-1">
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          downloadCatalog(wholesaler.id, wholesaler.catalogFileName);
+                                        }}
+                                        title="Download catalog"
+                                      >
+                                        <Download className="w-3 h-3" />
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          deleteCatalogMutation.mutate(wholesaler.id);
+                                        }}
+                                        title="Delete catalog"
+                                      >
+                                        <Trash2 className="w-3 h-3" />
+                                      </Button>
+                                    </div>
+                                  ) : (
+                                    <div className="relative">
+                                      <input
+                                        type="file"
+                                        accept=".pdf,.xlsx,.xls,.csv"
+                                        onChange={(e) => handleFileUpload(wholesaler.id, e)}
+                                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                        disabled={uploadingCatalog === wholesaler.id}
+                                        onClick={(e) => e.stopPropagation()}
+                                      />
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        disabled={uploadingCatalog === wholesaler.id}
+                                        title="Upload catalog"
+                                      >
+                                        <Upload className="w-3 h-3" />
+                                      </Button>
+                                    </div>
+                                  )}
+                                </div>
+                                {wholesaler.catalogFileName && (
+                                  <div className="flex items-center gap-1 mt-1">
+                                    <FileText className="w-3 h-3 text-muted-foreground" />
+                                    <span className="text-xs text-muted-foreground truncate">
+                                      {wholesaler.catalogFileName}
+                                    </span>
+                                  </div>
+                                )}
+                                {wholesaler.catalogUploadedAt && (
+                                  <div className="text-xs text-muted-foreground">
+                                    Uploaded: {new Date(wholesaler.catalogUploadedAt).toLocaleDateString()}
+                                  </div>
+                                )}
+                                {uploadingCatalog === wholesaler.id && (
+                                  <div className="text-xs text-primary">
+                                    Uploading...
+                                  </div>
                                 )}
                               </div>
                             </CardContent>
