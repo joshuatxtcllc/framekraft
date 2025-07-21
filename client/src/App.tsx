@@ -10,6 +10,9 @@ import Dashboard from "@/pages/dashboard";
 import Orders from "@/pages/orders";
 import Customers from "@/pages/customers";
 import AIAssistant from "@/pages/ai-assistant";
+import Pricing from "@/pages/pricing";
+import Invoices from "@/pages/invoices";
+import Wholesalers from "@/pages/wholesalers";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -23,6 +26,9 @@ function Router() {
           <Route path="/" component={Dashboard} />
           <Route path="/orders" component={Orders} />
           <Route path="/customers" component={Customers} />
+          <Route path="/pricing" component={Pricing} />
+          <Route path="/invoices" component={Invoices} />
+          <Route path="/wholesalers" component={Wholesalers} />
           <Route path="/ai-assistant" component={AIAssistant} />
         </>
       )}

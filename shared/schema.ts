@@ -35,6 +35,8 @@ export const users = pgTable("users", {
   profileImageUrl: varchar("profile_image_url"),
   role: varchar("role").default("owner").notNull(),
   businessName: varchar("business_name"),
+  stripeCustomerId: varchar("stripe_customer_id"),
+  stripeSubscriptionId: varchar("stripe_subscription_id"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -67,6 +69,11 @@ export const orders = pgTable("orders", {
   glazing: varchar("glazing"),
   totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).notNull(),
   depositAmount: decimal("deposit_amount", { precision: 10, scale: 2 }),
+  balanceAmount: decimal("balance_amount", { precision: 10, scale: 2 }),
+  taxAmount: decimal("tax_amount", { precision: 10, scale: 2 }).default("0"),
+  discountAmount: decimal("discount_amount", { precision: 10, scale: 2 }).default("0"),
+  laborCost: decimal("labor_cost", { precision: 10, scale: 2 }),
+  materialsCost: decimal("materials_cost", { precision: 10, scale: 2 }),
   status: varchar("status").default("pending").notNull(), // pending, measuring, production, ready, completed, cancelled
   priority: varchar("priority").default("normal").notNull(), // low, normal, high, rush
   dueDate: timestamp("due_date"),
@@ -129,10 +136,115 @@ export const inventory = pgTable("inventory", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Price structure for framing components
+export const priceStructure = pgTable("price_structure", {
+  id: serial("id").primaryKey(),
+  category: varchar("category").notNull(), // frame, mat, glazing, labor, misc
+  subcategory: varchar("subcategory"), // wood, metal, fabric, etc.
+  itemName: varchar("item_name").notNull(),
+  unitType: varchar("unit_type").default("linear_foot"), // linear_foot, square_foot, each
+  basePrice: decimal("base_price", { precision: 8, scale: 2 }).notNull(),
+  markupPercentage: decimal("markup_percentage", { precision: 5, scale: 2 }).default("50.00"),
+  retailPrice: decimal("retail_price", { precision: 8, scale: 2 }).notNull(),
+  isActive: boolean("is_active").default(true),
+  effectiveDate: timestamp("effective_date").defaultNow(),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Wholesaler catalogs and suppliers
+export const wholesalers = pgTable("wholesalers", {
+  id: serial("id").primaryKey(),
+  companyName: varchar("company_name").notNull(),
+  contactName: varchar("contact_name"),
+  email: varchar("email"),
+  phone: varchar("phone"),
+  website: varchar("website"),
+  address: text("address"),
+  specialties: text("specialties").array(), // wood_frames, metal_frames, mats, glazing
+  paymentTerms: varchar("payment_terms"), // net30, net15, cod
+  minOrderAmount: decimal("min_order_amount", { precision: 8, scale: 2 }),
+  discountTiers: jsonb("discount_tiers"), // volume discounts
+  isActive: boolean("is_active").default(true),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Wholesaler product catalog
+export const wholesalerProducts = pgTable("wholesaler_products", {
+  id: serial("id").primaryKey(),
+  wholesalerId: integer("wholesaler_id").references(() => wholesalers.id).notNull(),
+  productCode: varchar("product_code").notNull(),
+  productName: varchar("product_name").notNull(),
+  category: varchar("category").notNull(),
+  description: text("description"),
+  unitType: varchar("unit_type").default("linear_foot"),
+  wholesalePrice: decimal("wholesale_price", { precision: 8, scale: 2 }).notNull(),
+  suggestedRetail: decimal("suggested_retail", { precision: 8, scale: 2 }),
+  minQuantity: integer("min_quantity").default(1),
+  leadTime: varchar("lead_time"), // "5-7 days", "2-3 weeks"
+  isActive: boolean("is_active").default(true),
+  lastUpdated: timestamp("last_updated").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Invoices
+export const invoices = pgTable("invoices", {
+  id: serial("id").primaryKey(),
+  invoiceNumber: varchar("invoice_number").unique().notNull(),
+  orderId: integer("order_id").references(() => orders.id),
+  customerId: integer("customer_id").references(() => customers.id).notNull(),
+  status: varchar("status").default("draft").notNull(), // draft, sent, paid, overdue, cancelled
+  subtotal: decimal("subtotal", { precision: 10, scale: 2 }).notNull(),
+  taxAmount: decimal("tax_amount", { precision: 10, scale: 2 }).default("0"),
+  discountAmount: decimal("discount_amount", { precision: 10, scale: 2 }).default("0"),
+  totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).notNull(),
+  dueDate: timestamp("due_date").notNull(),
+  sentDate: timestamp("sent_date"),
+  paidDate: timestamp("paid_date"),
+  paymentMethod: varchar("payment_method"), // cash, check, card, stripe
+  stripePaymentIntentId: varchar("stripe_payment_intent_id"),
+  notes: text("notes"),
+  emailTemplate: text("email_template"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Invoice line items
+export const invoiceItems = pgTable("invoice_items", {
+  id: serial("id").primaryKey(),
+  invoiceId: integer("invoice_id").references(() => invoices.id).notNull(),
+  description: text("description").notNull(),
+  quantity: decimal("quantity", { precision: 8, scale: 2 }).notNull(),
+  unitPrice: decimal("unit_price", { precision: 8, scale: 2 }).notNull(),
+  totalPrice: decimal("total_price", { precision: 8, scale: 2 }).notNull(),
+  category: varchar("category"), // frame, mat, glazing, labor, misc
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Payment tracking
+export const payments = pgTable("payments", {
+  id: serial("id").primaryKey(),
+  invoiceId: integer("invoice_id").references(() => invoices.id).notNull(),
+  orderId: integer("order_id").references(() => orders.id),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  paymentMethod: varchar("payment_method").notNull(), // cash, check, card, stripe
+  paymentDate: timestamp("payment_date").defaultNow(),
+  stripePaymentIntentId: varchar("stripe_payment_intent_id"),
+  stripeChargeId: varchar("stripe_charge_id"),
+  checkNumber: varchar("check_number"),
+  notes: text("notes"),
+  status: varchar("status").default("completed").notNull(), // pending, completed, failed, refunded
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Relations
 export const customersRelations = relations(customers, ({ many }) => ({
   orders: many(orders),
   aiInsights: many(aiInsights),
+  invoices: many(invoices),
 }));
 
 export const ordersRelations = relations(orders, ({ one, many }) => ({
@@ -142,6 +254,8 @@ export const ordersRelations = relations(orders, ({ one, many }) => ({
   }),
   projectSteps: many(projectSteps),
   aiInsights: many(aiInsights),
+  invoices: many(invoices),
+  payments: many(payments),
 }));
 
 export const projectStepsRelations = relations(projectSteps, ({ one }) => ({
@@ -159,6 +273,48 @@ export const aiInsightsRelations = relations(aiInsights, ({ one }) => ({
   customer: one(customers, {
     fields: [aiInsights.customerId],
     references: [customers.id],
+  }),
+}));
+
+export const wholesalersRelations = relations(wholesalers, ({ many }) => ({
+  products: many(wholesalerProducts),
+}));
+
+export const wholesalerProductsRelations = relations(wholesalerProducts, ({ one }) => ({
+  wholesaler: one(wholesalers, {
+    fields: [wholesalerProducts.wholesalerId],
+    references: [wholesalers.id],
+  }),
+}));
+
+export const invoicesRelations = relations(invoices, ({ one, many }) => ({
+  customer: one(customers, {
+    fields: [invoices.customerId],
+    references: [customers.id],
+  }),
+  order: one(orders, {
+    fields: [invoices.orderId],
+    references: [orders.id],
+  }),
+  items: many(invoiceItems),
+  payments: many(payments),
+}));
+
+export const invoiceItemsRelations = relations(invoiceItems, ({ one }) => ({
+  invoice: one(invoices, {
+    fields: [invoiceItems.invoiceId],
+    references: [invoices.id],
+  }),
+}));
+
+export const paymentsRelations = relations(payments, ({ one }) => ({
+  invoice: one(invoices, {
+    fields: [payments.invoiceId],
+    references: [invoices.id],
+  }),
+  order: one(orders, {
+    fields: [payments.orderId],
+    references: [orders.id],
   }),
 }));
 
@@ -202,6 +358,40 @@ export const insertInventorySchema = createInsertSchema(inventory).omit({
   updatedAt: true,
 });
 
+export const insertPriceStructureSchema = createInsertSchema(priceStructure).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertWholesalerSchema = createInsertSchema(wholesalers).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertWholesalerProductSchema = createInsertSchema(wholesalerProducts).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertInvoiceSchema = createInsertSchema(invoices).omit({
+  id: true,
+  invoiceNumber: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertInvoiceItemSchema = createInsertSchema(invoiceItems).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertPaymentSchema = createInsertSchema(payments).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types
 export type UpsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -214,3 +404,21 @@ export type ProjectStep = typeof projectSteps.$inferSelect;
 export type AiInsight = typeof aiInsights.$inferSelect;
 export type BusinessMetric = typeof businessMetrics.$inferSelect;
 export type Inventory = typeof inventory.$inferSelect;
+export type PriceStructure = typeof priceStructure.$inferSelect;
+export type InsertPriceStructure = z.infer<typeof insertPriceStructureSchema>;
+export type Wholesaler = typeof wholesalers.$inferSelect;
+export type InsertWholesaler = z.infer<typeof insertWholesalerSchema>;
+export type WholesalerProduct = typeof wholesalerProducts.$inferSelect;
+export type InsertWholesalerProduct = z.infer<typeof insertWholesalerProductSchema>;
+export type Invoice = typeof invoices.$inferSelect;
+export type InsertInvoice = z.infer<typeof insertInvoiceSchema>;
+export type InvoiceItem = typeof invoiceItems.$inferSelect;
+export type InsertInvoiceItem = z.infer<typeof insertInvoiceItemSchema>;
+export type Payment = typeof payments.$inferSelect;
+export type InsertPayment = z.infer<typeof insertPaymentSchema>;
+export type InvoiceWithDetails = Invoice & { 
+  customer: Customer; 
+  order?: Order; 
+  items: InvoiceItem[];
+  payments: Payment[];
+};

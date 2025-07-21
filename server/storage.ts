@@ -6,6 +6,12 @@ import {
   aiInsights,
   businessMetrics,
   inventory,
+  priceStructure,
+  wholesalers,
+  wholesalerProducts,
+  invoices,
+  invoiceItems,
+  payments,
   type User,
   type UpsertUser,
   type InsertCustomer,
@@ -17,9 +23,28 @@ import {
   type AiInsight,
   type BusinessMetric,
   type Inventory,
+  type PriceStructure,
+  type InsertPriceStructure,
+  type Wholesaler,
+  type InsertWholesaler,
+  type WholesalerProduct,
+  type InsertWholesalerProduct,
+  type Invoice,
+  type InsertInvoice,
+  type InvoiceItem,
+  type InsertInvoiceItem,
+  type InvoiceWithDetails,
+  type Payment,
+  type InsertPayment,
   insertProjectStepSchema,
   insertAiInsightSchema,
   insertInventorySchema,
+  insertPriceStructureSchema,
+  insertWholesalerSchema,
+  insertWholesalerProductSchema,
+  insertInvoiceSchema,
+  insertInvoiceItemSchema,
+  insertPaymentSchema,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, and, gte, lte } from "drizzle-orm";
@@ -63,6 +88,28 @@ export interface IStorage {
   getInventory(): Promise<Inventory[]>;
   updateInventoryItem(id: number, item: any): Promise<Inventory>;
   getLowStockItems(): Promise<Inventory[]>;
+
+  // Price Structure
+  getPriceStructure(): Promise<PriceStructure[]>;
+  createPriceStructure(price: InsertPriceStructure): Promise<PriceStructure>;
+  updatePriceStructure(id: number, price: Partial<InsertPriceStructure>): Promise<PriceStructure>;
+  deletePriceStructure(id: number): Promise<void>;
+
+  // Wholesalers
+  getWholesalers(): Promise<Wholesaler[]>;
+  createWholesaler(wholesaler: InsertWholesaler): Promise<Wholesaler>;
+  getWholesalerProducts(wholesalerId: number): Promise<WholesalerProduct[]>;
+
+  // Invoices
+  getInvoices(): Promise<InvoiceWithDetails[]>;
+  getInvoice(id: number): Promise<InvoiceWithDetails | undefined>;
+  createInvoice(invoice: InsertInvoice, items: InsertInvoiceItem[]): Promise<Invoice>;
+  updateInvoice(id: number, invoice: Partial<InsertInvoice>): Promise<Invoice>;
+  deleteInvoice(id: number): Promise<void>;
+  markInvoicePaid(invoiceId: number, payment: InsertPayment): Promise<void>;
+
+  // Stripe integration
+  updateUserStripeInfo(userId: string, customerId: string, subscriptionId?: string): Promise<User>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -327,6 +374,165 @@ export class DatabaseStorage implements IStorage {
       .from(inventory)
       .where(sql`${inventory.quantity} <= ${inventory.minQuantity}`)
       .orderBy(inventory.itemName);
+  }
+
+  // Price Structure methods
+  async getPriceStructure(): Promise<PriceStructure[]> {
+    return await db.select().from(priceStructure).where(eq(priceStructure.isActive, true)).orderBy(priceStructure.category, priceStructure.itemName);
+  }
+
+  async createPriceStructure(priceData: InsertPriceStructure): Promise<PriceStructure> {
+    const [price] = await db.insert(priceStructure).values(priceData).returning();
+    return price;
+  }
+
+  async updatePriceStructure(id: number, priceData: Partial<InsertPriceStructure>): Promise<PriceStructure> {
+    const [price] = await db
+      .update(priceStructure)
+      .set({ ...priceData, updatedAt: new Date() })
+      .where(eq(priceStructure.id, id))
+      .returning();
+    return price;
+  }
+
+  async deletePriceStructure(id: number): Promise<void> {
+    await db.update(priceStructure).set({ isActive: false }).where(eq(priceStructure.id, id));
+  }
+
+  // Wholesaler methods
+  async getWholesalers(): Promise<Wholesaler[]> {
+    return await db.select().from(wholesalers).where(eq(wholesalers.isActive, true)).orderBy(wholesalers.companyName);
+  }
+
+  async createWholesaler(wholesalerData: InsertWholesaler): Promise<Wholesaler> {
+    const [wholesaler] = await db.insert(wholesalers).values(wholesalerData).returning();
+    return wholesaler;
+  }
+
+  async getWholesalerProducts(wholesalerId: number): Promise<WholesalerProduct[]> {
+    return await db
+      .select()
+      .from(wholesalerProducts)
+      .where(and(eq(wholesalerProducts.wholesalerId, wholesalerId), eq(wholesalerProducts.isActive, true)))
+      .orderBy(wholesalerProducts.category, wholesalerProducts.productName);
+  }
+
+  // Invoice methods
+  async getInvoices(): Promise<InvoiceWithDetails[]> {
+    const invoiceResults = await db
+      .select()
+      .from(invoices)
+      .leftJoin(customers, eq(invoices.customerId, customers.id))
+      .leftJoin(orders, eq(invoices.orderId, orders.id))
+      .orderBy(desc(invoices.createdAt));
+
+    const invoiceIds = invoiceResults.map(r => r.invoices.id);
+    
+    const items = await db
+      .select()
+      .from(invoiceItems)
+      .where(sql`${invoiceItems.invoiceId} = ANY(${invoiceIds})`);
+      
+    const paymentsResult = await db
+      .select()
+      .from(payments)
+      .where(sql`${payments.invoiceId} = ANY(${invoiceIds})`);
+
+    return invoiceResults.map(result => ({
+      ...result.invoices,
+      customer: result.customers!,
+      order: result.orders || undefined,
+      items: items.filter(item => item.invoiceId === result.invoices.id),
+      payments: paymentsResult.filter(payment => payment.invoiceId === result.invoices.id),
+    }));
+  }
+
+  async getInvoice(id: number): Promise<InvoiceWithDetails | undefined> {
+    const [invoiceResult] = await db
+      .select()
+      .from(invoices)
+      .leftJoin(customers, eq(invoices.customerId, customers.id))
+      .leftJoin(orders, eq(invoices.orderId, orders.id))
+      .where(eq(invoices.id, id));
+
+    if (!invoiceResult) return undefined;
+
+    const items = await db.select().from(invoiceItems).where(eq(invoiceItems.invoiceId, id));
+    const paymentsResult = await db.select().from(payments).where(eq(payments.invoiceId, id));
+
+    return {
+      ...invoiceResult.invoices,
+      customer: invoiceResult.customers!,
+      order: invoiceResult.orders || undefined,
+      items,
+      payments: paymentsResult,
+    };
+  }
+
+  async createInvoice(invoiceData: InsertInvoice, items: InsertInvoiceItem[]): Promise<Invoice> {
+    // Generate invoice number
+    const invoiceNumber = `INV${Date.now()}`;
+    
+    const [invoice] = await db
+      .insert(invoices)
+      .values({
+        ...invoiceData,
+        invoiceNumber,
+      })
+      .returning();
+
+    // Add invoice items
+    if (items.length > 0) {
+      await db.insert(invoiceItems).values(
+        items.map(item => ({ ...item, invoiceId: invoice.id }))
+      );
+    }
+
+    return invoice;
+  }
+
+  async updateInvoice(id: number, invoiceData: Partial<InsertInvoice>): Promise<Invoice> {
+    const [invoice] = await db
+      .update(invoices)
+      .set({ ...invoiceData, updatedAt: new Date() })
+      .where(eq(invoices.id, id))
+      .returning();
+    return invoice;
+  }
+
+  async deleteInvoice(id: number): Promise<void> {
+    await db.delete(invoiceItems).where(eq(invoiceItems.invoiceId, id));
+    await db.delete(invoices).where(eq(invoices.id, id));
+  }
+
+  async markInvoicePaid(invoiceId: number, paymentData: InsertPayment): Promise<void> {
+    // Add payment record
+    await db.insert(payments).values({ ...paymentData, invoiceId });
+
+    // Update invoice status
+    await db
+      .update(invoices)
+      .set({ 
+        status: 'paid', 
+        paidDate: new Date(),
+        updatedAt: new Date()
+      })
+      .where(eq(invoices.id, invoiceId));
+  }
+
+  // Stripe integration
+  async updateUserStripeInfo(userId: string, customerId: string, subscriptionId?: string): Promise<User> {
+    const updateData: any = { stripeCustomerId: customerId };
+    if (subscriptionId) {
+      updateData.stripeSubscriptionId = subscriptionId;
+    }
+    
+    const [user] = await db
+      .update(users)
+      .set({ ...updateData, updatedAt: new Date() })
+      .where(eq(users.id, userId))
+      .returning();
+    return user;
   }
 }
 

@@ -4,6 +4,9 @@ import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { aiService } from "./services/aiService";
 import { insertCustomerSchema, insertOrderSchema } from "@shared/schema";
+import { registerPricingRoutes } from "./routes/pricing";
+import { registerWholesalerRoutes } from "./routes/wholesalers";
+import { registerInvoiceRoutes } from "./routes/invoices";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
@@ -325,6 +328,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to fetch low stock items" });
     }
   });
+
+  // Register new feature routes
+  registerPricingRoutes(app);
+  registerWholesalerRoutes(app);
+  registerInvoiceRoutes(app);
 
   const httpServer = createServer(app);
   return httpServer;

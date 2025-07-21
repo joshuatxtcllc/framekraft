@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { Frame, LayoutDashboard, ShoppingBag, Users, Brain, Sparkles, Package, DollarSign, Settings, BarChart3 } from "lucide-react";
+import { Frame, LayoutDashboard, ShoppingBag, Users, Brain, Sparkles, Package, DollarSign, Settings, BarChart3, Building2, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
@@ -14,7 +14,7 @@ export default function Sidebar() {
     queryKey: ["/api/orders"],
   });
 
-  const activeOrdersCount = orders?.filter((order: any) => 
+  const activeOrdersCount = (orders as any[])?.filter((order: any) => 
     !['completed', 'cancelled'].includes(order.status)
   ).length || 0;
 
@@ -58,6 +58,24 @@ export default function Sidebar() {
       href: '/analytics',
       icon: BarChart3,
       current: location === '/analytics',
+    },
+    {
+      name: 'Price Structure',
+      href: '/pricing',
+      icon: DollarSign,
+      current: location === '/pricing',
+    },
+    {
+      name: 'Invoices',
+      href: '/invoices',
+      icon: FileText,
+      current: location === '/invoices',
+    },
+    {
+      name: 'Wholesalers',
+      href: '/wholesalers',
+      icon: Building2,
+      current: location === '/wholesalers',
     },
   ];
 
@@ -176,12 +194,12 @@ export default function Sidebar() {
           <div className="flex items-center">
             <div className="w-10 h-10 rounded-full bg-accent flex items-center justify-center">
               <span className="text-sm font-medium text-wood-600">
-                {user?.firstName?.[0]}{user?.lastName?.[0]}
+                {(user as any)?.firstName?.[0]}{(user as any)?.lastName?.[0]}
               </span>
             </div>
             <div className="ml-3">
               <p className="text-sm font-medium text-white">
-                {user?.firstName} {user?.lastName}
+                {(user as any)?.firstName} {(user as any)?.lastName}
               </p>
               <p className="text-xs font-medium text-wood-200">
                 Business Owner
