@@ -89,8 +89,8 @@ export default function OrderForm({
 
     if (!frameStyle || !glazing || !dimensions || !priceStructure || !priceStructure.length) return 0;
 
-    // Parse dimensions (e.g., "16x20" or "16\"x20\"")
-    const dimensionMatch = dimensions.match(/(\d+)(?:"?)(?:\s*x\s*|\s*×\s*)(\d+)/i);
+    // Parse dimensions (handles formats like "16x20", "16 x 20", "16\"x20\"", "16X20")
+    const dimensionMatch = dimensions.match(/(\d+(?:\.\d+)?)(?:["']?)(?:\s*[xX×]\s*)(\d+(?:\.\d+)?)(?:["']?)/i);
     if (!dimensionMatch) return 0;
 
     const width = parseFloat(dimensionMatch[1]);
@@ -104,17 +104,15 @@ export default function OrderForm({
     const areaSquareInches = width * height;
     const areaSquareFeet = areaSquareInches / 144;
 
-    // Find frame price
+    // Find frame price - match exact item name
     const frameItem = priceStructure.find((item: any) => 
-      item && item.category === "frame" && item.item_name && 
-      item.item_name.toLowerCase().includes(frameStyle.toLowerCase().split(" ")[0])
+      item && item.category === "frame" && item.item_name === frameStyle
     );
     const framePrice = frameItem ? frameItem.retail_price * perimeterFeet : 0;
 
-    // Find glazing price  
+    // Find glazing price - match exact item name
     const glazingItem = priceStructure.find((item: any) => 
-      item && item.category === "glazing" && item.item_name &&
-      item.item_name.toLowerCase().includes(glazing.toLowerCase().split(" ")[0])
+      item && item.category === "glazing" && item.item_name === glazing
     );
     const glazingPrice = glazingItem ? glazingItem.retail_price * areaSquareFeet : 0;
 
@@ -133,22 +131,29 @@ export default function OrderForm({
     }
   }, [form.watch("frameStyle"), form.watch("glazing"), form.watch("dimensions"), priceStructure, laborCost, useCalculatedPrice]);
 
-  const frameStyles = [
-    "Walnut Wood Frame",
-    "Oak Wood Frame",
-    "Mahogany Frame",
-    "Black Metal Frame",
-    "Silver Metal Frame",
-    "White Wood Frame",
-    "Modern Walnut",
-    "Classic Oak",
-    "Rustic Pine",
-    "Contemporary Black",
-  ];
+  // Get frame options with wholesale prices from pricing structure
+  const frameOptions = priceStructure
+    .filter((item: any) => item.category === "frame")
+    .map((item: any) => ({
+      value: item.item_name,
+      label: `${item.item_name} - $${item.base_price}/ft wholesale`,
+      basePrice: item.base_price,
+      retailPrice: item.retail_price
+    }));
+
+  // Get glazing options with wholesale prices from pricing structure  
+  const glazingOptionsWithPrices = priceStructure
+    .filter((item: any) => item.category === "glazing")
+    .map((item: any) => ({
+      value: item.item_name,
+      label: `${item.item_name} - $${item.base_price}/sq ft wholesale`,
+      basePrice: item.base_price,
+      retailPrice: item.retail_price
+    }));
 
   const matColors = [
     "Warm White",
-    "Cream",
+    "Cream", 
     "Light Gray",
     "Charcoal",
     "Navy Blue",
@@ -157,15 +162,6 @@ export default function OrderForm({
     "Gold",
     "Silver",
     "Black",
-  ];
-
-  const glazingOptions = [
-    "Standard Glass",
-    "UV-Protective Glass",
-    "Anti-Reflective Glass",
-    "Museum Glass",
-    "Acrylic",
-    "UV Acrylic",
   ];
 
   const statusOptions = [
@@ -421,9 +417,9 @@ export default function OrderForm({
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {frameStyles.map((style) => (
-                      <SelectItem key={style} value={style}>
-                        {style}
+                    {frameOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -473,9 +469,9 @@ export default function OrderForm({
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {glazingOptions.map((option) => (
-                      <SelectItem key={option} value={option}>
-                        {option}
+                    {glazingOptionsWithPrices.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -519,22 +515,59 @@ export default function OrderForm({
           {useCalculatedPrice && calculatedPrice > 0 && (
             <CardContent className="pt-0">
               <div className="text-sm text-blue-700">
-                <div className="flex justify-between">
-                  <span>Frame Cost ({form.watch("frameStyle") || "N/A"}):</span>
-                  <span>${((calculatedPrice - laborCost) * 0.6).toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Glazing Cost ({form.watch("glazing") || "N/A"}):</span>
-                  <span>${((calculatedPrice - laborCost) * 0.4).toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Labor:</span>
-                  <span>${laborCost.toFixed(2)}</span>
-                </div>
-                <div className="border-t pt-1 mt-1 font-semibold flex justify-between">
-                  <span>Total:</span>
-                  <span>${calculatedPrice.toFixed(2)}</span>
-                </div>
+                {(() => {
+                  const frameStyle = form.watch("frameStyle");
+                  const glazing = form.watch("glazing");
+                  const dimensions = form.watch("dimensions");
+                  
+                  if (!frameStyle || !glazing || !dimensions) {
+                    return <p>Fill in dimensions, frame style, and glazing to see calculation</p>;
+                  }
+                  
+                  const dimensionMatch = dimensions.match(/(\d+(?:\.\d+)?)(?:["']?)(?:\s*[xX×]\s*)(\d+(?:\.\d+)?)(?:["']?)/i);
+                  if (!dimensionMatch) {
+                    return <p>Invalid dimension format. Use format like "16x20" or "16X20"</p>;
+                  }
+                  
+                  const width = parseFloat(dimensionMatch[1]);
+                  const height = parseFloat(dimensionMatch[2]);
+                  const perimeterFeet = ((width + height) * 2) / 12;
+                  const areaSquareFeet = (width * height) / 144;
+                  
+                  const frameItem = priceStructure.find((item: any) => 
+                    item && item.category === "frame" && item.item_name === frameStyle
+                  );
+                  const glazingItem = priceStructure.find((item: any) => 
+                    item && item.category === "glazing" && item.item_name === glazing
+                  );
+                  
+                  const framePrice = frameItem ? frameItem.retail_price * perimeterFeet : 0;
+                  const glazingPrice = glazingItem ? glazingItem.retail_price * areaSquareFeet : 0;
+                  
+                  return (
+                    <>
+                      <div className="flex justify-between text-xs mb-1 text-blue-600">
+                        <span>Size: {width}"×{height}" ({perimeterFeet.toFixed(1)} linear ft, {areaSquareFeet.toFixed(1)} sq ft)</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Frame Cost:</span>
+                        <span>${framePrice.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Glazing Cost:</span>
+                        <span>${glazingPrice.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Labor:</span>
+                        <span>${laborCost.toFixed(2)}</span>
+                      </div>
+                      <div className="border-t pt-1 mt-1 font-semibold flex justify-between">
+                        <span>Total:</span>
+                        <span>${calculatedPrice.toFixed(2)}</span>
+                      </div>
+                    </>
+                  );
+                })()}
                 <Button
                   type="button"
                   variant="outline"
