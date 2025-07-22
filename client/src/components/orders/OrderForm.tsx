@@ -83,11 +83,37 @@ export default function OrderForm({
     },
   });
 
-  // Auto-calculate price based on selections
+  // Calculate frame markup based on wholesale price per foot
+  const getFrameMarkupFactor = (pricePerFoot: number): number => {
+    if (pricePerFoot <= 1.99) return 4.5;
+    if (pricePerFoot <= 2.99) return 4.0;
+    if (pricePerFoot <= 3.99) return 3.5;
+    if (pricePerFoot <= 4.99) return 3.0;
+    return 2.5; // $5.00+ per foot
+  };
+
+  // Calculate mat markup based on united inches
+  const getMatMarkupFactor = (unitedInches: number): number => {
+    if (unitedInches <= 32) return 2.0; // 100% markup
+    if (unitedInches <= 60) return 1.8; // 80% markup
+    if (unitedInches <= 80) return 1.6; // 60% markup
+    return 1.4; // 40% markup for 80+ united inches
+  };
+
+  // Calculate glass markup based on united inches
+  const getGlassMarkupFactor = (unitedInches: number): number => {
+    if (unitedInches <= 40) return 2.0; // 100% markup
+    if (unitedInches <= 60) return 1.75; // 75% markup
+    if (unitedInches <= 80) return 1.5; // 50% markup
+    return 1.25; // 25% markup for 80+ united inches
+  };
+
+  // Advanced united inch-based pricing calculation
   const calculatePrice = () => {
     const frameStyle = form.watch("frameStyle");
     const glazing = form.watch("glazing");
     const dimensions = form.watch("dimensions");
+    const matColor = form.watch("matColor");
 
     if (!dimensions) return 0;
 
@@ -95,49 +121,77 @@ export default function OrderForm({
     const dimensionMatch = dimensions.match(/(\d+(?:\.\d+)?)(?:["']?)(?:\s*[xX×]\s*)(\d+(?:\.\d+)?)(?:["']?)/i);
     if (!dimensionMatch) return 0;
 
-    const width = parseFloat(dimensionMatch[1]);
-    const height = parseFloat(dimensionMatch[2]);
-    
-    // Calculate frame perimeter in linear feet
-    const perimeterInches = (width + height) * 2;
-    const perimeterFeet = perimeterInches / 12;
-    
-    // Calculate glass area in square feet
-    const areaSquareInches = width * height;
-    const areaSquareFeet = areaSquareInches / 144;
+    const artworkWidth = parseFloat(dimensionMatch[1]);
+    const artworkHeight = parseFloat(dimensionMatch[2]);
+    const matWidth = 2; // Standard 2" mat border
 
-    // Find frame price - match exact item name (0 if no frame selected)
+    // Calculate united inches (core measurement for custom framing)
+    const unitedInches = artworkWidth + artworkHeight + (matWidth * 4);
+
+    // Calculate frame price with advanced pricing
     let framePrice = 0;
     if (frameStyle && frameStyle !== "none" && priceStructure && Array.isArray(priceStructure)) {
       const frameItem = priceStructure.find((item: any) => 
         item && item.category === "frame" && item.itemName === frameStyle
       );
-      framePrice = frameItem ? parseFloat(frameItem.retailPrice) * perimeterFeet : 0;
+      
+      if (frameItem) {
+        const framePerimeterInches = 2 * (artworkWidth + artworkHeight + matWidth * 4);
+        const framePerimeterFeet = framePerimeterInches / 12;
+        const basePrice = parseFloat(frameItem.basePrice);
+        const markupFactor = getFrameMarkupFactor(basePrice);
+        
+        // Apply Houston Heights market adjustment (16.67% of full calculation)
+        framePrice = framePerimeterFeet * basePrice * markupFactor * 0.1667;
+      }
     }
 
-    // Find glazing price - match exact item name (0 if no glazing selected)
+    // Calculate mat price based on united inches
+    let matPrice = 0;
+    if (matColor && priceStructure && Array.isArray(priceStructure)) {
+      const matItem = priceStructure.find((item: any) => 
+        item && item.category === "mat"
+      );
+      
+      if (matItem) {
+        const baseMatPrice = parseFloat(matItem.basePrice);
+        const matMarkupFactor = getMatMarkupFactor(unitedInches);
+        matPrice = baseMatPrice * matMarkupFactor;
+      }
+    }
+
+    // Calculate glass price with advanced pricing
     let glazingPrice = 0;
     if (glazing && glazing !== "none" && priceStructure && Array.isArray(priceStructure)) {
       const glazingItem = priceStructure.find((item: any) => 
         item && item.category === "glazing" && item.itemName === glazing
       );
-      glazingPrice = glazingItem ? parseFloat(glazingItem.retailPrice) * areaSquareFeet : 0;
+      
+      if (glazingItem) {
+        const glassAreaInches = artworkWidth * artworkHeight;
+        const glassAreaFeet = glassAreaInches / 144;
+        const basePrice = parseFloat(glazingItem.basePrice);
+        const glassMarkupFactor = getGlassMarkupFactor(unitedInches);
+        
+        // Apply Houston Heights market adjustment (45% of full calculation)
+        glazingPrice = glassAreaFeet * basePrice * glassMarkupFactor * 0.45;
+      }
     }
 
-    // Add labor cost
-    const totalPrice = framePrice + glazingPrice + laborCost;
+    // Calculate total with all components
+    const totalPrice = framePrice + matPrice + glazingPrice + laborCost;
     
     return Math.round(totalPrice * 100) / 100; // Round to 2 decimal places
   };
 
-  // Watch for changes and recalculate price
+  // Watch for changes and recalculate price (include matColor for united inch calculations)
   useEffect(() => {
     const newPrice = calculatePrice();
     setCalculatedPrice(newPrice);
     if (newPrice > 0 && useCalculatedPrice) {
       form.setValue("totalAmount", newPrice.toFixed(2));
     }
-  }, [form.watch("frameStyle"), form.watch("glazing"), form.watch("dimensions"), priceStructure, laborCost, useCalculatedPrice]);
+  }, [form.watch("frameStyle"), form.watch("glazing"), form.watch("dimensions"), form.watch("matColor"), priceStructure, laborCost, useCalculatedPrice]);
 
   // Get frame options with wholesale prices from pricing structure
   const frameOptions = [

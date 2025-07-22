@@ -11,11 +11,11 @@ Preferred communication style: Simple, everyday language.
 ## Recent Changes (July 22, 2025)
 
 ✓ **Fixed Critical Data Persistence Issues**: Resolved all database connection and API request problems preventing orders, customers, and invoices from saving
-✓ **Implemented Sliding Scale Pricing System**: Revolutionary pricing structure where lowest cost materials get 4.5x markup and highest cost materials get 1.9x markup for maximum profitability
-✓ **Added PDF Export for Invoices**: Implemented professional PDF generation using jsPDF with company header, itemized billing, and proper formatting
-✓ **Enhanced Wholesale/Retail Price Display**: Order dropdowns now show both wholesale cost and retail price (e.g., "Basic Wood Frame - $3.50/ft wholesale → $15.75/ft retail")
+✓ **Implemented United Inch-Based Pricing System**: Comprehensive industry-standard pricing with sliding scale markups based on material cost and artwork size (4.5x for low-cost materials, 2.5x for premium)
+✓ **Added Houston Heights Market Adjustments**: Location-specific pricing reductions (frame prices reduced to 16.67%, glass prices to 45% of full calculation) for competitive local market
+✓ **Created Advanced Pricing Service**: Sophisticated pricing calculation engine with united inch measurements, size-dependent markups, and detailed price breakdowns
+✓ **Enhanced Wholesale/Retail Price Intelligence**: Dropdowns show both wholesale cost and calculated retail prices with markup factors for informed business decisions
 ✓ **Added Flexible Order Types**: Support for mat-only, glass-only, frame-only, and complete framing orders with "No Frame" and "No Glass" options
-✓ **Fixed Order Creation Forms**: Resolved field reference issues and added proper dimension parsing for formats like "16x20", "16X20", "16 x 20"
 
 **Note**: Authentication is required for all data operations. Users must be logged in via Replit Auth to create customers, orders, or invoices.
 
