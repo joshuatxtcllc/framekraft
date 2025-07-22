@@ -87,7 +87,7 @@ export default function OrderForm({
     const glazing = form.watch("glazing");
     const dimensions = form.watch("dimensions");
 
-    if (!frameStyle || !glazing || !dimensions || !priceStructure.length) return 0;
+    if (!frameStyle || !glazing || !dimensions || !priceStructure || !priceStructure.length) return 0;
 
     // Parse dimensions (e.g., "16x20" or "16\"x20\"")
     const dimensionMatch = dimensions.match(/(\d+)(?:"?)(?:\s*x\s*|\s*×\s*)(\d+)/i);
@@ -106,13 +106,15 @@ export default function OrderForm({
 
     // Find frame price
     const frameItem = priceStructure.find((item: any) => 
-      item.category === "frame" && item.item_name.toLowerCase().includes(frameStyle.toLowerCase().split(" ")[0])
+      item && item.category === "frame" && item.item_name && 
+      item.item_name.toLowerCase().includes(frameStyle.toLowerCase().split(" ")[0])
     );
     const framePrice = frameItem ? frameItem.retail_price * perimeterFeet : 0;
 
-    // Find glazing price
+    // Find glazing price  
     const glazingItem = priceStructure.find((item: any) => 
-      item.category === "glazing" && item.item_name.toLowerCase().includes(glazing.toLowerCase().split(" ")[0])
+      item && item.category === "glazing" && item.item_name &&
+      item.item_name.toLowerCase().includes(glazing.toLowerCase().split(" ")[0])
     );
     const glazingPrice = glazingItem ? glazingItem.retail_price * areaSquareFeet : 0;
 
@@ -518,11 +520,11 @@ export default function OrderForm({
             <CardContent className="pt-0">
               <div className="text-sm text-blue-700">
                 <div className="flex justify-between">
-                  <span>Frame Cost ({form.watch("frameStyle")}):</span>
+                  <span>Frame Cost ({form.watch("frameStyle") || "N/A"}):</span>
                   <span>${((calculatedPrice - laborCost) * 0.6).toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Glazing Cost ({form.watch("glazing")}):</span>
+                  <span>Glazing Cost ({form.watch("glazing") || "N/A"}):</span>
                   <span>${((calculatedPrice - laborCost) * 0.4).toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
