@@ -16,29 +16,28 @@ export default function Orders() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: orders, isLoading } = useQuery({
+  const { data: orders = [], isLoading } = useQuery({
     queryKey: ["/api/orders"],
   });
 
-  const { data: customers } = useQuery({
+  const { data: customers = [] } = useQuery({
     queryKey: ["/api/customers"],
   });
 
   const createOrderMutation = useMutation({
-    mutationFn: (data: any) => {
+    mutationFn: async (data: any) => {
       // Ensure required fields are present
       const orderData = {
         ...data,
         customerId: parseInt(data.customerId),
-        totalAmount: data.totalAmount,
+        totalAmount: parseFloat(data.totalAmount),
+        depositAmount: data.depositAmount ? parseFloat(data.depositAmount) : 0,
         status: data.status || 'pending',
         priority: data.priority || 'normal',
       };
 
-      return apiRequest("/api/orders", {
-        method: "POST",
-        body: orderData,
-      });
+      const response = await apiRequest("POST", "/api/orders", orderData);
+      return response.json();
     },
     onSuccess: (newOrder) => {
       queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
@@ -62,16 +61,16 @@ export default function Orders() {
   });
 
   const updateOrderMutation = useMutation({
-    mutationFn: ({ id, ...data }: any) => {
+    mutationFn: async ({ id, ...data }: any) => {
       const orderData = {
         ...data,
         customerId: parseInt(data.customerId),
+        totalAmount: parseFloat(data.totalAmount),
+        depositAmount: data.depositAmount ? parseFloat(data.depositAmount) : 0,
       };
 
-      return apiRequest(`/api/orders/${id}`, {
-        method: "PUT",
-        body: orderData,
-      });
+      const response = await apiRequest("PUT", `/api/orders/${id}`, orderData);
+      return response.json();
     },
     onSuccess: (updatedOrder) => {
       queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
@@ -94,41 +93,9 @@ export default function Orders() {
     },
   });
 
-  const handleSubmit = async (data: any) => {
-    // Check if we need to create a new customer first
-    if (data.customerId < 0) {
-      // This is a new customer, extract name and create customer first
-      const customer = customers?.find(c => c.id.toString() === data.customerId.toString());
-      if (customer) {
-        try {
-          const newCustomerData = {
-            firstName: customer.firstName,
-            lastName: customer.lastName,
-          };
-          
-          const newCustomer = await apiRequest("/api/customers", {
-            method: "POST",
-            body: newCustomerData,
-          });
-          
-          // Update the order data with the real customer ID
-          data.customerId = newCustomer.id;
-          
-          // Refresh customers list
-          queryClient.invalidateQueries({ queryKey: ["/api/customers"] });
-        } catch (error) {
-          toast({
-            title: "Error",
-            description: "Failed to create customer. Please try again.",
-            variant: "destructive",
-          });
-          return;
-        }
-      }
-    }
-
+  const handleSubmit = (data: any) => {
     if (editingOrder) {
-      updateOrderMutation.mutate({ id: editingOrder.id, ...data });
+      updateOrderMutation.mutate({ id: (editingOrder as any).id, ...data });
     } else {
       createOrderMutation.mutate(data);
     }
