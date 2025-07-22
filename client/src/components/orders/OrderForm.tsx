@@ -58,9 +58,11 @@ export default function OrderForm({
   const [useCalculatedPrice, setUseCalculatedPrice] = useState(true);
 
   // Fetch pricing data
-  const { data: priceStructure = [] } = useQuery({
+  const { data: priceStructure = [], isLoading: priceLoading, error: priceError } = useQuery({
     queryKey: ["/api/pricing/structure"],
   });
+
+
 
   const form = useForm<OrderFormData>({
     resolver: zodResolver(orderSchema),
@@ -108,18 +110,18 @@ export default function OrderForm({
     let framePrice = 0;
     if (frameStyle && frameStyle !== "none" && priceStructure && Array.isArray(priceStructure)) {
       const frameItem = priceStructure.find((item: any) => 
-        item && item.category === "frame" && item.item_name === frameStyle
+        item && item.category === "frame" && item.itemName === frameStyle
       );
-      framePrice = frameItem ? frameItem.retail_price * perimeterFeet : 0;
+      framePrice = frameItem ? parseFloat(frameItem.retailPrice) * perimeterFeet : 0;
     }
 
     // Find glazing price - match exact item name (0 if no glazing selected)
     let glazingPrice = 0;
     if (glazing && glazing !== "none" && priceStructure && Array.isArray(priceStructure)) {
       const glazingItem = priceStructure.find((item: any) => 
-        item && item.category === "glazing" && item.item_name === glazing
+        item && item.category === "glazing" && item.itemName === glazing
       );
-      glazingPrice = glazingItem ? glazingItem.retail_price * areaSquareFeet : 0;
+      glazingPrice = glazingItem ? parseFloat(glazingItem.retailPrice) * areaSquareFeet : 0;
     }
 
     // Add labor cost
@@ -142,13 +144,17 @@ export default function OrderForm({
     { value: "none", label: "No Frame (Mat/Glass Only)", basePrice: 0, retailPrice: 0 },
     ...(priceStructure && Array.isArray(priceStructure) ? priceStructure
       .filter((item: any) => item && item.category === "frame")
-      .map((item: any) => ({
-        value: item.item_name,
-        label: `${item.item_name} - $${item.base_price}/ft wholesale`,
-        basePrice: item.base_price,
-        retailPrice: item.retail_price
-      })) : [])
+      .map((item: any) => {
+        return {
+          value: item.itemName,
+          label: `${item.itemName} - $${item.basePrice}/ft wholesale`,
+          basePrice: item.basePrice,
+          retailPrice: item.retailPrice
+        };
+      }) : [])
   ];
+
+
 
   // Get glazing options with wholesale prices from pricing structure  
   const glazingOptionsWithPrices = [
@@ -156,10 +162,10 @@ export default function OrderForm({
     ...(priceStructure && Array.isArray(priceStructure) ? priceStructure
       .filter((item: any) => item && item.category === "glazing")
       .map((item: any) => ({
-        value: item.item_name,
-        label: `${item.item_name} - $${item.base_price}/sq ft wholesale`,
-        basePrice: item.base_price,
-        retailPrice: item.retail_price
+        value: item.itemName,
+        label: `${item.itemName} - $${item.basePrice}/sq ft wholesale`,
+        basePrice: item.basePrice,
+        retailPrice: item.retailPrice
       })) : [])
   ];
 
@@ -550,18 +556,18 @@ export default function OrderForm({
                   let framePrice = 0;
                   if (frameStyle && frameStyle !== "none" && priceStructure && Array.isArray(priceStructure)) {
                     const frameItem = priceStructure.find((item: any) => 
-                      item && item.category === "frame" && item.item_name === frameStyle
+                      item && item.category === "frame" && item.itemName === frameStyle
                     );
-                    framePrice = frameItem ? frameItem.retail_price * perimeterFeet : 0;
+                    framePrice = frameItem ? parseFloat(frameItem.retailPrice) * perimeterFeet : 0;
                   }
                   
                   // Calculate glazing price (0 if no glazing)
                   let glazingPrice = 0;
                   if (glazing && glazing !== "none" && priceStructure && Array.isArray(priceStructure)) {
                     const glazingItem = priceStructure.find((item: any) => 
-                      item && item.category === "glazing" && item.item_name === glazing
+                      item && item.category === "glazing" && item.itemName === glazing
                     );
-                    glazingPrice = glazingItem ? glazingItem.retail_price * areaSquareFeet : 0;
+                    glazingPrice = glazingItem ? parseFloat(glazingItem.retailPrice) * areaSquareFeet : 0;
                   }
                   
                   return (
