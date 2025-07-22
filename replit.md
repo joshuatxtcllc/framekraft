@@ -11,10 +11,11 @@ Preferred communication style: Simple, everyday language.
 ## Recent Changes (July 22, 2025)
 
 ✓ **Fixed Critical Data Persistence Issues**: Resolved all database connection and API request problems preventing orders, customers, and invoices from saving
-✓ **Implemented Realistic Pricing System**: Added comprehensive pricing structure with proper glass and acrylic options, reduced markup from 50% to 30%
+✓ **Implemented Sliding Scale Pricing System**: Revolutionary pricing structure where lowest cost materials get 4.5x markup and highest cost materials get 1.9x markup for maximum profitability
 ✓ **Added PDF Export for Invoices**: Implemented professional PDF generation using jsPDF with company header, itemized billing, and proper formatting
-✓ **Enhanced Glass/Acrylic Options**: Added proper pricing tiers for different glass types (Standard $4.23/sq ft to Museum Glass $19.83/sq ft) and acrylic options ($5.53-$16.25/sq ft)
-✓ **Fixed Order Creation Forms**: Resolved TypeScript errors and API request formatting issues in order management
+✓ **Enhanced Wholesale/Retail Price Display**: Order dropdowns now show both wholesale cost and retail price (e.g., "Basic Wood Frame - $3.50/ft wholesale → $15.75/ft retail")
+✓ **Added Flexible Order Types**: Support for mat-only, glass-only, frame-only, and complete framing orders with "No Frame" and "No Glass" options
+✓ **Fixed Order Creation Forms**: Resolved field reference issues and added proper dimension parsing for formats like "16x20", "16X20", "16 x 20"
 
 **Note**: Authentication is required for all data operations. Users must be logged in via Replit Auth to create customers, orders, or invoices.
 
