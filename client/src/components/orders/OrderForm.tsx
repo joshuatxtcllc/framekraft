@@ -147,7 +147,7 @@ export default function OrderForm({
       .map((item: any) => {
         return {
           value: item.itemName,
-          label: `${item.itemName} - $${item.basePrice}/ft wholesale`,
+          label: `${item.itemName} - $${item.basePrice}/ft wholesale → $${item.retailPrice}/ft retail`,
           basePrice: item.basePrice,
           retailPrice: item.retailPrice
         };
@@ -163,7 +163,7 @@ export default function OrderForm({
       .filter((item: any) => item && item.category === "glazing")
       .map((item: any) => ({
         value: item.itemName,
-        label: `${item.itemName} - $${item.basePrice}/sq ft wholesale`,
+        label: `${item.itemName} - $${item.basePrice}/sq ft wholesale → $${item.retailPrice}/sq ft retail`,
         basePrice: item.basePrice,
         retailPrice: item.retailPrice
       })) : [])
@@ -577,13 +577,13 @@ export default function OrderForm({
                       </div>
                       {frameStyle && frameStyle !== "none" && (
                         <div className="flex justify-between">
-                          <span>Frame Cost:</span>
+                          <span>Frame Cost (retail):</span>
                           <span>${framePrice.toFixed(2)}</span>
                         </div>
                       )}
                       {glazing && glazing !== "none" && (
                         <div className="flex justify-between">
-                          <span>Glazing Cost:</span>
+                          <span>Glazing Cost (retail):</span>
                           <span>${glazingPrice.toFixed(2)}</span>
                         </div>
                       )}
@@ -598,9 +598,14 @@ export default function OrderForm({
                         <span>${laborCost.toFixed(2)}</span>
                       </div>
                       <div className="border-t pt-1 mt-1 font-semibold flex justify-between">
-                        <span>Total:</span>
+                        <span>Customer Total (retail):</span>
                         <span>${calculatedPrice.toFixed(2)}</span>
                       </div>
+                      {(frameStyle && frameStyle !== "none") || (glazing && glazing !== "none") ? (
+                        <div className="text-xs text-green-600 mt-1">
+                          <span>Your profit margin: ~30% markup from wholesale</span>
+                        </div>
+                      ) : null}
                     </>
                   );
                 })()}
