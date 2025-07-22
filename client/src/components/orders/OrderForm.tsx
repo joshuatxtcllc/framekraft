@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -8,12 +8,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Check, ChevronsUpDown } from "lucide-react";
+import { Check, ChevronsUpDown, Calculator } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Calendar } from "@/components/ui/calendar";
 import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
+import { useQuery } from "@tanstack/react-query";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const orderSchema = z.object({
   customerId: z.string().min(1, "Customer is required"),
@@ -51,6 +53,13 @@ export default function OrderForm({
   const [customerOpen, setCustomerOpen] = useState(false);
   const [customerSearch, setCustomerSearch] = useState("");
   const [newCustomerName, setNewCustomerName] = useState("");
+  const [calculatedPrice, setCalculatedPrice] = useState(0);
+  const [laborCost, setLaborCost] = useState(35); // Default labor cost
+
+  // Fetch pricing data
+  const { data: priceStructure = [] } = useQuery({
+    queryKey: ["/api/pricing/structure"],
+  });
 
   const form = useForm<OrderFormData>({
     resolver: zodResolver(orderSchema),
@@ -70,6 +79,56 @@ export default function OrderForm({
       notes: initialData?.notes || "",
     },
   });
+
+  // Auto-calculate price based on selections
+  const calculatePrice = () => {
+    const frameStyle = form.watch("frameStyle");
+    const glazing = form.watch("glazing");
+    const dimensions = form.watch("dimensions");
+
+    if (!frameStyle || !glazing || !dimensions || !priceStructure.length) return 0;
+
+    // Parse dimensions (e.g., "16x20" or "16\"x20\"")
+    const dimensionMatch = dimensions.match(/(\d+)(?:"?)(?:\s*x\s*|\s*×\s*)(\d+)/i);
+    if (!dimensionMatch) return 0;
+
+    const width = parseFloat(dimensionMatch[1]);
+    const height = parseFloat(dimensionMatch[2]);
+    
+    // Calculate frame perimeter in linear feet
+    const perimeterInches = (width + height) * 2;
+    const perimeterFeet = perimeterInches / 12;
+    
+    // Calculate glass area in square feet
+    const areaSquareInches = width * height;
+    const areaSquareFeet = areaSquareInches / 144;
+
+    // Find frame price
+    const frameItem = priceStructure.find((item: any) => 
+      item.category === "frame" && item.item_name.toLowerCase().includes(frameStyle.toLowerCase().split(" ")[0])
+    );
+    const framePrice = frameItem ? frameItem.retail_price * perimeterFeet : 0;
+
+    // Find glazing price
+    const glazingItem = priceStructure.find((item: any) => 
+      item.category === "glazing" && item.item_name.toLowerCase().includes(glazing.toLowerCase().split(" ")[0])
+    );
+    const glazingPrice = glazingItem ? glazingItem.retail_price * areaSquareFeet : 0;
+
+    // Add labor cost
+    const totalPrice = framePrice + glazingPrice + laborCost;
+    
+    return Math.round(totalPrice * 100) / 100; // Round to 2 decimal places
+  };
+
+  // Watch for changes and recalculate price
+  useEffect(() => {
+    const newPrice = calculatePrice();
+    setCalculatedPrice(newPrice);
+    if (newPrice > 0) {
+      form.setValue("totalAmount", newPrice.toFixed(2));
+    }
+  }, [form.watch("frameStyle"), form.watch("glazing"), form.watch("dimensions"), priceStructure, laborCost]);
 
   const frameStyles = [
     "Walnut Wood Frame",
@@ -424,6 +483,38 @@ export default function OrderForm({
           />
         </div>
 
+        {/* Price Calculation Display */}
+        {calculatedPrice > 0 && (
+          <Card className="bg-green-50 border-green-200">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-sm text-green-800">
+                <Calculator className="w-4 h-4" />
+                Automatic Price Calculation
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="text-sm text-green-700">
+                <div className="flex justify-between">
+                  <span>Frame Cost ({form.watch("frameStyle")}):</span>
+                  <span>${((calculatedPrice - laborCost) * 0.6).toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Glazing Cost ({form.watch("glazing")}):</span>
+                  <span>${((calculatedPrice - laborCost) * 0.4).toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Labor:</span>
+                  <span>${laborCost.toFixed(2)}</span>
+                </div>
+                <div className="border-t pt-1 mt-1 font-semibold flex justify-between">
+                  <span>Total:</span>
+                  <span>${calculatedPrice.toFixed(2)}</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Total Amount */}
           <FormField
@@ -431,13 +522,19 @@ export default function OrderForm({
             name="totalAmount"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Total Amount *</FormLabel>
+                <FormLabel className="flex items-center gap-2">
+                  Total Amount *
+                  {calculatedPrice > 0 && (
+                    <span className="text-xs text-green-600">(Auto-calculated)</span>
+                  )}
+                </FormLabel>
                 <FormControl>
                   <Input
                     type="number"
                     step="0.01"
                     placeholder="0.00"
                     {...field}
+                    className={calculatedPrice > 0 ? "bg-green-50 border-green-200" : ""}
                   />
                 </FormControl>
                 <FormMessage />
@@ -451,7 +548,20 @@ export default function OrderForm({
             name="depositAmount"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Deposit Amount</FormLabel>
+                <FormLabel className="flex items-center gap-2">
+                  Deposit Amount
+                  {calculatedPrice > 0 && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-6 text-xs"
+                      onClick={() => form.setValue("depositAmount", (calculatedPrice * 0.5).toFixed(2))}
+                    >
+                      50%
+                    </Button>
+                  )}
+                </FormLabel>
                 <FormControl>
                   <Input
                     type="number"
