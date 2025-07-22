@@ -460,23 +460,27 @@ export default function Wholesalers() {
                               </div>
 
                               {/* Catalog Upload Section */}
-                              <div className="pt-3 border-t">
-                                <div className="flex items-center justify-between">
-                                  <span className="text-sm font-medium text-muted-foreground">
-                                    Price Catalog
-                                  </span>
+                              <div className="pt-3 border-t bg-muted/20 rounded-b-lg -mx-6 -mb-6 px-6 pb-6">
+                                <div className="flex items-center justify-between mb-2">
+                                  <div className="flex items-center gap-2">
+                                    <FileText className="w-4 h-4 text-primary" />
+                                    <span className="text-sm font-medium">
+                                      Digital Price Catalog
+                                    </span>
+                                  </div>
                                   {wholesaler.catalogFileName ? (
                                     <div className="flex gap-1">
                                       <Button
                                         size="sm"
-                                        variant="ghost"
+                                        variant="outline"
                                         onClick={(e) => {
                                           e.stopPropagation();
                                           downloadCatalog(wholesaler.id, wholesaler.catalogFileName);
                                         }}
                                         title="Download catalog"
                                       >
-                                        <Download className="w-3 h-3" />
+                                        <Download className="w-4 h-4 mr-1" />
+                                        Download
                                       </Button>
                                       <Button
                                         size="sm"
@@ -502,31 +506,42 @@ export default function Wholesalers() {
                                       />
                                       <Button
                                         size="sm"
-                                        variant="ghost"
+                                        variant="outline"
                                         disabled={uploadingCatalog === wholesaler.id}
-                                        title="Upload catalog"
+                                        title="Upload catalog (PDF, Excel, CSV)"
+                                        className="border-dashed"
                                       >
-                                        <Upload className="w-3 h-3" />
+                                        <Upload className="w-4 h-4 mr-1" />
+                                        Upload Catalog
                                       </Button>
                                     </div>
                                   )}
                                 </div>
-                                {wholesaler.catalogFileName && (
-                                  <div className="flex items-center gap-1 mt-1">
-                                    <FileText className="w-3 h-3 text-muted-foreground" />
-                                    <span className="text-xs text-muted-foreground truncate">
-                                      {wholesaler.catalogFileName}
-                                    </span>
+                                
+                                {wholesaler.catalogFileName ? (
+                                  <div className="space-y-1">
+                                    <div className="flex items-center gap-2">
+                                      <FileText className="w-3 h-3 text-green-600" />
+                                      <span className="text-sm font-medium text-green-700">
+                                        {wholesaler.catalogFileName}
+                                      </span>
+                                    </div>
+                                    {wholesaler.catalogUploadedAt && (
+                                      <div className="text-xs text-muted-foreground pl-5">
+                                        Uploaded: {new Date(wholesaler.catalogUploadedAt).toLocaleDateString()}
+                                      </div>
+                                    )}
                                   </div>
-                                )}
-                                {wholesaler.catalogUploadedAt && (
+                                ) : (
                                   <div className="text-xs text-muted-foreground">
-                                    Uploaded: {new Date(wholesaler.catalogUploadedAt).toLocaleDateString()}
+                                    Upload pricing catalogs in PDF, Excel, or CSV format (max 50MB)
                                   </div>
                                 )}
+                                
                                 {uploadingCatalog === wholesaler.id && (
-                                  <div className="text-xs text-primary">
-                                    Uploading...
+                                  <div className="flex items-center gap-2 mt-2">
+                                    <div className="animate-spin w-3 h-3 border-2 border-primary border-t-transparent rounded-full" />
+                                    <span className="text-xs text-primary">Uploading catalog...</span>
                                   </div>
                                 )}
                               </div>
