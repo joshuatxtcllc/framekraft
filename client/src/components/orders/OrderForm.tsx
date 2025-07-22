@@ -87,7 +87,7 @@ export default function OrderForm({
     const glazing = form.watch("glazing");
     const dimensions = form.watch("dimensions");
 
-    if (!frameStyle || !glazing || !dimensions || !priceStructure || !priceStructure.length) return 0;
+    if (!dimensions) return 0;
 
     // Parse dimensions (handles formats like "16x20", "16 x 20", "16\"x20\"", "16X20")
     const dimensionMatch = dimensions.match(/(\d+(?:\.\d+)?)(?:["']?)(?:\s*[xX×]\s*)(\d+(?:\.\d+)?)(?:["']?)/i);
@@ -104,17 +104,23 @@ export default function OrderForm({
     const areaSquareInches = width * height;
     const areaSquareFeet = areaSquareInches / 144;
 
-    // Find frame price - match exact item name
-    const frameItem = priceStructure.find((item: any) => 
-      item && item.category === "frame" && item.item_name === frameStyle
-    );
-    const framePrice = frameItem ? frameItem.retail_price * perimeterFeet : 0;
+    // Find frame price - match exact item name (0 if no frame selected)
+    let framePrice = 0;
+    if (frameStyle && frameStyle !== "none" && priceStructure && Array.isArray(priceStructure)) {
+      const frameItem = priceStructure.find((item: any) => 
+        item && item.category === "frame" && item.item_name === frameStyle
+      );
+      framePrice = frameItem ? frameItem.retail_price * perimeterFeet : 0;
+    }
 
-    // Find glazing price - match exact item name
-    const glazingItem = priceStructure.find((item: any) => 
-      item && item.category === "glazing" && item.item_name === glazing
-    );
-    const glazingPrice = glazingItem ? glazingItem.retail_price * areaSquareFeet : 0;
+    // Find glazing price - match exact item name (0 if no glazing selected)
+    let glazingPrice = 0;
+    if (glazing && glazing !== "none" && priceStructure && Array.isArray(priceStructure)) {
+      const glazingItem = priceStructure.find((item: any) => 
+        item && item.category === "glazing" && item.item_name === glazing
+      );
+      glazingPrice = glazingItem ? glazingItem.retail_price * areaSquareFeet : 0;
+    }
 
     // Add labor cost
     const totalPrice = framePrice + glazingPrice + laborCost;
@@ -132,24 +138,30 @@ export default function OrderForm({
   }, [form.watch("frameStyle"), form.watch("glazing"), form.watch("dimensions"), priceStructure, laborCost, useCalculatedPrice]);
 
   // Get frame options with wholesale prices from pricing structure
-  const frameOptions = priceStructure
-    .filter((item: any) => item.category === "frame")
-    .map((item: any) => ({
-      value: item.item_name,
-      label: `${item.item_name} - $${item.base_price}/ft wholesale`,
-      basePrice: item.base_price,
-      retailPrice: item.retail_price
-    }));
+  const frameOptions = [
+    { value: "none", label: "No Frame (Mat/Glass Only)", basePrice: 0, retailPrice: 0 },
+    ...(priceStructure && Array.isArray(priceStructure) ? priceStructure
+      .filter((item: any) => item && item.category === "frame")
+      .map((item: any) => ({
+        value: item.item_name,
+        label: `${item.item_name} - $${item.base_price}/ft wholesale`,
+        basePrice: item.base_price,
+        retailPrice: item.retail_price
+      })) : [])
+  ];
 
   // Get glazing options with wholesale prices from pricing structure  
-  const glazingOptionsWithPrices = priceStructure
-    .filter((item: any) => item.category === "glazing")
-    .map((item: any) => ({
-      value: item.item_name,
-      label: `${item.item_name} - $${item.base_price}/sq ft wholesale`,
-      basePrice: item.base_price,
-      retailPrice: item.retail_price
-    }));
+  const glazingOptionsWithPrices = [
+    { value: "none", label: "No Glass/Acrylic (Frame/Mat Only)", basePrice: 0, retailPrice: 0 },
+    ...(priceStructure && Array.isArray(priceStructure) ? priceStructure
+      .filter((item: any) => item && item.category === "glazing")
+      .map((item: any) => ({
+        value: item.item_name,
+        label: `${item.item_name} - $${item.base_price}/sq ft wholesale`,
+        basePrice: item.base_price,
+        retailPrice: item.retail_price
+      })) : [])
+  ];
 
   const matColors = [
     "Warm White",
@@ -520,8 +532,8 @@ export default function OrderForm({
                   const glazing = form.watch("glazing");
                   const dimensions = form.watch("dimensions");
                   
-                  if (!frameStyle || !glazing || !dimensions) {
-                    return <p>Fill in dimensions, frame style, and glazing to see calculation</p>;
+                  if (!dimensions) {
+                    return <p>Enter dimensions to see calculation</p>;
                   }
                   
                   const dimensionMatch = dimensions.match(/(\d+(?:\.\d+)?)(?:["']?)(?:\s*[xX×]\s*)(\d+(?:\.\d+)?)(?:["']?)/i);
@@ -534,29 +546,47 @@ export default function OrderForm({
                   const perimeterFeet = ((width + height) * 2) / 12;
                   const areaSquareFeet = (width * height) / 144;
                   
-                  const frameItem = priceStructure.find((item: any) => 
-                    item && item.category === "frame" && item.item_name === frameStyle
-                  );
-                  const glazingItem = priceStructure.find((item: any) => 
-                    item && item.category === "glazing" && item.item_name === glazing
-                  );
+                  // Calculate frame price (0 if no frame)
+                  let framePrice = 0;
+                  if (frameStyle && frameStyle !== "none" && priceStructure && Array.isArray(priceStructure)) {
+                    const frameItem = priceStructure.find((item: any) => 
+                      item && item.category === "frame" && item.item_name === frameStyle
+                    );
+                    framePrice = frameItem ? frameItem.retail_price * perimeterFeet : 0;
+                  }
                   
-                  const framePrice = frameItem ? frameItem.retail_price * perimeterFeet : 0;
-                  const glazingPrice = glazingItem ? glazingItem.retail_price * areaSquareFeet : 0;
+                  // Calculate glazing price (0 if no glazing)
+                  let glazingPrice = 0;
+                  if (glazing && glazing !== "none" && priceStructure && Array.isArray(priceStructure)) {
+                    const glazingItem = priceStructure.find((item: any) => 
+                      item && item.category === "glazing" && item.item_name === glazing
+                    );
+                    glazingPrice = glazingItem ? glazingItem.retail_price * areaSquareFeet : 0;
+                  }
                   
                   return (
                     <>
                       <div className="flex justify-between text-xs mb-1 text-blue-600">
                         <span>Size: {width}"×{height}" ({perimeterFeet.toFixed(1)} linear ft, {areaSquareFeet.toFixed(1)} sq ft)</span>
                       </div>
-                      <div className="flex justify-between">
-                        <span>Frame Cost:</span>
-                        <span>${framePrice.toFixed(2)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Glazing Cost:</span>
-                        <span>${glazingPrice.toFixed(2)}</span>
-                      </div>
+                      {frameStyle && frameStyle !== "none" && (
+                        <div className="flex justify-between">
+                          <span>Frame Cost:</span>
+                          <span>${framePrice.toFixed(2)}</span>
+                        </div>
+                      )}
+                      {glazing && glazing !== "none" && (
+                        <div className="flex justify-between">
+                          <span>Glazing Cost:</span>
+                          <span>${glazingPrice.toFixed(2)}</span>
+                        </div>
+                      )}
+                      {(!frameStyle || frameStyle === "none") && (!glazing || glazing === "none") && (
+                        <div className="flex justify-between text-amber-600">
+                          <span>Mat/Custom Only:</span>
+                          <span>No standard pricing</span>
+                        </div>
+                      )}
                       <div className="flex justify-between">
                         <span>Labor:</span>
                         <span>${laborCost.toFixed(2)}</span>
