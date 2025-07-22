@@ -72,20 +72,18 @@ export function registerInvoiceRoutes(app: Express) {
         notes,
       };
       
-      const invoice = await storage.createInvoice(invoiceData);
+      // Create invoice items array
+      const invoiceItems = items.map((item: any) => ({
+        description: item.description,
+        quantity: parseFloat(item.quantity),
+        unitPrice: parseFloat(item.unitPrice),
+        totalPrice: parseFloat(item.total),
+      }));
       
-      // Create invoice items
-      for (const item of items) {
-        await storage.createInvoiceItem({
-          invoiceId: invoice.id,
-          description: item.description,
-          quantity: parseFloat(item.quantity),
-          unitPrice: parseFloat(item.unitPrice),
-          totalPrice: parseFloat(item.total),
-        });
-      }
+      // Create invoice with items using the proper storage method
+      const finalInvoice = await storage.createInvoice(invoiceData, invoiceItems);
       
-      res.status(201).json(invoice);
+      res.status(201).json(finalInvoice);
     } catch (error: any) {
       console.error("Error creating invoice:", error);
       res.status(500).json({ message: error.message || "Failed to create invoice" });

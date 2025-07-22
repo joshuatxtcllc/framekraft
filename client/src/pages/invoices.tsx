@@ -14,11 +14,12 @@ import { Separator } from "@/components/ui/separator";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Plus, FileText, Mail, CreditCard, DollarSign, Eye, Download, UserPlus, Trash2 } from "lucide-react";
+import { Plus, FileText, Mail, CreditCard, DollarSign, Eye, Download, UserPlus, Trash2, Printer } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import Sidebar from "@/components/layout/Sidebar";
 import Header from "@/components/layout/Header";
+import { exportInvoiceToPDF } from "@/lib/pdfExport";
 
 const customerSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
@@ -174,6 +175,10 @@ export default function Invoices() {
 
   const onSubmit = (data: InvoiceFormData) => {
     createInvoiceMutation.mutate(data);
+  };
+
+  const handleExportPDF = (invoice: any) => {
+    exportInvoiceToPDF(invoice);
   };
 
   const getStatusBadge = (status: string) => {
@@ -656,7 +661,12 @@ export default function Invoices() {
                                 <Button variant="ghost" size="sm" title="View Invoice">
                                   <Eye className="w-4 h-4" />
                                 </Button>
-                                <Button variant="ghost" size="sm" title="Download PDF">
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  title="Download PDF"
+                                  onClick={() => handleExportPDF(invoice)}
+                                >
                                   <Download className="w-4 h-4" />
                                 </Button>
                                 <Button variant="ghost" size="sm" title="Send Email">

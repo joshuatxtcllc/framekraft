@@ -140,11 +140,11 @@ export const inventory = pgTable("inventory", {
 export const priceStructure = pgTable("price_structure", {
   id: serial("id").primaryKey(),
   category: varchar("category").notNull(), // frame, mat, glazing, labor, misc
-  subcategory: varchar("subcategory"), // wood, metal, fabric, etc.
+  subcategory: varchar("subcategory"), // wood, metal, fabric, standard_glass, acrylic, conservation_glass
   itemName: varchar("item_name").notNull(),
   unitType: varchar("unit_type").default("linear_foot"), // linear_foot, square_foot, each
   basePrice: decimal("base_price", { precision: 8, scale: 2 }).notNull(),
-  markupPercentage: decimal("markup_percentage", { precision: 5, scale: 2 }).default("50.00"),
+  markupPercentage: decimal("markup_percentage", { precision: 5, scale: 2 }).default("30.00"), // Reduced from 50%
   retailPrice: decimal("retail_price", { precision: 8, scale: 2 }).notNull(),
   isActive: boolean("is_active").default(true),
   effectiveDate: timestamp("effective_date").defaultNow(),
