@@ -55,6 +55,7 @@ export default function OrderForm({
   const [newCustomerName, setNewCustomerName] = useState("");
   const [calculatedPrice, setCalculatedPrice] = useState(0);
   const [laborCost, setLaborCost] = useState(35); // Default labor cost
+  const [useCalculatedPrice, setUseCalculatedPrice] = useState(true);
 
   // Fetch pricing data
   const { data: priceStructure = [] } = useQuery({
@@ -125,10 +126,10 @@ export default function OrderForm({
   useEffect(() => {
     const newPrice = calculatePrice();
     setCalculatedPrice(newPrice);
-    if (newPrice > 0) {
+    if (newPrice > 0 && useCalculatedPrice) {
       form.setValue("totalAmount", newPrice.toFixed(2));
     }
-  }, [form.watch("frameStyle"), form.watch("glazing"), form.watch("dimensions"), priceStructure, laborCost]);
+  }, [form.watch("frameStyle"), form.watch("glazing"), form.watch("dimensions"), priceStructure, laborCost, useCalculatedPrice]);
 
   const frameStyles = [
     "Walnut Wood Frame",
@@ -483,17 +484,39 @@ export default function OrderForm({
           />
         </div>
 
-        {/* Price Calculation Display */}
-        {calculatedPrice > 0 && (
-          <Card className="bg-green-50 border-green-200">
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-sm text-green-800">
+        {/* Pricing Mode Toggle */}
+        <Card className="border-blue-200 bg-blue-50">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center justify-between text-sm text-blue-800">
+              <span className="flex items-center gap-2">
                 <Calculator className="w-4 h-4" />
-                Automatic Price Calculation
-              </CardTitle>
-            </CardHeader>
+                Pricing Method
+              </span>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant={useCalculatedPrice ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setUseCalculatedPrice(true)}
+                  className="h-7 text-xs"
+                >
+                  Auto Calculate
+                </Button>
+                <Button
+                  type="button"
+                  variant={!useCalculatedPrice ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setUseCalculatedPrice(false)}
+                  className="h-7 text-xs"
+                >
+                  Manual Entry
+                </Button>
+              </div>
+            </CardTitle>
+          </CardHeader>
+          {useCalculatedPrice && calculatedPrice > 0 && (
             <CardContent className="pt-0">
-              <div className="text-sm text-green-700">
+              <div className="text-sm text-blue-700">
                 <div className="flex justify-between">
                   <span>Frame Cost ({form.watch("frameStyle")}):</span>
                   <span>${((calculatedPrice - laborCost) * 0.6).toFixed(2)}</span>
@@ -510,10 +533,26 @@ export default function OrderForm({
                   <span>Total:</span>
                   <span>${calculatedPrice.toFixed(2)}</span>
                 </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="w-full mt-2 h-7 text-xs"
+                  onClick={() => form.setValue("totalAmount", calculatedPrice.toFixed(2))}
+                >
+                  Apply Calculated Price
+                </Button>
               </div>
             </CardContent>
-          </Card>
-        )}
+          )}
+          {!useCalculatedPrice && (
+            <CardContent className="pt-0">
+              <p className="text-sm text-blue-700">
+                Manual pricing mode enabled. Enter your custom total amount below.
+              </p>
+            </CardContent>
+          )}
+        </Card>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Total Amount */}
@@ -524,8 +563,11 @@ export default function OrderForm({
               <FormItem>
                 <FormLabel className="flex items-center gap-2">
                   Total Amount *
-                  {calculatedPrice > 0 && (
-                    <span className="text-xs text-green-600">(Auto-calculated)</span>
+                  {useCalculatedPrice && calculatedPrice > 0 && (
+                    <span className="text-xs text-blue-600">(Auto-calculated)</span>
+                  )}
+                  {!useCalculatedPrice && (
+                    <span className="text-xs text-gray-600">(Manual entry)</span>
                   )}
                 </FormLabel>
                 <FormControl>
@@ -534,7 +576,12 @@ export default function OrderForm({
                     step="0.01"
                     placeholder="0.00"
                     {...field}
-                    className={calculatedPrice > 0 ? "bg-green-50 border-green-200" : ""}
+                    readOnly={useCalculatedPrice && calculatedPrice > 0}
+                    className={
+                      useCalculatedPrice && calculatedPrice > 0 
+                        ? "bg-blue-50 border-blue-200" 
+                        : ""
+                    }
                   />
                 </FormControl>
                 <FormMessage />
@@ -550,13 +597,16 @@ export default function OrderForm({
               <FormItem>
                 <FormLabel className="flex items-center gap-2">
                   Deposit Amount
-                  {calculatedPrice > 0 && (
+                  {form.watch("totalAmount") && parseFloat(form.watch("totalAmount")) > 0 && (
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
                       className="h-6 text-xs"
-                      onClick={() => form.setValue("depositAmount", (calculatedPrice * 0.5).toFixed(2))}
+                      onClick={() => {
+                        const total = parseFloat(form.watch("totalAmount"));
+                        form.setValue("depositAmount", (total * 0.5).toFixed(2));
+                      }}
                     >
                       50%
                     </Button>
