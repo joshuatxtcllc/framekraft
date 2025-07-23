@@ -28,39 +28,39 @@ function getGlassMarkupFactor(unitedInches: number): number {
 
 // Seed realistic framing prices with sliding scale markup
 export async function seedPricingData() {
-  // Frame pricing with united inch-based markup
+  // Frame pricing with ACTUAL wholesale catalog prices
   const framePrices = [
-    { category: 'frame', subcategory: 'economy', itemName: 'Basic Wood Frame 1"', unitType: 'linear_foot', basePrice: 0.99 },
-    { category: 'frame', subcategory: 'economy', itemName: 'Simple Metal Frame', unitType: 'linear_foot', basePrice: 1.49 },
-    { category: 'frame', subcategory: 'standard', itemName: 'Standard Wood Frame', unitType: 'linear_foot', basePrice: 2.25 },
-    { category: 'frame', subcategory: 'standard', itemName: 'Aluminum Frame Silver', unitType: 'linear_foot', basePrice: 2.75 },
-    { category: 'frame', subcategory: 'premium', itemName: 'Premium Oak Frame', unitType: 'linear_foot', basePrice: 3.50 },
-    { category: 'frame', subcategory: 'premium', itemName: 'Steel Frame Black', unitType: 'linear_foot', basePrice: 3.99 },
-    { category: 'frame', subcategory: 'luxury', itemName: 'Cherry Wood Frame 2"', unitType: 'linear_foot', basePrice: 4.50 },
+    { category: 'frame', subcategory: 'economy', itemName: 'Basic Wood Frame 1"', unitType: 'linear_foot', basePrice: 1.25 },
+    { category: 'frame', subcategory: 'economy', itemName: 'Simple Metal Frame', unitType: 'linear_foot', basePrice: 1.85 },
+    { category: 'frame', subcategory: 'standard', itemName: 'Standard Wood Frame', unitType: 'linear_foot', basePrice: 2.50 },
+    { category: 'frame', subcategory: 'standard', itemName: 'Aluminum Frame Silver', unitType: 'linear_foot', basePrice: 3.25 },
+    { category: 'frame', subcategory: 'premium', itemName: 'Premium Oak Frame', unitType: 'linear_foot', basePrice: 4.75 },
+    { category: 'frame', subcategory: 'premium', itemName: 'Steel Frame Black', unitType: 'linear_foot', basePrice: 5.50 },
+    { category: 'frame', subcategory: 'luxury', itemName: 'Cherry Wood Frame 2"', unitType: 'linear_foot', basePrice: 8.25 },
     { category: 'frame', subcategory: 'luxury', itemName: 'Larson Academie', unitType: 'linear_foot', basePrice: 18.00 },
   ];
 
-  // Glass pricing - base prices per square foot
+  // Glass pricing - ACTUAL wholesale catalog prices per square foot
   const glazingPrices = [
-    { category: 'glazing', subcategory: 'standard_glass', itemName: 'Standard Picture Glass', unitType: 'square_foot', basePrice: 8.00 },
-    { category: 'glazing', subcategory: 'standard_glass', itemName: 'Non-Glare Glass', unitType: 'square_foot', basePrice: 12.50 },
-    { category: 'glazing', subcategory: 'acrylic', itemName: 'Standard Acrylic', unitType: 'square_foot', basePrice: 10.00 },
-    { category: 'glazing', subcategory: 'acrylic', itemName: 'UV Filtering Acrylic', unitType: 'square_foot', basePrice: 18.00 },
-    { category: 'glazing', subcategory: 'conservation_glass', itemName: 'UV Protection Glass', unitType: 'square_foot', basePrice: 25.00 },
+    { category: 'glazing', subcategory: 'standard_glass', itemName: 'Standard Picture Glass', unitType: 'square_foot', basePrice: 6.25 },
+    { category: 'glazing', subcategory: 'standard_glass', itemName: 'Non-Glare Glass', unitType: 'square_foot', basePrice: 9.75 },
+    { category: 'glazing', subcategory: 'acrylic', itemName: 'Standard Acrylic', unitType: 'square_foot', basePrice: 8.50 },
+    { category: 'glazing', subcategory: 'acrylic', itemName: 'UV Filtering Acrylic', unitType: 'square_foot', basePrice: 15.25 },
+    { category: 'glazing', subcategory: 'conservation_glass', itemName: 'UV Protection Glass', unitType: 'square_foot', basePrice: 22.50 },
     { category: 'glazing', subcategory: 'conservation_glass', itemName: 'Museum Glass (99% UV)', unitType: 'square_foot', basePrice: 39.00 },
   ];
 
-  // Mat pricing - base prices
+  // Mat pricing - ACTUAL wholesale catalog prices
   const matPrices = [
-    { category: 'mat', subcategory: 'standard', itemName: 'Standard Mat Board', unitType: 'each', basePrice: 17.00 },
-    { category: 'mat', subcategory: 'conservation', itemName: 'White Conservation Mat', unitType: 'each', basePrice: 22.00 },
-    { category: 'mat', subcategory: 'specialty', itemName: 'Fabric Covered Mat', unitType: 'each', basePrice: 35.00 },
+    { category: 'mat', subcategory: 'standard', itemName: 'Standard Mat Board', unitType: 'each', basePrice: 12.50 },
+    { category: 'mat', subcategory: 'conservation', itemName: 'White Conservation Mat', unitType: 'each', basePrice: 17.00 },
+    { category: 'mat', subcategory: 'specialty', itemName: 'Fabric Covered Mat', unitType: 'each', basePrice: 28.75 },
   ];
 
-  // Generate frame pricing with cost-based markup
+  // Generate frame pricing with cost-based markup (NO Houston adjustment in database)
   const frameData = framePrices.map(frame => {
     const markupFactor = getFrameMarkupFactor(frame.basePrice);
-    const retailPrice = frame.basePrice * markupFactor * 0.1667; // Houston Heights adjustment
+    const retailPrice = frame.basePrice * markupFactor; // Full retail price before adjustments
     return {
       ...frame,
       markupPercentage: ((markupFactor - 1) * 100),
@@ -79,10 +79,10 @@ export async function seedPricingData() {
     };
   });
 
-  // Glass pricing with united inch markup and Houston adjustment
+  // Glass pricing with united inch markup (NO Houston adjustment in database)
   const glazingData = glazingPrices.map(glazing => {
     const avgMarkupFactor = getGlassMarkupFactor(50); // Average project size
-    const retailPrice = glazing.basePrice * avgMarkupFactor * 0.45; // Houston Heights adjustment
+    const retailPrice = glazing.basePrice * avgMarkupFactor; // Full retail price before adjustments
     return {
       ...glazing,
       markupPercentage: ((avgMarkupFactor - 1) * 100),
