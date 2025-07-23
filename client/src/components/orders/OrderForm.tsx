@@ -265,8 +265,9 @@ export default function OrderForm({
     const transformedData = {
       ...data,
       customerId: parseInt(data.customerId),
-      totalAmount: parseFloat(data.totalAmount),
-      depositAmount: data.depositAmount ? parseFloat(data.depositAmount) : undefined,
+      totalAmount: data.totalAmount, // Keep as string
+      depositAmount: data.depositAmount || undefined, // Keep as string
+      dueDate: data.dueDate ? data.dueDate.toISOString() : undefined, // Convert date to ISO string
     };
     onSubmit(transformedData);
   };

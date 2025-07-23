@@ -26,12 +26,9 @@ export default function Orders() {
 
   const createOrderMutation = useMutation({
     mutationFn: async (data: any) => {
-      // Ensure required fields are present
+      // Data is already properly formatted from OrderForm
       const orderData = {
         ...data,
-        customerId: parseInt(data.customerId),
-        totalAmount: parseFloat(data.totalAmount),
-        depositAmount: data.depositAmount ? parseFloat(data.depositAmount) : 0,
         status: data.status || 'pending',
         priority: data.priority || 'normal',
       };
