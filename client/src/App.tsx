@@ -10,6 +10,7 @@ import Dashboard from "@/pages/dashboard";
 import Orders from "@/pages/orders";
 import Customers from "@/pages/customers";
 import AIAssistant from "@/pages/ai-assistant";
+import APIExplorer from "@/pages/api-explorer";
 import Pricing from "@/pages/pricing";
 import Invoices from "@/pages/invoices";
 import Wholesalers from "@/pages/wholesalers";
@@ -30,6 +31,7 @@ function Router() {
           <Route path="/invoices" component={Invoices} />
           <Route path="/wholesalers" component={Wholesalers} />
           <Route path="/ai-assistant" component={AIAssistant} />
+          <Route path="/api-explorer" element={<APIExplorer />} />
         </>
       )}
       <Route component={NotFound} />

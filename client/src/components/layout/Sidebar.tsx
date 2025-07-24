@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { Frame, LayoutDashboard, ShoppingBag, Users, Brain, Sparkles, Package, DollarSign, Settings, BarChart3, Building2, FileText } from "lucide-react";
+import { Frame, LayoutDashboard, ShoppingBag, Users, Brain, Sparkles, Package, DollarSign, Settings, BarChart3, Building2, FileText, Database } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
@@ -37,6 +37,12 @@ export default function Sidebar() {
       href: '/customers',
       icon: Users,
       current: location === '/customers',
+    },
+    {
+      name: 'API Explorer',
+      href: '/api-explorer',
+      icon: Database,
+      current: location === '/api-explorer',
     },
   ];
 
