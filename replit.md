@@ -10,12 +10,13 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes (July 24, 2025)
 
-✓ **Implemented Exact User-Specified Pricing Formula**: Frame pricing using perimeter calculation (16+16+20+20+2+2+2+2=80" ÷ 12 = 6.667 feet × price per foot × markup), with wholesale cost rounded up to nearest dollar
+✓ **Implemented Exact User-Specified Pricing Formula**: Frame pricing correctly accounts for mat size impact - 16x20 artwork with 2" mat becomes 20x24 frame (88" perimeter ÷ 12 = 7.33 feet × price per foot × sliding scale markup)
 ✓ **Updated Mat Pricing to United Inches Method**: Mat pricing using simple united inches formula (16+20=36 united inches × $0.0109 per square inch) based on 32"×40" board at $14 cost
 ✓ **Removed All Location-Specific Discounts**: Eliminated Houston Heights market adjustments and location-based pricing strategies to use industry-standard methodology
 ✓ **Updated Labor and Overhead Costs**: Labor cost increased from $25 to $38, added $54 overhead cost per frame job for accurate business cost accounting
 ✓ **Fixed Critical Data Persistence Issues**: Resolved all database connection and API request problems preventing orders, customers, and invoices from saving
-✓ **Enhanced Price Breakdown Display**: Shows detailed calculation steps including perimeter inches, feet conversion, wholesale cost, and markup factors for transparency
+✓ **Enhanced Price Breakdown Display**: Shows detailed calculation steps including actual frame dimensions (20x24), perimeter calculation, feet conversion, wholesale cost, and sliding scale markup factors
+✓ **Fixed Mat Size Impact on Frame/Glass**: Frame and glass sizes now correctly adjust when mat is added - 16x20 artwork becomes 20x24 frame/glass with 2" mat border
 
 **Note**: Authentication is required for all data operations. Users must be logged in via Replit Auth to create customers, orders, or invoices.
 
