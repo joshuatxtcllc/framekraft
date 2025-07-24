@@ -147,19 +147,12 @@ export default function OrderForm({
       }
     }
 
-    // Calculate mat price based on selected color/item
+    // Calculate mat price based on artwork area at $0.12 per square inch
     let matPrice = 0;
-    if (matColor && priceStructure && Array.isArray(priceStructure)) {
-      const matItem = priceStructure.find((item: any) => 
-        item && item.category === "mat" && item.itemName === matColor
-      );
-      
-      if (matItem) {
-        const retailMatPrice = parseFloat(matItem.retailPrice);
-        
-        // Use the retail price directly (already includes markup adjustments)
-        matPrice = retailMatPrice;
-      }
+    if (matColor && matColor !== "none") {
+      const artworkAreaInches = artworkWidth * artworkHeight;
+      const matPricePerSquareInch = 0.12;
+      matPrice = artworkAreaInches * matPricePerSquareInch;
     }
 
     // Calculate glass price with advanced pricing
@@ -628,17 +621,14 @@ export default function OrderForm({
                     }
                   }
                   
-                  // Calculate mat price
+                  // Calculate mat price based on artwork area at $0.12 per square inch
                   let matPrice = 0;
                   let matDetails = "";
-                  if (matColor && priceStructure && Array.isArray(priceStructure)) {
-                    const matItem = priceStructure.find((item: any) => 
-                      item && item.category === "mat" && item.itemName === matColor
-                    );
-                    if (matItem) {
-                      matPrice = parseFloat(matItem.retailPrice);
-                      matDetails = matItem.itemName;
-                    }
+                  if (matColor && matColor !== "none") {
+                    const artworkAreaInches = artworkWidth * artworkHeight;
+                    const matPricePerSquareInch = 0.12;
+                    matPrice = artworkAreaInches * matPricePerSquareInch;
+                    matDetails = `${artworkWidth}"×${artworkHeight}" = ${artworkAreaInches} sq in × $${matPricePerSquareInch}`;
                   }
                   
                   // Calculate glazing price with mat border (if selected)
