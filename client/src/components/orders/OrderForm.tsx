@@ -142,8 +142,8 @@ export default function OrderForm({
         const framePerimeterFeet = framePerimeterInches / 12;
         const retailPricePerFoot = parseFloat(frameItem.retailPrice);
         
-        // Apply Houston Heights market adjustment (16.67% of retail price)
-        framePrice = framePerimeterFeet * retailPricePerFoot * 0.1667;
+        // Apply Houston Heights market adjustment (70% of retail price for realistic pricing)
+        framePrice = framePerimeterFeet * retailPricePerFoot * 0.70;
       }
     }
 
@@ -178,8 +178,8 @@ export default function OrderForm({
         const glassAreaFeet = glassAreaInches / 144;
         const retailPricePerSqFt = parseFloat(glazingItem.retailPrice);
         
-        // Apply Houston Heights market adjustment (45% of retail price)
-        glazingPrice = glassAreaFeet * retailPricePerSqFt * 0.45;
+        // Apply Houston Heights market adjustment (75% of retail price for realistic pricing)  
+        glazingPrice = glassAreaFeet * retailPricePerSqFt * 0.75;
       }
     }
 
@@ -623,8 +623,8 @@ export default function OrderForm({
                       const framePerimeterInches = 2 * (artworkWidth + artworkHeight + matBorder * 2);
                       const framePerimeterFeet = framePerimeterInches / 12;
                       const retailPricePerFoot = parseFloat(frameItem.retailPrice);
-                      framePrice = framePerimeterFeet * retailPricePerFoot * 0.1667; // Houston adjustment
-                      frameDetails = `${framePerimeterFeet.toFixed(1)} ft × $${retailPricePerFoot}/ft × 16.67%`;
+                      framePrice = framePerimeterFeet * retailPricePerFoot * 0.70; // Houston adjustment
+                      frameDetails = `${framePerimeterFeet.toFixed(1)} ft × $${retailPricePerFoot}/ft × 70%`;
                     }
                   }
                   
@@ -655,8 +655,8 @@ export default function OrderForm({
                       const glassAreaInches = glassWidthInches * glassHeightInches;
                       const glassAreaFeet = glassAreaInches / 144;
                       const retailPricePerSqFt = parseFloat(glazingItem.retailPrice);
-                      glazingPrice = glassAreaFeet * retailPricePerSqFt * 0.45; // Houston adjustment
-                      glazingDetails = `${glassAreaFeet.toFixed(2)} sq ft × $${retailPricePerSqFt}/sq ft × 45%`;
+                      glazingPrice = glassAreaFeet * retailPricePerSqFt * 0.75; // Houston adjustment
+                      glazingDetails = `${glassAreaFeet.toFixed(2)} sq ft × $${retailPricePerSqFt}/sq ft × 75%`;
                     }
                   }
                   
@@ -705,7 +705,7 @@ export default function OrderForm({
                         <span>${calculatedPrice.toFixed(2)}</span>
                       </div>
                       <div className="text-xs text-green-600 mt-1">
-                        <span>Includes location-specific market adjustments</span>
+                        <span>Market-adjusted pricing: Frame 70%, Glass 75% of retail</span>
                       </div>
                     </>
                   );
