@@ -28,17 +28,20 @@ function getGlassMarkupFactor(unitedInches: number): number {
 
 // Seed realistic framing prices with sliding scale markup
 export async function seedPricingData() {
-  // Frame pricing with price groups
+  // Frame pricing from ACTUAL Larson-Juhl catalog (wholesale "Length" prices per linear foot)
   const framePrices = [
-    { category: 'frame', subcategory: 'price_group', itemName: '$2.00 per foot frames', unitType: 'linear_foot', basePrice: 2.00 },
-    { category: 'frame', subcategory: 'price_group', itemName: '$3.00 per foot frames', unitType: 'linear_foot', basePrice: 3.00 },
-    { category: 'frame', subcategory: 'price_group', itemName: '$4.00 per foot frames', unitType: 'linear_foot', basePrice: 4.00 },
-    { category: 'frame', subcategory: 'price_group', itemName: '$5.00 per foot frames', unitType: 'linear_foot', basePrice: 5.00 },
-    { category: 'frame', subcategory: 'price_group', itemName: '$6.00 per foot frames', unitType: 'linear_foot', basePrice: 6.00 },
-    { category: 'frame', subcategory: 'price_group', itemName: '$7.00 per foot frames', unitType: 'linear_foot', basePrice: 7.00 },
-    { category: 'frame', subcategory: 'price_group', itemName: '$8.00 per foot frames', unitType: 'linear_foot', basePrice: 8.00 },
-    { category: 'frame', subcategory: 'price_group', itemName: '$9.00 per foot frames', unitType: 'linear_foot', basePrice: 9.00 },
-    { category: 'frame', subcategory: 'price_group', itemName: '$10.00 per foot frames', unitType: 'linear_foot', basePrice: 10.00 },
+    { category: 'frame', subcategory: 'economy', itemName: 'Spencer II 114153', unitType: 'linear_foot', basePrice: 1.47 },
+    { category: 'frame', subcategory: 'economy', itemName: 'Confetti 115632', unitType: 'linear_foot', basePrice: 2.08 },
+    { category: 'frame', subcategory: 'standard', itemName: 'Gramercy 135791', unitType: 'linear_foot', basePrice: 2.13 },
+    { category: 'frame', subcategory: 'standard', itemName: 'Gramercy 135790', unitType: 'linear_foot', basePrice: 2.93 },
+    { category: 'frame', subcategory: 'standard', itemName: 'Hudson 103180', unitType: 'linear_foot', basePrice: 3.11 },
+    { category: 'frame', subcategory: 'standard', itemName: 'Academie 103235', unitType: 'linear_foot', basePrice: 3.17 },
+    { category: 'frame', subcategory: 'premium', itemName: 'Vienna 105CB', unitType: 'linear_foot', basePrice: 3.31 },
+    { category: 'frame', subcategory: 'premium', itemName: 'Gramercy 145791', unitType: 'linear_foot', basePrice: 3.45 },
+    { category: 'frame', subcategory: 'premium', itemName: 'Shoji 119206', unitType: 'linear_foot', basePrice: 3.62 },
+    { category: 'frame', subcategory: 'luxury', itemName: 'Lucerne 105794', unitType: 'linear_foot', basePrice: 5.02 },
+    { category: 'frame', subcategory: 'luxury', itemName: 'L7 108184', unitType: 'linear_foot', basePrice: 7.04 },
+    { category: 'frame', subcategory: 'luxury', itemName: 'Maple Garrett 10-036M', unitType: 'linear_foot', basePrice: 10.05 },
   ];
 
   // Glass pricing - specific requested types
