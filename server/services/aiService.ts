@@ -1,4 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
+import OpenAI from 'openai';
 
 /*
 The newest Anthropic model is "claude-sonnet-4-20250514", not "claude-3-7-sonnet-20250219", "claude-3-5-sonnet-20241022" nor "claude-3-sonnet-20240229". 
@@ -10,6 +11,10 @@ const DEFAULT_MODEL_STR = "claude-sonnet-4-20250514";
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY || process.env.CLAUDE_API_KEY || "sk-ant-api03-mock",
+});
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY || "sk-mock",
 });
 
 interface AIResponse {
@@ -39,6 +44,62 @@ interface BusinessInsight {
 }
 
 export class AIService {
+  async analyzeArtworkImage(imageUrl: string, additionalContext?: string): Promise<{
+    description: string;
+    suggestedFrameStyle: string;
+    colors: string[];
+    dimensions: string;
+    confidence: number;
+  }> {
+    try {
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: `Analyze this artwork image and provide framing recommendations. Focus on:
+                1. Detailed description of the artwork
+                2. Suggested frame style and color
+                3. Dominant colors in the piece
+                4. Estimated dimensions if visible
+                5. Any special considerations for framing
+                
+                Additional context: ${additionalContext || 'None'}
+                
+                Respond in JSON format.`
+              },
+              {
+                type: "image_url",
+                image_url: { url: imageUrl }
+              }
+            ]
+          }
+        ],
+        max_tokens: 1000,
+      });
+
+      const content = response.choices[0]?.message?.content || '';
+      
+      try {
+        return JSON.parse(content);
+      } catch {
+        return {
+          description: "Beautiful artwork that would benefit from professional framing",
+          suggestedFrameStyle: "Classic wood frame with neutral matting",
+          colors: ["Various"],
+          dimensions: "Standard size",
+          confidence: 0.7
+        };
+      }
+    } catch (error) {
+      console.error('OpenAI image analysis error:', error);
+      throw new Error('Failed to analyze artwork image');
+    }
+  }
+
   async sendMessage(message: string, context: any): Promise<AIResponse> {
     try {
       const systemPrompt = this.buildSystemPrompt(context);

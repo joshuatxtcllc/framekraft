@@ -3,6 +3,8 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { aiService } from "./services/aiService";
+import { emailService } from './services/emailService';
+import { searchService } from './services/searchService';
 import { insertCustomerSchema, insertOrderSchema } from "@shared/schema";
 import { registerPricingRoutes } from "./routes/pricing";
 import { registerWholesalerRoutes } from "./routes/wholesalers";

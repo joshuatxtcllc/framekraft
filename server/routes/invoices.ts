@@ -3,6 +3,7 @@ import Stripe from "stripe";
 import { storage } from "../storage";
 import { insertInvoiceSchema, insertInvoiceItemSchema, insertPaymentSchema } from "@shared/schema";
 import { isAuthenticated } from "../middleware/auth";
+import { emailService } from "../services/emailService";
 
 if (!process.env.STRIPE_SECRET_KEY) {
   throw new Error('Missing required Stripe secret: STRIPE_SECRET_KEY');
@@ -164,27 +165,16 @@ export function registerInvoiceRoutes(app: Express) {
     }
   });
 
-  // Send invoice via email (placeholder for now)
+  // Send invoice via email
   app.post("/api/invoices/:id/send", isAuthenticated, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const { emailAddress } = req.body;
-      const invoice = await storage.getInvoice(id);
+      const { emailAddress, customMessage } = req.body;
       
-      if (!invoice) {
-        return res.status(404).json({ message: "Invoice not found" });
-      }
-
-      // Update invoice status to sent
-      await storage.updateInvoice(id, { 
-        status: 'sent', 
-        sentDate: new Date() 
-      });
-
-      // TODO: Implement email sending
+      await emailService.sendInvoiceEmail(id, emailAddress, customMessage);
+      
       res.json({ 
-        message: `Invoice sent to ${emailAddress}`,
-        invoice: invoice 
+        message: `Invoice sent successfully to ${emailAddress}`
       });
     } catch (error) {
       console.error("Error sending invoice:", error);
