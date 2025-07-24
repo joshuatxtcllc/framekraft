@@ -54,7 +54,8 @@ export default function OrderForm({
   const [customerSearch, setCustomerSearch] = useState("");
   const [newCustomerName, setNewCustomerName] = useState("");
   const [calculatedPrice, setCalculatedPrice] = useState(0);
-  const [laborCost, setLaborCost] = useState(35); // Default labor cost
+  const [laborCost, setLaborCost] = useState(38); // Labor cost before retail markup
+  const overheadCost = 54.00; // Overhead cost per frame job
   const [useCalculatedPrice, setUseCalculatedPrice] = useState(true);
 
   // Fetch pricing data
@@ -172,8 +173,8 @@ export default function OrderForm({
       glazingPrice = artworkAreaInches * glassPricePerSquareInch;
     }
 
-    // Calculate total with all components
-    const totalPrice = framePrice + matPrice + glazingPrice + laborCost;
+    // Calculate total with all components including overhead
+    const totalPrice = framePrice + matPrice + glazingPrice + laborCost + overheadCost;
     
     return Math.round(totalPrice * 100) / 100; // Round to 2 decimal places
   };
@@ -684,6 +685,10 @@ export default function OrderForm({
                       <div className="flex justify-between">
                         <span>Labor:</span>
                         <span>${laborCost.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Overhead:</span>
+                        <span>${overheadCost.toFixed(2)}</span>
                       </div>
                       <div className="border-t pt-1 mt-1 font-semibold flex justify-between">
                         <span>Total (Houston Heights pricing):</span>
