@@ -137,16 +137,17 @@ export default function OrderForm({
       );
       
       if (frameItem) {
-        // Frame perimeter: 16+16+20+20+2+2+2+2 = 80" for 16x20 with 2" mat
-        const matBorder = matColor ? matWidth * 4 : 0; // 2" mat = 8" total border (2" on each side)
-        const framePerimeterInches = (artworkWidth * 2) + (artworkHeight * 2) + matBorder;
+        // Frame size with mat: 16x20 becomes 20x24 with 2" mat (add 4" to each dimension)
+        const frameWidth = artworkWidth + (matColor ? matWidth * 2 : 0);
+        const frameHeight = artworkHeight + (matColor ? matWidth * 2 : 0);
+        const framePerimeterInches = (frameWidth * 2) + (frameHeight * 2);
         const framePerimeterFeet = framePerimeterInches / 12;
         const pricePerFoot = parseFloat(frameItem.basePrice);
         
         // Wholesale cost = feet × price per foot, then round up to nearest dollar
         const wholesaleCost = Math.ceil(framePerimeterFeet * pricePerFoot);
         
-        // Apply markup based on price per foot
+        // Apply sliding scale retail markup based on price per foot
         const markupFactor = getFrameMarkupFactor(pricePerFoot);
         framePrice = wholesaleCost * markupFactor;
       }
@@ -168,12 +169,11 @@ export default function OrderForm({
       );
       
       if (glazingItem) {
-        // Glass area includes mat border if mat is selected
-        const matBorder = matColor ? matWidth * 2 : 0;
-        const glassWidthInches = artworkWidth + matBorder;
-        const glassHeightInches = artworkHeight + matBorder;
-        const glassAreaFeet = (glassWidthInches * glassHeightInches) / 144;
-        const unitedInches = artworkWidth + artworkHeight + (matColor ? matWidth * 4 : 0);
+        // Glass size matches frame size (includes mat border)
+        const glassWidth = artworkWidth + (matColor ? matWidth * 2 : 0);
+        const glassHeight = artworkHeight + (matColor ? matWidth * 2 : 0);
+        const glassAreaFeet = (glassWidth * glassHeight) / 144;
+        const unitedInches = glassWidth + glassHeight;
         const markupFactor = getGlassMarkupFactor(unitedInches);
         glazingPrice = glassAreaFeet * parseFloat(glazingItem.basePrice) * markupFactor;
       }
@@ -615,14 +615,15 @@ export default function OrderForm({
                       item && item.category === "frame" && item.itemName === frameStyle
                     );
                     if (frameItem) {
-                      const matBorder = matColor ? matWidth * 4 : 0; // 2" mat = 8" total border
-                      const framePerimeterInches = (artworkWidth * 2) + (artworkHeight * 2) + matBorder;
+                      const frameWidth = artworkWidth + (matColor ? matWidth * 2 : 0);
+                      const frameHeight = artworkHeight + (matColor ? matWidth * 2 : 0);
+                      const framePerimeterInches = (frameWidth * 2) + (frameHeight * 2);
                       const framePerimeterFeet = framePerimeterInches / 12;
                       const pricePerFoot = parseFloat(frameItem.basePrice);
                       const wholesaleCost = Math.ceil(framePerimeterFeet * pricePerFoot);
                       const markupFactor = getFrameMarkupFactor(pricePerFoot);
                       framePrice = wholesaleCost * markupFactor;
-                      frameDetails = `${framePerimeterInches}" = ${framePerimeterFeet.toFixed(2)} ft × $${pricePerFoot}/ft = $${wholesaleCost} × ${markupFactor}x`;
+                      frameDetails = `${frameWidth}×${frameHeight} = ${framePerimeterInches}" = ${framePerimeterFeet.toFixed(2)} ft × $${pricePerFoot}/ft = $${wholesaleCost} × ${markupFactor}x`;
                     }
                   }
                   
@@ -636,7 +637,7 @@ export default function OrderForm({
                     matDetails = `${artworkWidth}+${artworkHeight} = ${unitedInches} united inches × $${pricePerSquareInch}`;
                   }
                   
-                  // Calculate glazing price using proper united inch-based markup
+                  // Calculate glazing price - glass size matches frame size
                   let glazingPrice = 0;
                   let glazingDetails = "";
                   if (glazing && glazing !== "none" && priceStructure && Array.isArray(priceStructure)) {
@@ -644,14 +645,13 @@ export default function OrderForm({
                       item && item.category === "glazing" && item.itemName === glazing
                     );
                     if (glazingItem) {
-                      const matBorder = matColor ? matWidth * 2 : 0;
-                      const glassWidthInches = artworkWidth + matBorder;
-                      const glassHeightInches = artworkHeight + matBorder;
-                      const glassAreaFeet = (glassWidthInches * glassHeightInches) / 144;
-                      const unitedInches = artworkWidth + artworkHeight + (matColor ? matWidth * 4 : 0);
+                      const glassWidth = artworkWidth + (matColor ? matWidth * 2 : 0);
+                      const glassHeight = artworkHeight + (matColor ? matWidth * 2 : 0);
+                      const glassAreaFeet = (glassWidth * glassHeight) / 144;
+                      const unitedInches = glassWidth + glassHeight;
                       const markupFactor = getGlassMarkupFactor(unitedInches);
                       glazingPrice = glassAreaFeet * parseFloat(glazingItem.basePrice) * markupFactor;
-                      glazingDetails = `${glassAreaFeet.toFixed(2)} sq ft × $${glazingItem.basePrice}/sq ft × ${markupFactor}x`;
+                      glazingDetails = `${glassWidth}×${glassHeight} = ${glassAreaFeet.toFixed(2)} sq ft × $${glazingItem.basePrice}/sq ft × ${markupFactor}x`;
                     }
                   }
                   
@@ -659,7 +659,7 @@ export default function OrderForm({
                     <>
                       <div className="flex justify-between text-xs mb-1 text-blue-600">
                         <span>Artwork: {artworkWidth}"×{artworkHeight}"</span>
-                        {matColor && <span>+ 2" mat border</span>}
+                        {matColor && <span>Frame/Glass: {artworkWidth + matWidth * 2}"×{artworkHeight + matWidth * 2}"</span>}
                       </div>
                       {frameStyle && frameStyle !== "none" && framePrice > 0 && (
                         <div className="space-y-1">
