@@ -28,26 +28,27 @@ function getGlassMarkupFactor(unitedInches: number): number {
 
 // Seed realistic framing prices with sliding scale markup
 export async function seedPricingData() {
-  // Frame pricing with ACTUAL wholesale catalog prices
+  // Frame pricing with price groups
   const framePrices = [
-    { category: 'frame', subcategory: 'economy', itemName: 'Basic Wood Frame 1"', unitType: 'linear_foot', basePrice: 1.25 },
-    { category: 'frame', subcategory: 'economy', itemName: 'Simple Metal Frame', unitType: 'linear_foot', basePrice: 1.85 },
-    { category: 'frame', subcategory: 'standard', itemName: 'Standard Wood Frame', unitType: 'linear_foot', basePrice: 2.50 },
-    { category: 'frame', subcategory: 'standard', itemName: 'Aluminum Frame Silver', unitType: 'linear_foot', basePrice: 3.25 },
-    { category: 'frame', subcategory: 'premium', itemName: 'Premium Oak Frame', unitType: 'linear_foot', basePrice: 4.75 },
-    { category: 'frame', subcategory: 'premium', itemName: 'Steel Frame Black', unitType: 'linear_foot', basePrice: 5.50 },
-    { category: 'frame', subcategory: 'luxury', itemName: 'Cherry Wood Frame 2"', unitType: 'linear_foot', basePrice: 8.25 },
-    { category: 'frame', subcategory: 'luxury', itemName: 'Larson Academie', unitType: 'linear_foot', basePrice: 18.00 },
+    { category: 'frame', subcategory: 'price_group', itemName: '$2.00 per foot frames', unitType: 'linear_foot', basePrice: 2.00 },
+    { category: 'frame', subcategory: 'price_group', itemName: '$3.00 per foot frames', unitType: 'linear_foot', basePrice: 3.00 },
+    { category: 'frame', subcategory: 'price_group', itemName: '$4.00 per foot frames', unitType: 'linear_foot', basePrice: 4.00 },
+    { category: 'frame', subcategory: 'price_group', itemName: '$5.00 per foot frames', unitType: 'linear_foot', basePrice: 5.00 },
+    { category: 'frame', subcategory: 'price_group', itemName: '$6.00 per foot frames', unitType: 'linear_foot', basePrice: 6.00 },
+    { category: 'frame', subcategory: 'price_group', itemName: '$7.00 per foot frames', unitType: 'linear_foot', basePrice: 7.00 },
+    { category: 'frame', subcategory: 'price_group', itemName: '$8.00 per foot frames', unitType: 'linear_foot', basePrice: 8.00 },
+    { category: 'frame', subcategory: 'price_group', itemName: '$9.00 per foot frames', unitType: 'linear_foot', basePrice: 9.00 },
+    { category: 'frame', subcategory: 'price_group', itemName: '$10.00 per foot frames', unitType: 'linear_foot', basePrice: 10.00 },
   ];
 
-  // Glass pricing - ACTUAL wholesale catalog prices per square foot
+  // Glass pricing - specific requested types
   const glazingPrices = [
-    { category: 'glazing', subcategory: 'standard_glass', itemName: 'Standard Picture Glass', unitType: 'square_foot', basePrice: 6.25 },
-    { category: 'glazing', subcategory: 'standard_glass', itemName: 'Non-Glare Glass', unitType: 'square_foot', basePrice: 9.75 },
-    { category: 'glazing', subcategory: 'acrylic', itemName: 'Standard Acrylic', unitType: 'square_foot', basePrice: 8.50 },
-    { category: 'glazing', subcategory: 'acrylic', itemName: 'UV Filtering Acrylic', unitType: 'square_foot', basePrice: 15.25 },
-    { category: 'glazing', subcategory: 'conservation_glass', itemName: 'UV Protection Glass', unitType: 'square_foot', basePrice: 22.50 },
-    { category: 'glazing', subcategory: 'conservation_glass', itemName: 'Museum Glass (99% UV)', unitType: 'square_foot', basePrice: 39.00 },
+    { category: 'glazing', subcategory: 'standard_glass', itemName: 'Regular Glass', unitType: 'square_foot', basePrice: 6.25 },
+    { category: 'glazing', subcategory: 'conservation_glass', itemName: 'Conservation Clear Glass', unitType: 'square_foot', basePrice: 22.50 },
+    { category: 'glazing', subcategory: 'museum_glass', itemName: 'Museum Glass', unitType: 'square_foot', basePrice: 39.00 },
+    { category: 'glazing', subcategory: 'acrylic', itemName: 'Regular Plexiglass', unitType: 'square_foot', basePrice: 8.50 },
+    { category: 'glazing', subcategory: 'conservation_acrylic', itemName: 'Conservation Plexiglass', unitType: 'square_foot', basePrice: 15.25 },
+    { category: 'glazing', subcategory: 'optium_acrylic', itemName: 'Optium Acrylic', unitType: 'square_foot', basePrice: 28.00 },
   ];
 
   // Mat pricing - ACTUAL wholesale catalog prices
