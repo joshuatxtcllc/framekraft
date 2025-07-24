@@ -155,25 +155,21 @@ export default function OrderForm({
       matPrice = artworkAreaInches * matPricePerSquareInch;
     }
 
-    // Calculate glass price with advanced pricing
+    // Calculate glass price based on artwork area (not glass area with mat)
     let glazingPrice = 0;
-    if (glazing && glazing !== "none" && priceStructure && Array.isArray(priceStructure)) {
-      const glazingItem = priceStructure.find((item: any) => 
-        item && item.category === "glazing" && item.itemName === glazing
-      );
+    if (glazing && glazing !== "none") {
+      // Use artwork area for pricing (like mat calculation)
+      const artworkAreaInches = artworkWidth * artworkHeight;
       
-      if (glazingItem) {
-        // Glass area includes mat border if mat is selected
-        const matBorder = matColor ? matWidth * 2 : 0; // Add mat border to each dimension
-        const glassWidthInches = artworkWidth + matBorder;
-        const glassHeightInches = artworkHeight + matBorder;
-        const glassAreaInches = glassWidthInches * glassHeightInches;
-        const glassAreaFeet = glassAreaInches / 144;
-        const retailPricePerSqFt = parseFloat(glazingItem.retailPrice);
-        
-        // Apply Houston Heights market adjustment (75% of retail price for realistic pricing)  
-        glazingPrice = glassAreaFeet * retailPricePerSqFt * 0.75;
+      // Different pricing per square inch based on glass type
+      let glassPricePerSquareInch = 0.10; // Standard glass
+      if (glazing.toLowerCase().includes('museum') || glazing.toLowerCase().includes('conservation')) {
+        glassPricePerSquareInch = 0.23; // Museum/Conservation glass
+      } else if (glazing.toLowerCase().includes('uv') || glazing.toLowerCase().includes('premium')) {
+        glassPricePerSquareInch = 0.15; // UV or premium glass
       }
+      
+      glazingPrice = artworkAreaInches * glassPricePerSquareInch;
     }
 
     // Calculate total with all components
@@ -631,23 +627,22 @@ export default function OrderForm({
                     matDetails = `${artworkWidth}"×${artworkHeight}" = ${artworkAreaInches} sq in × $${matPricePerSquareInch}`;
                   }
                   
-                  // Calculate glazing price with mat border (if selected)
+                  // Calculate glazing price based on artwork area (like mat calculation)
                   let glazingPrice = 0;
                   let glazingDetails = "";
-                  if (glazing && glazing !== "none" && priceStructure && Array.isArray(priceStructure)) {
-                    const glazingItem = priceStructure.find((item: any) => 
-                      item && item.category === "glazing" && item.itemName === glazing
-                    );
-                    if (glazingItem) {
-                      const matBorder = matColor ? matWidth * 2 : 0;
-                      const glassWidthInches = artworkWidth + matBorder;
-                      const glassHeightInches = artworkHeight + matBorder;
-                      const glassAreaInches = glassWidthInches * glassHeightInches;
-                      const glassAreaFeet = glassAreaInches / 144;
-                      const retailPricePerSqFt = parseFloat(glazingItem.retailPrice);
-                      glazingPrice = glassAreaFeet * retailPricePerSqFt * 0.75; // Houston adjustment
-                      glazingDetails = `${glassAreaFeet.toFixed(2)} sq ft × $${retailPricePerSqFt}/sq ft × 75%`;
+                  if (glazing && glazing !== "none") {
+                    const artworkAreaInches = artworkWidth * artworkHeight;
+                    
+                    // Different pricing per square inch based on glass type
+                    let glassPricePerSquareInch = 0.10; // Standard glass
+                    if (glazing.toLowerCase().includes('museum') || glazing.toLowerCase().includes('conservation')) {
+                      glassPricePerSquareInch = 0.23; // Museum/Conservation glass
+                    } else if (glazing.toLowerCase().includes('uv') || glazing.toLowerCase().includes('premium')) {
+                      glassPricePerSquareInch = 0.15; // UV or premium glass
                     }
+                    
+                    glazingPrice = artworkAreaInches * glassPricePerSquareInch;
+                    glazingDetails = `${artworkWidth}"×${artworkHeight}" = ${artworkAreaInches} sq in × $${glassPricePerSquareInch}`;
                   }
                   
                   return (
