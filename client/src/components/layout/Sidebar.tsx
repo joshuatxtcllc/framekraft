@@ -44,6 +44,12 @@ export default function Sidebar() {
       icon: Database,
       current: location === '/api-explorer',
     },
+        {
+      name: 'Integrations',
+      href: '/settings',
+      icon: Settings,
+      current: location === '/settings',
+    },
   ];
 
   const aiTools = [

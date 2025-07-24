@@ -5,6 +5,7 @@ import { setupAuth, isAuthenticated } from "./replitAuth";
 import { aiService } from "./services/aiService";
 import { emailService } from './services/emailService';
 import { searchService } from './services/searchService';
+import { settingsService } from './services/settingsService';
 import { insertCustomerSchema, insertOrderSchema } from "@shared/schema";
 import { registerPricingRoutes } from "./routes/pricing";
 import { registerWholesalerRoutes } from "./routes/wholesalers";
@@ -350,6 +351,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching low stock items:", error);
       res.status(500).json({ message: "Failed to fetch low stock items" });
+    }
+  });
+
+  // Integration settings routes
+  app.get('/api/settings/integrations', isAuthenticated, async (req, res) => {
+    try {
+      const settings = settingsService.getSettings();
+      const status = settingsService.getServiceStatus();
+      res.json({ settings, status });
+    } catch (error) {
+      console.error("Error fetching integration settings:", error);
+      res.status(500).json({ message: "Failed to fetch settings" });
+    }
+  });
+
+  app.put('/api/settings/integrations', isAuthenticated, async (req, res) => {
+    try {
+      settingsService.updateSettings(req.body);
+      res.json({ message: "Settings updated successfully" });
+    } catch (error) {
+      console.error("Error updating integration settings:", error);
+      res.status(500).json({ message: "Failed to update settings" });
+    }
+  });
+
+  // Service health check
+  app.get('/api/health/integrations', isAuthenticated, async (req, res) => {
+    try {
+      const status = settingsService.getServiceStatus();
+      const health = {
+        gmail: {
+          configured: !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET && process.env.GOOGLE_REFRESH_TOKEN),
+          ...status.gmail
+        },
+        openai: {
+          configured: !!process.env.OPENAI_API_KEY,
+          ...status.openai
+        },
+        stripe: {
+          configured: !!process.env.STRIPE_SECRET_KEY,
+          ...status.stripe
+        },
+        googleSearch: {
+          configured: !!(process.env.GOOGLE_API_KEY && process.env.GOOGLE_SEARCH_ENGINE_ID),
+          ...status.googleSearch
+        }
+      };
+      res.json(health);
+    } catch (error) {
+      console.error("Error checking service health:", error);
+      res.status(500).json({ message: "Failed to check service health" });
     }
   });
 

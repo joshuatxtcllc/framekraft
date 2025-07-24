@@ -1,6 +1,7 @@
 
 import { google } from 'googleapis';
 import { storage } from '../storage';
+import { settingsService } from './settingsService';
 
 const oauth2Client = new google.auth.OAuth2(
   process.env.GOOGLE_CLIENT_ID,
@@ -19,9 +20,22 @@ const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
 
 export class EmailService {
   async sendInvoiceEmail(invoiceId: number, recipientEmail: string, customMessage?: string): Promise<void> {
-    try {
-      const invoice = await storage.getInvoice(invoiceId);
-      if (!invoice) throw new Error('Invoice not found');
+    // Check if Gmail integration is enabled
+    if (!settingsService.isEnabled('gmail')) {
+      throw new Error('Gmail integration is disabled');
+    }
+
+    // Check for required environment variables
+    if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET || !process.env.GOOGLE_REFRESH_TOKEN) {
+      throw new Error('Gmail integration not properly configured - missing required environment variables');
+    }
+
+    const circuitBreaker = settingsService.getCircuitBreaker('gmail');
+    
+    return await circuitBreaker.execute(async () => {
+      try {
+        const invoice = await storage.getInvoice(invoiceId);
+        if (!invoice) throw new Error('Invoice not found');
 
       const subject = `Invoice ${invoice.invoiceNumber} - FrameCraft Custom Framing`;
       const htmlContent = `
@@ -62,28 +76,49 @@ export class EmailService {
         .replace(/=+$/, '');
 
       await gmail.users.messages.send({
-        userId: 'me',
-        requestBody: {
-          raw: encodedMessage,
-        },
-      });
+          userId: 'me',
+          requestBody: {
+            raw: encodedMessage,
+          },
+        });
 
-      // Update invoice status
-      await storage.updateInvoice(invoiceId, { 
-        status: 'sent', 
-        sentDate: new Date() 
-      });
+        console.log(`✅ Invoice ${invoice.invoiceNumber} sent successfully to ${recipientEmail}`);
 
-    } catch (error) {
-      console.error('Error sending invoice email:', error);
-      throw new Error('Failed to send invoice email');
-    }
+        // Update invoice status
+        await storage.updateInvoice(invoiceId, { 
+          status: 'sent', 
+          sentDate: new Date() 
+        });
+
+      } catch (error: any) {
+        console.error('❌ Gmail API Error:', error.message);
+        
+        // Handle specific Gmail errors
+        if (error.code === 401) {
+          throw new Error('Gmail authentication failed - please check your OAuth credentials');
+        } else if (error.code === 403) {
+          throw new Error('Gmail API access denied - check your permissions');
+        } else if (error.code >= 500) {
+          throw new Error('Gmail service temporarily unavailable');
+        }
+        
+        throw new Error(`Failed to send email: ${error.message}`);
+      }
+    });
+  }
   }
 
   async sendOrderStatusUpdate(orderId: number, status: string, customerEmail: string): Promise<void> {
-    try {
-      const order = await storage.getOrder(orderId);
-      if (!order) throw new Error('Order not found');
+    if (!settingsService.isEnabled('gmail')) {
+      throw new Error('Gmail integration is disabled');
+    }
+
+    const circuitBreaker = settingsService.getCircuitBreaker('gmail');
+    
+    return await circuitBreaker.execute(async () => {
+      try {
+        const order = await storage.getOrder(orderId);
+        if (!order) throw new Error('Order not found');
 
       const subject = `Order Update - ${order.orderNumber}`;
       const htmlContent = `
@@ -121,16 +156,20 @@ export class EmailService {
         .replace(/=+$/, '');
 
       await gmail.users.messages.send({
-        userId: 'me',
-        requestBody: {
-          raw: encodedMessage,
-        },
-      });
+          userId: 'me',
+          requestBody: {
+            raw: encodedMessage,
+          },
+        });
 
-    } catch (error) {
-      console.error('Error sending order status email:', error);
-      throw new Error('Failed to send order status email');
-    }
+        console.log(`✅ Order status update sent successfully for ${order.orderNumber} to ${customerEmail}`);
+
+      } catch (error: any) {
+        console.error('❌ Gmail order status error:', error.message);
+        throw new Error(`Failed to send order status email: ${error.message}`);
+      }
+    });
+  }
   }
 }
 
