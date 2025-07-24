@@ -26,6 +26,130 @@ interface InvoiceData {
   createdAt: string;
 }
 
+interface OrderData {
+  orderNumber: string;
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string;
+  description: string;
+  artworkDescription: string;
+  dimensions: string;
+  frameStyle: string;
+  matColor: string;
+  glazing: string;
+  totalAmount: number;
+  depositAmount: number;
+  status: string;
+  priority: string;
+  dueDate: string;
+  createdAt: string;
+  notes: string;
+}
+
+export const exportToPDF = (data: OrderData, type: 'invoice' | 'work-order') => {
+  const doc = new jsPDF();
+  
+  // Company header
+  doc.setFontSize(20);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Jay\'s Frames', 20, 30);
+  
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  doc.text('Professional Custom Framing Services', 20, 38);
+  doc.text('Houston Heights, Texas', 20, 45);
+  doc.text('Phone: (713) 555-FRAME | Email: info@jaysframes.com', 20, 52);
+  
+  // Document title
+  doc.setFontSize(16);
+  doc.setFont('helvetica', 'bold');
+  const title = type === 'invoice' ? 'INVOICE' : 'WORK ORDER';
+  doc.text(title, 150, 30);
+  
+  doc.setFontSize(12);
+  doc.setFont('helvetica', 'normal');
+  doc.text(`Order #: ${data.orderNumber}`, 150, 40);
+  doc.text(`Date: ${new Date(data.createdAt).toLocaleDateString()}`, 150, 48);
+  if (data.dueDate) {
+    doc.text(`Due Date: ${new Date(data.dueDate).toLocaleDateString()}`, 150, 56);
+  }
+  
+  // Customer information
+  doc.setFontSize(12);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Customer:', 20, 75);
+  
+  doc.setFont('helvetica', 'normal');
+  doc.text(data.customerName, 20, 85);
+  if (data.customerEmail) {
+    doc.text(data.customerEmail, 20, 93);
+  }
+  if (data.customerPhone) {
+    doc.text(data.customerPhone, 20, 101);
+  }
+  
+  // Project details
+  doc.setFont('helvetica', 'bold');
+  doc.text('Project Details:', 20, 120);
+  
+  doc.setFont('helvetica', 'normal');
+  doc.text(`Description: ${data.description}`, 20, 130);
+  
+  if (data.dimensions) {
+    doc.text(`Dimensions: ${data.dimensions}`, 20, 138);
+  }
+  
+  if (data.frameStyle) {
+    doc.text(`Frame: ${data.frameStyle}`, 20, 146);
+  }
+  
+  if (data.matColor) {
+    doc.text(`Mat: ${data.matColor}`, 20, 154);
+  }
+  
+  if (data.glazing) {
+    doc.text(`Glass: ${data.glazing}`, 20, 162);
+  }
+  
+  // Financial information (for invoices)
+  if (type === 'invoice') {
+    doc.setFont('helvetica', 'bold');
+    doc.text('Financial Summary:', 20, 180);
+    
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Total Amount: $${data.totalAmount.toFixed(2)}`, 20, 190);
+    
+    if (data.depositAmount > 0) {
+      doc.text(`Deposit: $${data.depositAmount.toFixed(2)}`, 20, 198);
+      doc.text(`Balance Due: $${(data.totalAmount - data.depositAmount).toFixed(2)}`, 20, 206);
+    }
+  }
+  
+  // Status and priority (for work orders)
+  if (type === 'work-order') {
+    doc.setFont('helvetica', 'bold');
+    doc.text('Status Information:', 20, 180);
+    
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Status: ${data.status}`, 20, 190);
+    doc.text(`Priority: ${data.priority}`, 20, 198);
+  }
+  
+  // Notes
+  if (data.notes) {
+    doc.setFont('helvetica', 'bold');
+    doc.text('Notes:', 20, 220);
+    
+    doc.setFont('helvetica', 'normal');
+    const splitNotes = doc.splitTextToSize(data.notes, 170);
+    doc.text(splitNotes, 20, 230);
+  }
+  
+  // Download the PDF
+  const filename = `${type}-${data.orderNumber}-${new Date().toISOString().split('T')[0]}.pdf`;
+  doc.save(filename);
+};
+
 export const exportInvoiceToPDF = (invoice: InvoiceData) => {
   const doc = new jsPDF();
   

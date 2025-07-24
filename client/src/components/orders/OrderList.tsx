@@ -5,8 +5,11 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Edit, Search, Filter, Eye, FileText, Printer, Mail } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Edit, Search, Filter, Eye, FileText, Printer, Mail, X } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useToast } from "@/hooks/use-toast";
+import { exportToPDF } from "@/lib/pdfExport";
 
 interface Order {
   id: number;
@@ -14,14 +17,22 @@ interface Order {
   customer: {
     firstName: string;
     lastName: string;
+    email?: string;
+    phone?: string;
   };
   description: string;
+  artworkDescription?: string;
+  dimensions?: string;
+  frameStyle?: string;
+  matColor?: string;
+  glazing?: string;
   totalAmount: string;
   depositAmount?: string;
   status: string;
   priority: string;
   dueDate?: string;
   createdAt: string;
+  notes?: string;
 }
 
 interface OrderListProps {
@@ -46,22 +57,143 @@ export default function OrderList({
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [priorityFilter, setPriorityFilter] = useState("all");
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const { toast } = useToast();
 
-  // Default handlers if not provided
+  // View order details
+  const handleViewOrder = (order: Order) => {
+    setSelectedOrder(order);
+    setIsViewDialogOpen(true);
+  };
+
+  // Generate and download invoice PDF
   const handleGenerateInvoice = onGenerateInvoice || ((order: Order) => {
-    console.log("Generate invoice for order:", order.orderNumber);
+    try {
+      const invoiceData = {
+        orderNumber: order.orderNumber,
+        customerName: `${order.customer.firstName} ${order.customer.lastName}`,
+        customerEmail: order.customer.email || '',
+        customerPhone: order.customer.phone || '',
+        description: order.description,
+        artworkDescription: order.artworkDescription || '',
+        dimensions: order.dimensions || '',
+        frameStyle: order.frameStyle || '',
+        matColor: order.matColor || '',
+        glazing: order.glazing || '',
+        totalAmount: parseFloat(order.totalAmount),
+        depositAmount: order.depositAmount ? parseFloat(order.depositAmount) : 0,
+        status: order.status,
+        priority: order.priority,
+        dueDate: order.dueDate || '',
+        createdAt: order.createdAt,
+        notes: order.notes || ''
+      };
+      
+      exportToPDF(invoiceData, 'invoice');
+      toast({
+        title: "Invoice Generated",
+        description: `Invoice for order ${order.orderNumber} has been downloaded.`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to generate invoice PDF.",
+        variant: "destructive",
+      });
+    }
   });
 
+  // Generate and download work order PDF
   const handleGenerateWorkOrder = onGenerateWorkOrder || ((order: Order) => {
-    console.log("Generate work order for order:", order.orderNumber);
+    try {
+      const workOrderData = {
+        orderNumber: order.orderNumber,
+        customerName: `${order.customer.firstName} ${order.customer.lastName}`,
+        customerEmail: order.customer.email || '',
+        customerPhone: order.customer.phone || '',
+        description: order.description,
+        artworkDescription: order.artworkDescription || '',
+        dimensions: order.dimensions || '',
+        frameStyle: order.frameStyle || '',
+        matColor: order.matColor || '',
+        glazing: order.glazing || '',
+        totalAmount: parseFloat(order.totalAmount),
+        depositAmount: order.depositAmount ? parseFloat(order.depositAmount) : 0,
+        status: order.status,
+        priority: order.priority,
+        dueDate: order.dueDate || '',
+        createdAt: order.createdAt,
+        notes: order.notes || ''
+      };
+      
+      exportToPDF(workOrderData, 'work-order');
+      toast({
+        title: "Work Order Generated",
+        description: `Work order for ${order.orderNumber} has been downloaded.`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to generate work order PDF.",
+        variant: "destructive",
+      });
+    }
   });
 
+  // Print invoice
   const handlePrintInvoice = onPrintInvoice || ((order: Order) => {
-    console.log("Print invoice for order:", order.orderNumber);
+    try {
+      const invoiceData = {
+        orderNumber: order.orderNumber,
+        customerName: `${order.customer.firstName} ${order.customer.lastName}`,
+        customerEmail: order.customer.email || '',
+        customerPhone: order.customer.phone || '',
+        description: order.description,
+        artworkDescription: order.artworkDescription || '',
+        dimensions: order.dimensions || '',
+        frameStyle: order.frameStyle || '',
+        matColor: order.matColor || '',
+        glazing: order.glazing || '',
+        totalAmount: parseFloat(order.totalAmount),
+        depositAmount: order.depositAmount ? parseFloat(order.depositAmount) : 0,
+        status: order.status,
+        priority: order.priority,
+        dueDate: order.dueDate || '',
+        createdAt: order.createdAt,
+        notes: order.notes || ''
+      };
+      
+      // Generate PDF and trigger print dialog
+      exportToPDF(invoiceData, 'invoice');
+      toast({
+        title: "Print Ready",
+        description: `Invoice for order ${order.orderNumber} is ready to print.`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to prepare invoice for printing.",
+        variant: "destructive",
+      });
+    }
   });
 
+  // Email invoice
   const handleEmailInvoice = onEmailInvoice || ((order: Order) => {
-    console.log("Email invoice for order:", order.orderNumber);
+    if (!order.customer.email) {
+      toast({
+        title: "No Email Address",
+        description: "Customer has no email address on file.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    toast({
+      title: "Email Feature",
+      description: "Email functionality will be implemented with your email service provider.",
+    });
   });
 
   const formatCurrency = (amount: string) => {
@@ -286,6 +418,7 @@ export default function OrderList({
                         <Button 
                           variant="ghost" 
                           size="sm"
+                          onClick={() => handleViewOrder(order)}
                           title="View Details"
                         >
                           <Eye className="w-4 h-4" />
@@ -331,6 +464,189 @@ export default function OrderList({
           </div>
         )}
       </CardContent>
+
+      {/* Order Details Modal */}
+      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center justify-between">
+              Order Details - {selectedOrder?.orderNumber}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsViewDialogOpen(false)}
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </DialogTitle>
+          </DialogHeader>
+          
+          {selectedOrder && (
+            <div className="space-y-6">
+              {/* Customer Information */}
+              <div>
+                <h3 className="text-lg font-semibold mb-2">Customer Information</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Name</label>
+                    <p className="font-medium">{selectedOrder.customer.firstName} {selectedOrder.customer.lastName}</p>
+                  </div>
+                  {selectedOrder.customer.email && (
+                    <div>
+                      <label className="text-sm font-medium text-gray-500">Email</label>
+                      <p className="font-medium">{selectedOrder.customer.email}</p>
+                    </div>
+                  )}
+                  {selectedOrder.customer.phone && (
+                    <div>
+                      <label className="text-sm font-medium text-gray-500">Phone</label>
+                      <p className="font-medium">{selectedOrder.customer.phone}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Order Information */}
+              <div>
+                <h3 className="text-lg font-semibold mb-2">Order Information</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Status</label>
+                    <div className="mt-1">{getStatusBadge(selectedOrder.status)}</div>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Priority</label>
+                    <div className="mt-1">{getPriorityBadge(selectedOrder.priority)}</div>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Created</label>
+                    <p className="font-medium">{formatDate(selectedOrder.createdAt)}</p>
+                  </div>
+                  {selectedOrder.dueDate && (
+                    <div>
+                      <label className="text-sm font-medium text-gray-500">Due Date</label>
+                      <p className="font-medium">{formatDate(selectedOrder.dueDate)}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Project Details */}
+              <div>
+                <h3 className="text-lg font-semibold mb-2">Project Details</h3>
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Description</label>
+                    <p className="font-medium">{selectedOrder.description}</p>
+                  </div>
+                  {selectedOrder.artworkDescription && (
+                    <div>
+                      <label className="text-sm font-medium text-gray-500">Artwork Description</label>
+                      <p className="font-medium">{selectedOrder.artworkDescription}</p>
+                    </div>
+                  )}
+                  {selectedOrder.dimensions && (
+                    <div>
+                      <label className="text-sm font-medium text-gray-500">Dimensions</label>
+                      <p className="font-medium">{selectedOrder.dimensions}</p>
+                    </div>
+                  )}
+                  <div className="grid grid-cols-3 gap-4">
+                    {selectedOrder.frameStyle && (
+                      <div>
+                        <label className="text-sm font-medium text-gray-500">Frame Style</label>
+                        <p className="font-medium">{selectedOrder.frameStyle}</p>
+                      </div>
+                    )}
+                    {selectedOrder.matColor && (
+                      <div>
+                        <label className="text-sm font-medium text-gray-500">Mat Color</label>
+                        <p className="font-medium">{selectedOrder.matColor}</p>
+                      </div>
+                    )}
+                    {selectedOrder.glazing && (
+                      <div>
+                        <label className="text-sm font-medium text-gray-500">Glazing</label>
+                        <p className="font-medium">{selectedOrder.glazing}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Financial Information */}
+              <div>
+                <h3 className="text-lg font-semibold mb-2">Financial Information</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Total Amount</label>
+                    <p className="font-bold text-lg">{formatCurrency(selectedOrder.totalAmount)}</p>
+                  </div>
+                  {selectedOrder.depositAmount && (
+                    <div>
+                      <label className="text-sm font-medium text-gray-500">Deposit Amount</label>
+                      <p className="font-medium">{formatCurrency(selectedOrder.depositAmount)}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Notes */}
+              {selectedOrder.notes && (
+                <div>
+                  <h3 className="text-lg font-semibold mb-2">Notes</h3>
+                  <p className="bg-gray-50 p-3 rounded-md">{selectedOrder.notes}</p>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex flex-wrap gap-2 pt-4 border-t">
+                <Button 
+                  onClick={() => onEdit(selectedOrder)} 
+                  className="flex items-center gap-2"
+                >
+                  <Edit className="w-4 h-4" />
+                  Edit Order
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => handleGenerateInvoice(selectedOrder)}
+                  className="flex items-center gap-2"
+                >
+                  <FileText className="w-4 h-4" />
+                  Generate Invoice
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => handleGenerateWorkOrder(selectedOrder)}
+                  className="flex items-center gap-2"
+                >
+                  <FileText className="w-4 h-4" />
+                  Work Order
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => handlePrintInvoice(selectedOrder)}
+                  className="flex items-center gap-2"
+                >
+                  <Printer className="w-4 h-4" />
+                  Print
+                </Button>
+                {selectedOrder.customer.email && (
+                  <Button 
+                    variant="outline" 
+                    onClick={() => handleEmailInvoice(selectedOrder)}
+                    className="flex items-center gap-2"
+                  >
+                    <Mail className="w-4 h-4" />
+                    Email Invoice
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
