@@ -52,6 +52,10 @@ export default function OrderForm({
 }: OrderFormProps) {
   const [customerOpen, setCustomerOpen] = useState(false);
   const [customerSearch, setCustomerSearch] = useState("");
+  const [frameOpen, setFrameOpen] = useState(false);
+  const [frameSearch, setFrameSearch] = useState("");
+  const [matOpen, setMatOpen] = useState(false);
+  const [matSearch, setMatSearch] = useState("");
   const [newCustomerName, setNewCustomerName] = useState("");
   const [calculatedPrice, setCalculatedPrice] = useState(0);
   const [laborCost, setLaborCost] = useState(38); // Labor cost before retail markup
@@ -257,8 +261,24 @@ export default function OrderForm({
     `${customer.firstName} ${customer.lastName}`.toLowerCase().includes(customerSearch.toLowerCase())
   );
 
+  // Filter frames based on search
+  const filteredFrames = frameOptions.filter(option =>
+    option.label.toLowerCase().includes(frameSearch.toLowerCase())
+  );
+
+  // Filter mats based on search
+  const filteredMats = matOptions.filter(option =>
+    option.label.toLowerCase().includes(matSearch.toLowerCase())
+  );
+
   // Get selected customer for display
   const selectedCustomer = customers.find(c => c.id.toString() === form.watch("customerId"));
+
+  // Get selected frame for display
+  const selectedFrame = frameOptions.find(f => f.value === form.watch("frameStyle"));
+
+  // Get selected mat for display
+  const selectedMat = matOptions.find(m => m.value === form.watch("matColor"));
 
   const handleFormSubmit = (data: OrderFormData) => {
     // Transform the data before sending
@@ -481,22 +501,66 @@ export default function OrderForm({
             control={form.control}
             name="frameStyle"
             render={({ field }) => (
-              <FormItem>
+              <FormItem className="flex flex-col">
                 <FormLabel>Frame Style</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value || ""}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select frame style" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {frameOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Popover open={frameOpen} onOpenChange={setFrameOpen}>
+                  <PopoverTrigger asChild>
+                    <FormControl>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={frameOpen}
+                        className="justify-between"
+                        data-testid="button-frame-select"
+                      >
+                        {selectedFrame
+                          ? selectedFrame.label.split(' - ')[0] // Show just the frame name, not the pricing
+                          : "Select frame style..."}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </FormControl>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-full p-0">
+                    <Command>
+                      <CommandInput
+                        placeholder="Search frame styles..."
+                        value={frameSearch}
+                        onValueChange={setFrameSearch}
+                        data-testid="input-frame-search"
+                      />
+                      <CommandEmpty>No frame style found.</CommandEmpty>
+                      <CommandGroup className="max-h-60 overflow-auto">
+                        {filteredFrames.map((option) => (
+                          <CommandItem
+                            key={option.value}
+                            value={option.label}
+                            onSelect={() => {
+                              field.onChange(option.value);
+                              setFrameOpen(false);
+                              setFrameSearch("");
+                            }}
+                            data-testid={`option-frame-${option.value}`}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                selectedFrame?.value === option.value ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            <div className="flex flex-col">
+                              <span className="font-medium">{option.label.split(' - ')[0]}</span>
+                              {option.basePrice > 0 && (
+                                <span className="text-xs text-muted-foreground">
+                                  ${option.basePrice}/ft wholesale → ${option.retailPrice}/ft retail
+                                </span>
+                              )}
+                            </div>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
                 <FormMessage />
               </FormItem>
             )}
@@ -507,22 +571,66 @@ export default function OrderForm({
             control={form.control}
             name="matColor"
             render={({ field }) => (
-              <FormItem>
+              <FormItem className="flex flex-col">
                 <FormLabel>Mat Color</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value || ""}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select mat color" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {matOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Popover open={matOpen} onOpenChange={setMatOpen}>
+                  <PopoverTrigger asChild>
+                    <FormControl>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={matOpen}
+                        className="justify-between"
+                        data-testid="button-mat-select"
+                      >
+                        {selectedMat
+                          ? selectedMat.label.split(' - ')[0] // Show just the mat name, not the pricing
+                          : "Select mat color..."}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </FormControl>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-full p-0">
+                    <Command>
+                      <CommandInput
+                        placeholder="Search mat colors..."
+                        value={matSearch}
+                        onValueChange={setMatSearch}
+                        data-testid="input-mat-search"
+                      />
+                      <CommandEmpty>No mat color found.</CommandEmpty>
+                      <CommandGroup className="max-h-60 overflow-auto">
+                        {filteredMats.map((option) => (
+                          <CommandItem
+                            key={option.value}
+                            value={option.label}
+                            onSelect={() => {
+                              field.onChange(option.value);
+                              setMatOpen(false);
+                              setMatSearch("");
+                            }}
+                            data-testid={`option-mat-${option.value}`}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                selectedMat?.value === option.value ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            <div className="flex flex-col">
+                              <span className="font-medium">{option.label.split(' - ')[0]}</span>
+                              {option.basePrice > 0 && (
+                                <span className="text-xs text-muted-foreground">
+                                  ${option.basePrice} wholesale → ${option.retailPrice} retail
+                                </span>
+                              )}
+                            </div>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
                 <FormMessage />
               </FormItem>
             )}

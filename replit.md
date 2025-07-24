@@ -17,6 +17,7 @@ Preferred communication style: Simple, everyday language.
 ✓ **Fixed Critical Data Persistence Issues**: Resolved all database connection and API request problems preventing orders, customers, and invoices from saving
 ✓ **Enhanced Price Breakdown Display**: Shows detailed calculation steps including actual frame dimensions (20x24), perimeter calculation, feet conversion, wholesale cost, and sliding scale markup factors
 ✓ **Fixed Mat Size Impact on Frame/Glass**: Frame and glass sizes now correctly adjust when mat is added - 16x20 artwork becomes 20x24 frame/glass with 2" mat border
+✓ **Added Searchable Frame and Mat Dropdowns**: Enhanced order form with searchable comboboxes for frame styles and mat colors, making it easy to find specific options from large inventories
 
 **Note**: Authentication is required for all data operations. Users must be logged in via Replit Auth to create customers, orders, or invoices.
 
