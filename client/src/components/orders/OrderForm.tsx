@@ -137,31 +137,27 @@ export default function OrderForm({
       );
       
       if (frameItem) {
-        // Frame perimeter includes mat border if mat is selected
-        const matBorder = matColor ? matWidth * 2 : 0; // Add mat border to each dimension
-        const framePerimeterInches = 2 * (artworkWidth + artworkHeight + matBorder * 2);
+        // Frame perimeter: 16+16+20+20+2+2+2+2 = 80" for 16x20 with 2" mat
+        const matBorder = matColor ? matWidth * 4 : 0; // 2" mat = 8" total border (2" on each side)
+        const framePerimeterInches = (artworkWidth * 2) + (artworkHeight * 2) + matBorder;
         const framePerimeterFeet = framePerimeterInches / 12;
-        const retailPricePerFoot = parseFloat(frameItem.retailPrice);
+        const pricePerFoot = parseFloat(frameItem.basePrice);
         
-        // Apply proper united inch-based markup without location discounts
-        const unitedInches = artworkWidth + artworkHeight + (matColor ? matWidth * 4 : 0);
-        const markupFactor = getFrameMarkupFactor(parseFloat(frameItem.basePrice));
-        framePrice = framePerimeterFeet * parseFloat(frameItem.basePrice) * markupFactor;
+        // Wholesale cost = feet × price per foot, then round up to nearest dollar
+        const wholesaleCost = Math.ceil(framePerimeterFeet * pricePerFoot);
+        
+        // Apply markup based on price per foot
+        const markupFactor = getFrameMarkupFactor(pricePerFoot);
+        framePrice = wholesaleCost * markupFactor;
       }
     }
 
-    // Calculate mat price using proper united inch-based markup without location discounts
+    // Calculate mat price using united inches: 16+20=36 united inches at $0.0109 per square inch
     let matPrice = 0;
-    if (matColor && matColor !== "none" && priceStructure && Array.isArray(priceStructure)) {
-      const matItem = priceStructure.find((item: any) => 
-        item && item.category === "mat" && item.itemName === matColor
-      );
-      
-      if (matItem) {
-        const unitedInches = artworkWidth + artworkHeight + (matWidth * 4);
-        const markupFactor = getMatMarkupFactor(unitedInches);
-        matPrice = parseFloat(matItem.basePrice) * markupFactor;
-      }
+    if (matColor && matColor !== "none") {
+      const unitedInches = artworkWidth + artworkHeight; // 16+20=36 for your example
+      const pricePerSquareInch = 0.0109; // $0.0109 per square inch
+      matPrice = unitedInches * pricePerSquareInch;
     }
 
     // Calculate glass price using proper united inch-based markup without location discounts
@@ -619,30 +615,25 @@ export default function OrderForm({
                       item && item.category === "frame" && item.itemName === frameStyle
                     );
                     if (frameItem) {
-                      const matBorder = matColor ? matWidth * 2 : 0;
-                      const framePerimeterInches = 2 * (artworkWidth + artworkHeight + matBorder * 2);
+                      const matBorder = matColor ? matWidth * 4 : 0; // 2" mat = 8" total border
+                      const framePerimeterInches = (artworkWidth * 2) + (artworkHeight * 2) + matBorder;
                       const framePerimeterFeet = framePerimeterInches / 12;
-                      const retailPricePerFoot = parseFloat(frameItem.retailPrice);
-                      const unitedInches = artworkWidth + artworkHeight + (matColor ? matWidth * 4 : 0);
-                      const markupFactor = getFrameMarkupFactor(parseFloat(frameItem.basePrice));
-                      framePrice = framePerimeterFeet * parseFloat(frameItem.basePrice) * markupFactor;
-                      frameDetails = `${framePerimeterFeet.toFixed(1)} ft × $${frameItem.basePrice}/ft × ${markupFactor}x`;
+                      const pricePerFoot = parseFloat(frameItem.basePrice);
+                      const wholesaleCost = Math.ceil(framePerimeterFeet * pricePerFoot);
+                      const markupFactor = getFrameMarkupFactor(pricePerFoot);
+                      framePrice = wholesaleCost * markupFactor;
+                      frameDetails = `${framePerimeterInches}" = ${framePerimeterFeet.toFixed(2)} ft × $${pricePerFoot}/ft = $${wholesaleCost} × ${markupFactor}x`;
                     }
                   }
                   
-                  // Calculate mat price using proper united inch-based markup
+                  // Calculate mat price using united inches: 16+20=36 at $0.0109 per square inch
                   let matPrice = 0;
                   let matDetails = "";
-                  if (matColor && matColor !== "none" && priceStructure && Array.isArray(priceStructure)) {
-                    const matItem = priceStructure.find((item: any) => 
-                      item && item.category === "mat" && item.itemName === matColor
-                    );
-                    if (matItem) {
-                      const unitedInches = artworkWidth + artworkHeight + (matWidth * 4);
-                      const markupFactor = getMatMarkupFactor(unitedInches);
-                      matPrice = parseFloat(matItem.basePrice) * markupFactor;
-                      matDetails = `$${matItem.basePrice} base × ${markupFactor}x markup (${unitedInches}" united)`;
-                    }
+                  if (matColor && matColor !== "none") {
+                    const unitedInches = artworkWidth + artworkHeight; // 16+20=36
+                    const pricePerSquareInch = 0.0109;
+                    matPrice = unitedInches * pricePerSquareInch;
+                    matDetails = `${artworkWidth}+${artworkHeight} = ${unitedInches} united inches × $${pricePerSquareInch}`;
                   }
                   
                   // Calculate glazing price using proper united inch-based markup
@@ -709,7 +700,7 @@ export default function OrderForm({
                         <span>${overheadCost.toFixed(2)}</span>
                       </div>
                       <div className="border-t pt-1 mt-1 font-semibold flex justify-between">
-                        <span>Total (Houston Heights pricing):</span>
+                        <span>Total:</span>
                         <span>${calculatedPrice.toFixed(2)}</span>
                       </div>
                       <div className="text-xs text-green-600 mt-1">

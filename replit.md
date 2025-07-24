@@ -8,14 +8,14 @@ FrameCraft is a comprehensive full-stack web application designed to streamline 
 
 Preferred communication style: Simple, everyday language.
 
-## Recent Changes (July 22, 2025)
+## Recent Changes (July 24, 2025)
 
+✓ **Implemented Exact User-Specified Pricing Formula**: Frame pricing using perimeter calculation (16+16+20+20+2+2+2+2=80" ÷ 12 = 6.667 feet × price per foot × markup), with wholesale cost rounded up to nearest dollar
+✓ **Updated Mat Pricing to United Inches Method**: Mat pricing using simple united inches formula (16+20=36 united inches × $0.0109 per square inch) based on 32"×40" board at $14 cost
+✓ **Removed All Location-Specific Discounts**: Eliminated Houston Heights market adjustments and location-based pricing strategies to use industry-standard methodology
+✓ **Updated Labor and Overhead Costs**: Labor cost increased from $25 to $38, added $54 overhead cost per frame job for accurate business cost accounting
 ✓ **Fixed Critical Data Persistence Issues**: Resolved all database connection and API request problems preventing orders, customers, and invoices from saving
-✓ **Implemented United Inch-Based Pricing System**: Comprehensive industry-standard pricing with sliding scale markups based on material cost and artwork size (4.5x for low-cost materials, 2.5x for premium)
-✓ **Added Houston Heights Market Adjustments**: Location-specific pricing reductions (frame prices reduced to 16.67%, glass prices to 45% of full calculation) for competitive local market
-✓ **Created Advanced Pricing Service**: Sophisticated pricing calculation engine with united inch measurements, size-dependent markups, and detailed price breakdowns
-✓ **Enhanced Wholesale/Retail Price Intelligence**: Dropdowns show both wholesale cost and calculated retail prices with markup factors for informed business decisions
-✓ **Added Flexible Order Types**: Support for mat-only, glass-only, frame-only, and complete framing orders with "No Frame" and "No Glass" options
+✓ **Enhanced Price Breakdown Display**: Shows detailed calculation steps including perimeter inches, feet conversion, wholesale cost, and markup factors for transparency
 
 **Note**: Authentication is required for all data operations. Users must be logged in via Replit Auth to create customers, orders, or invoices.
 
