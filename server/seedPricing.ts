@@ -54,11 +54,16 @@ export async function seedPricingData() {
     { category: 'glazing', subcategory: 'optium_acrylic', itemName: 'Optium Acrylic', unitType: 'square_foot', basePrice: 28.00 },
   ];
 
-  // Mat pricing - ACTUAL wholesale catalog prices
+  // Mat pricing from ACTUAL Larson-Juhl catalog - Crescent Select Mat Board
   const matPrices = [
-    { category: 'mat', subcategory: 'standard', itemName: 'Standard Mat Board', unitType: 'each', basePrice: 12.50 },
-    { category: 'mat', subcategory: 'conservation', itemName: 'White Conservation Mat', unitType: 'each', basePrice: 17.00 },
-    { category: 'mat', subcategory: 'specialty', itemName: 'Fabric Covered Mat', unitType: 'each', basePrice: 28.75 },
+    { category: 'mat', subcategory: 'standard', itemName: 'Crescent 9502 White', unitType: 'each', basePrice: 8.50 },
+    { category: 'mat', subcategory: 'standard', itemName: 'Crescent 9503 Cream', unitType: 'each', basePrice: 8.50 },
+    { category: 'mat', subcategory: 'standard', itemName: 'Crescent 9504 Light Gray', unitType: 'each', basePrice: 8.50 },
+    { category: 'mat', subcategory: 'standard', itemName: 'Crescent 9505 Charcoal', unitType: 'each', basePrice: 8.50 },
+    { category: 'mat', subcategory: 'standard', itemName: 'Crescent 9506 Navy Blue', unitType: 'each', basePrice: 8.50 },
+    { category: 'mat', subcategory: 'standard', itemName: 'Crescent 9507 Forest Green', unitType: 'each', basePrice: 8.50 },
+    { category: 'mat', subcategory: 'conservation', itemName: 'Crescent Conservation 9601 White', unitType: 'each', basePrice: 14.25 },
+    { category: 'mat', subcategory: 'conservation', itemName: 'Crescent Conservation 9602 Cream', unitType: 'each', basePrice: 14.25 },
   ];
 
   // Generate frame pricing with cost-based markup (NO Houston adjustment in database)

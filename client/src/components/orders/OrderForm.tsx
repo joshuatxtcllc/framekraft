@@ -136,7 +136,9 @@ export default function OrderForm({
       );
       
       if (frameItem) {
-        const framePerimeterInches = 2 * (artworkWidth + artworkHeight + matWidth * 4);
+        // Frame perimeter includes mat border if mat is selected
+        const matBorder = matColor ? matWidth * 2 : 0; // Add mat border to each dimension
+        const framePerimeterInches = 2 * (artworkWidth + artworkHeight + matBorder * 2);
         const framePerimeterFeet = framePerimeterInches / 12;
         const retailPricePerFoot = parseFloat(frameItem.retailPrice);
         
@@ -145,11 +147,11 @@ export default function OrderForm({
       }
     }
 
-    // Calculate mat price based on united inches
+    // Calculate mat price based on selected color/item
     let matPrice = 0;
     if (matColor && priceStructure && Array.isArray(priceStructure)) {
       const matItem = priceStructure.find((item: any) => 
-        item && item.category === "mat"
+        item && item.category === "mat" && item.itemName === matColor
       );
       
       if (matItem) {
@@ -168,7 +170,11 @@ export default function OrderForm({
       );
       
       if (glazingItem) {
-        const glassAreaInches = artworkWidth * artworkHeight;
+        // Glass area includes mat border if mat is selected
+        const matBorder = matColor ? matWidth * 2 : 0; // Add mat border to each dimension
+        const glassWidthInches = artworkWidth + matBorder;
+        const glassHeightInches = artworkHeight + matBorder;
+        const glassAreaInches = glassWidthInches * glassHeightInches;
         const glassAreaFeet = glassAreaInches / 144;
         const retailPricePerSqFt = parseFloat(glazingItem.retailPrice);
         
@@ -222,17 +228,16 @@ export default function OrderForm({
       })) : [])
   ];
 
-  const matColors = [
-    "Warm White",
-    "Cream", 
-    "Light Gray",
-    "Charcoal",
-    "Navy Blue",
-    "Forest Green",
-    "Burgundy",
-    "Gold",
-    "Silver",
-    "Black",
+  // Get mat options with wholesale prices from pricing structure
+  const matOptions = [
+    ...(priceStructure && Array.isArray(priceStructure) ? priceStructure
+      .filter((item: any) => item && item.category === "mat")
+      .map((item: any) => ({
+        value: item.itemName,
+        label: `${item.itemName} - $${item.basePrice} wholesale → $${item.retailPrice} retail`,
+        basePrice: item.basePrice,
+        retailPrice: item.retailPrice
+      })) : [])
   ];
 
   const statusOptions = [
@@ -515,9 +520,9 @@ export default function OrderForm({
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {matColors.map((color) => (
-                      <SelectItem key={color} value={color}>
-                        {color}
+                    {matOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
                       </SelectItem>
                     ))}
                   </SelectContent>
