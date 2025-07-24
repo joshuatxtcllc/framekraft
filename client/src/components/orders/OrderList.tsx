@@ -68,7 +68,7 @@ export default function OrderList({
   };
 
   // Generate and download invoice PDF
-  const handleGenerateInvoice = onGenerateInvoice || ((order: Order) => {
+  const handleGenerateInvoice = onGenerateInvoice || (async (order: Order) => {
     try {
       const invoiceData = {
         orderNumber: order.orderNumber,
@@ -90,12 +90,13 @@ export default function OrderList({
         notes: order.notes || ''
       };
       
-      exportToPDF(invoiceData, 'invoice');
+      await exportToPDF(invoiceData, 'invoice');
       toast({
         title: "Invoice Generated",
         description: `Invoice for order ${order.orderNumber} has been downloaded.`,
       });
     } catch (error) {
+      console.error('Invoice generation error:', error);
       toast({
         title: "Error",
         description: "Failed to generate invoice PDF.",
@@ -105,7 +106,7 @@ export default function OrderList({
   });
 
   // Generate and download work order PDF
-  const handleGenerateWorkOrder = onGenerateWorkOrder || ((order: Order) => {
+  const handleGenerateWorkOrder = onGenerateWorkOrder || (async (order: Order) => {
     try {
       const workOrderData = {
         orderNumber: order.orderNumber,
@@ -127,12 +128,13 @@ export default function OrderList({
         notes: order.notes || ''
       };
       
-      exportToPDF(workOrderData, 'work-order');
+      await exportToPDF(workOrderData, 'work-order');
       toast({
         title: "Work Order Generated",
         description: `Work order for ${order.orderNumber} has been downloaded.`,
       });
     } catch (error) {
+      console.error('Work order generation error:', error);
       toast({
         title: "Error",
         description: "Failed to generate work order PDF.",
@@ -142,7 +144,7 @@ export default function OrderList({
   });
 
   // Print invoice
-  const handlePrintInvoice = onPrintInvoice || ((order: Order) => {
+  const handlePrintInvoice = onPrintInvoice || (async (order: Order) => {
     try {
       const invoiceData = {
         orderNumber: order.orderNumber,
@@ -164,13 +166,19 @@ export default function OrderList({
         notes: order.notes || ''
       };
       
-      // Generate PDF and trigger print dialog
-      exportToPDF(invoiceData, 'invoice');
+      // Generate PDF and open print dialog
+      await exportToPDF(invoiceData, 'invoice');
+      // Attempt to trigger browser print dialog
+      setTimeout(() => {
+        window.print();
+      }, 1000);
+      
       toast({
         title: "Print Ready",
         description: `Invoice for order ${order.orderNumber} is ready to print.`,
       });
     } catch (error) {
+      console.error('Print preparation error:', error);
       toast({
         title: "Error",
         description: "Failed to prepare invoice for printing.",
@@ -190,9 +198,28 @@ export default function OrderList({
       return;
     }
     
+    // Create mailto link with invoice details
+    const subject = `Invoice ${order.orderNumber} - ${order.description}`;
+    const body = `Dear ${order.customer.firstName} ${order.customer.lastName},
+
+Please find attached your invoice for order ${order.orderNumber}.
+
+Order Details:
+- Description: ${order.description}
+- Total Amount: $${parseFloat(order.totalAmount).toFixed(2)}
+${order.depositAmount ? `- Deposit: $${parseFloat(order.depositAmount).toFixed(2)}` : ''}
+
+Thank you for your business!
+
+Best regards,
+FrameCraft`;
+    
+    const mailtoLink = `mailto:${order.customer.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.open(mailtoLink);
+    
     toast({
-      title: "Email Feature",
-      description: "Email functionality will be implemented with your email service provider.",
+      title: "Email Client Opened",
+      description: `Email client opened for ${order.customer.email}`,
     });
   });
 

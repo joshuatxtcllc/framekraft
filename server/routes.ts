@@ -30,25 +30,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const orders = await storage.getOrders();
       const customers = await storage.getCustomers();
-      
+
       const currentMonth = new Date();
       currentMonth.setDate(1);
-      
+
       const monthlyOrders = orders.filter(order => 
         new Date(order.createdAt!) >= currentMonth
       );
-      
+
       const monthlyRevenue = monthlyOrders.reduce(
         (sum, order) => sum + parseFloat(order.totalAmount), 0
       );
-      
+
       const activeOrders = orders.filter(order => 
         !['completed', 'cancelled'].includes(order.status)
       ).length;
-      
+
       const completedOrders = orders.filter(order => order.status === 'completed').length;
       const completionRate = orders.length > 0 ? (completedOrders / orders.length) * 100 : 0;
-      
+
       res.json({
         monthlyRevenue,
         activeOrders,
@@ -119,13 +119,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { status } = req.query;
       let orders;
-      
+
       if (status && typeof status === 'string') {
         orders = await storage.getOrdersByStatus(status);
       } else {
         orders = await storage.getOrders();
       }
-      
+
       res.json(orders);
     } catch (error) {
       console.error("Error fetching orders:", error);
@@ -136,7 +136,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/orders', isAuthenticated, async (req, res) => {
     try {
       const orderData = insertOrderSchema.parse(req.body);
-      const order = await storage.createOrder(orderData);
+      // Generate shorter order number (e.g., FC2401)
+  const orderNumber = `FC${new Date().getFullYear().toString().slice(-2)}${String(orderData.nextOrderId).padStart(2, '0')}`;
+      const order = await storage.createOrder({
+        ...orderData,
+        orderNumber,
+        totalAmount: parseFloat(req.body.totalAmount),
+        depositAmount: req.body.depositAmount ? parseFloat(req.body.depositAmount) : 0,
+        discountPercentage: req.body.discountPercentage ? parseFloat(req.body.discountPercentage) : 0,
+        status: req.body.status || 'pending',
+        priority: req.body.priority || 'normal',
+        dueDate: req.body.dueDate || null,
+        notes: req.body.notes || '',
+      });
       res.status(201).json(order);
     } catch (error) {
       console.error("Error creating order:", error);
@@ -163,7 +175,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const id = parseInt(req.params.id);
       const orderData = insertOrderSchema.partial().parse(req.body);
-      const order = await storage.updateOrder(id, orderData);
+      const order = await storage.updateOrder(id, {
+        ...orderData,
+        totalAmount: parseFloat(req.body.totalAmount),
+        depositAmount: req.body.depositAmount ? parseFloat(req.body.depositAmount) : 0,
+        discountPercentage: req.body.discountPercentage ? parseFloat(req.body.discountPercentage) : 0,
+        status: req.body.status,
+        priority: req.body.priority,
+        dueDate: req.body.dueDate || null,
+        notes: req.body.notes || '',
+      });
       res.json(order);
     } catch (error) {
       console.error("Error updating order:", error);
@@ -238,7 +259,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Gather business data for AI analysis
       const orders = await storage.getOrders();
       const customers = await storage.getCustomers();
-      
+
       const businessData = {
         recentOrders: orders.slice(0, 50),
         monthlyRevenue: orders.reduce((sum, order) => sum + parseFloat(order.totalAmount), 0),
@@ -249,7 +270,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
 
       const insights = await aiService.generateBusinessInsights(businessData);
-      
+
       // Store insights in database
       for (const insight of insights) {
         await storage.createAiInsight({
@@ -264,7 +285,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         });
       }
-      
+
       res.json(insights);
     } catch (error) {
       console.error("Error generating business insights:", error);
@@ -276,13 +297,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/orders/email-document', isAuthenticated, async (req, res) => {
     try {
       const { orderId, type, emailAddress } = req.body;
-      
+
       // Get order and customer data
       const order = await storage.getOrder(orderId);
       if (!order) {
         return res.status(404).json({ message: "Order not found" });
       }
-      
+
       const customer = await storage.getCustomer(order.customerId);
       if (!customer) {
         return res.status(404).json({ message: "Customer not found" });
@@ -295,10 +316,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`Subject: ${type === 'invoice' ? 'Invoice' : 'Work Order'} ${order.orderNumber}`);
       console.log(`Order ID: ${orderId}`);
       console.log(`Customer: ${customer.firstName} ${customer.lastName}`);
-      
+
       // Simulate processing delay
       await new Promise(resolve => setTimeout(resolve, 1000));
-      
+
       res.json({ 
         success: true, 
         message: `${type === 'invoice' ? 'Invoice' : 'Work order'} email sent successfully` 

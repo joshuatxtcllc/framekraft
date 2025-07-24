@@ -103,35 +103,155 @@ export default function Orders() {
     setIsFormOpen(true);
   };
 
-  const handleGenerateInvoice = (order: any) => {
-    // TODO: Implement invoice generation logic
-    toast({
-      title: "Invoice Generated",
-      description: `Invoice for order #${order.orderNumber} has been generated.`,
-    });
+  const handleGenerateInvoice = async (order: any) => {
+    try {
+      const { exportToPDF } = await import("@/lib/pdfExport");
+      const invoiceData = {
+        orderNumber: order.orderNumber,
+        customerName: `${order.customer.firstName} ${order.customer.lastName}`,
+        customerEmail: order.customer.email || '',
+        customerPhone: order.customer.phone || '',
+        description: order.description,
+        artworkDescription: order.artworkDescription || '',
+        dimensions: order.dimensions || '',
+        frameStyle: order.frameStyle || '',
+        matColor: order.matColor || '',
+        glazing: order.glazing || '',
+        totalAmount: parseFloat(order.totalAmount),
+        depositAmount: order.depositAmount ? parseFloat(order.depositAmount) : 0,
+        status: order.status,
+        priority: order.priority,
+        dueDate: order.dueDate || '',
+        createdAt: order.createdAt,
+        notes: order.notes || ''
+      };
+      
+      await exportToPDF(invoiceData, 'invoice');
+      toast({
+        title: "Invoice Generated",
+        description: `Invoice for order ${order.orderNumber} has been downloaded.`,
+      });
+    } catch (error) {
+      console.error('Invoice generation error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to generate invoice. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleGenerateWorkOrder = (order: any) => {
-    // TODO: Implement work order generation logic
-    toast({
-      title: "Work Order Generated",
-      description: `Work order for order #${order.orderNumber} has been generated.`,
-    });
+  const handleGenerateWorkOrder = async (order: any) => {
+    try {
+      const { exportToPDF } = await import("@/lib/pdfExport");
+      const workOrderData = {
+        orderNumber: order.orderNumber,
+        customerName: `${order.customer.firstName} ${order.customer.lastName}`,
+        customerEmail: order.customer.email || '',
+        customerPhone: order.customer.phone || '',
+        description: order.description,
+        artworkDescription: order.artworkDescription || '',
+        dimensions: order.dimensions || '',
+        frameStyle: order.frameStyle || '',
+        matColor: order.matColor || '',
+        glazing: order.glazing || '',
+        totalAmount: parseFloat(order.totalAmount),
+        depositAmount: order.depositAmount ? parseFloat(order.depositAmount) : 0,
+        status: order.status,
+        priority: order.priority,
+        dueDate: order.dueDate || '',
+        createdAt: order.createdAt,
+        notes: order.notes || ''
+      };
+      
+      await exportToPDF(workOrderData, 'work-order');
+      toast({
+        title: "Work Order Generated",
+        description: `Work order for ${order.orderNumber} has been downloaded.`,
+      });
+    } catch (error) {
+      console.error('Work order generation error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to generate work order. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handlePrintInvoice = (order: any) => {
-    // TODO: Implement print functionality
-    toast({
-      title: "Print Invoice",
-      description: `Printing invoice for order #${order.orderNumber}.`,
-    });
+  const handlePrintInvoice = async (order: any) => {
+    try {
+      const { exportToPDF } = await import("@/lib/pdfExport");
+      const invoiceData = {
+        orderNumber: order.orderNumber,
+        customerName: `${order.customer.firstName} ${order.customer.lastName}`,
+        customerEmail: order.customer.email || '',
+        customerPhone: order.customer.phone || '',
+        description: order.description,
+        artworkDescription: order.artworkDescription || '',
+        dimensions: order.dimensions || '',
+        frameStyle: order.frameStyle || '',
+        matColor: order.matColor || '',
+        glazing: order.glazing || '',
+        totalAmount: parseFloat(order.totalAmount),
+        depositAmount: order.depositAmount ? parseFloat(order.depositAmount) : 0,
+        status: order.status,
+        priority: order.priority,
+        dueDate: order.dueDate || '',
+        createdAt: order.createdAt,
+        notes: order.notes || ''
+      };
+      
+      await exportToPDF(invoiceData, 'invoice');
+      setTimeout(() => {
+        window.print();
+      }, 1000);
+      
+      toast({
+        title: "Print Ready",
+        description: `Invoice for order ${order.orderNumber} is ready to print.`,
+      });
+    } catch (error) {
+      console.error('Print preparation error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to prepare invoice for printing. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleEmailInvoice = (order: any) => {
-    // TODO: Implement email functionality
+    if (!order.customer.email) {
+      toast({
+        title: "No Email Address",
+        description: "Customer has no email address on file.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    const subject = `Invoice ${order.orderNumber} - ${order.description}`;
+    const body = `Dear ${order.customer.firstName} ${order.customer.lastName},
+
+Please find attached your invoice for order ${order.orderNumber}.
+
+Order Details:
+- Description: ${order.description}
+- Total Amount: $${parseFloat(order.totalAmount).toFixed(2)}
+${order.depositAmount ? `- Deposit: $${parseFloat(order.depositAmount).toFixed(2)}` : ''}
+
+Thank you for your business!
+
+Best regards,
+FrameCraft`;
+    
+    const mailtoLink = `mailto:${order.customer.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.open(mailtoLink);
+    
     toast({
-      title: "Email Invoice",
-      description: `Invoice for order #${order.orderNumber} has been emailed.`,
+      title: "Email Client Opened",
+      description: `Email client opened for ${order.customer.email}`,
     });
   };
 

@@ -69,6 +69,7 @@ export const orders = pgTable("orders", {
   glazing: varchar("glazing"),
   totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).notNull(),
   depositAmount: decimal("deposit_amount", { precision: 10, scale: 2 }),
+  discountPercentage: decimal("discount_percentage", { precision: 10, scale: 2 }).default("0"),
   balanceAmount: decimal("balance_amount", { precision: 10, scale: 2 }),
   taxAmount: decimal("tax_amount", { precision: 10, scale: 2 }).default("0"),
   discountAmount: decimal("discount_amount", { precision: 10, scale: 2 }).default("0"),

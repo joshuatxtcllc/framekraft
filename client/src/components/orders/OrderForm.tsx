@@ -27,6 +27,7 @@ const orderSchema = z.object({
   glazing: z.string().optional(),
   totalAmount: z.string().min(1, "Total amount is required"),
   depositAmount: z.string().optional(),
+  discountPercentage: z.string().optional(),
   status: z.string().default("pending"),
   priority: z.string().default("normal"),
   dueDate: z.date().optional(),
@@ -81,6 +82,7 @@ export default function OrderForm({
       glazing: initialData?.glazing || "",
       totalAmount: initialData?.totalAmount ? initialData.totalAmount.toString() : "",
       depositAmount: initialData?.depositAmount ? initialData.depositAmount.toString() : "",
+      discountPercentage: initialData?.discountPercentage ? initialData.discountPercentage.toString() : "",
       status: initialData?.status || "pending",
       priority: initialData?.priority || "normal",
       dueDate: initialData?.dueDate ? new Date(initialData.dueDate) : undefined,
@@ -184,7 +186,13 @@ export default function OrderForm({
     }
 
     // Calculate total with all components including overhead
-    const totalPrice = framePrice + matPrice + glazingPrice + laborCost + overheadCost;
+    let totalPrice = framePrice + matPrice + glazingPrice + laborCost + overheadCost;
+    
+    // Apply discount if specified
+    const discountPercentage = parseFloat(form.watch("discountPercentage") || "0");
+    if (discountPercentage > 0) {
+      totalPrice = totalPrice * (1 - discountPercentage / 100);
+    }
     
     return Math.round(totalPrice * 100) / 100; // Round to 2 decimal places
   };
@@ -196,7 +204,7 @@ export default function OrderForm({
     if (newPrice > 0 && useCalculatedPrice) {
       form.setValue("totalAmount", newPrice.toFixed(2));
     }
-  }, [form.watch("frameStyle"), form.watch("glazing"), form.watch("dimensions"), form.watch("matColor"), priceStructure, laborCost, useCalculatedPrice]);
+  }, [form.watch("frameStyle"), form.watch("glazing"), form.watch("dimensions"), form.watch("matColor"), form.watch("discountPercentage"), priceStructure, laborCost, useCalculatedPrice]);
 
   // Get frame options with wholesale prices from pricing structure
   const frameOptions = [
@@ -807,10 +815,36 @@ export default function OrderForm({
                         <span>Overhead:</span>
                         <span>${overheadCost.toFixed(2)}</span>
                       </div>
-                      <div className="border-t pt-1 mt-1 font-semibold flex justify-between">
-                        <span>Total:</span>
-                        <span>${calculatedPrice.toFixed(2)}</span>
-                      </div>
+                      {(() => {
+                        const discountPercentage = parseFloat(form.watch("discountPercentage") || "0");
+                        const subtotal = framePrice + matPrice + glazingPrice + laborCost + overheadCost;
+                        
+                        if (discountPercentage > 0) {
+                          return (
+                            <>
+                              <div className="flex justify-between">
+                                <span>Subtotal:</span>
+                                <span>${subtotal.toFixed(2)}</span>
+                              </div>
+                              <div className="flex justify-between text-red-600">
+                                <span>Discount ({discountPercentage}%):</span>
+                                <span>-${(subtotal * discountPercentage / 100).toFixed(2)}</span>
+                              </div>
+                              <div className="border-t pt-1 mt-1 font-semibold flex justify-between">
+                                <span>Total:</span>
+                                <span>${calculatedPrice.toFixed(2)}</span>
+                              </div>
+                            </>
+                          );
+                        } else {
+                          return (
+                            <div className="border-t pt-1 mt-1 font-semibold flex justify-between">
+                              <span>Total:</span>
+                              <span>${calculatedPrice.toFixed(2)}</span>
+                            </div>
+                          );
+                        }
+                      })()}
                       <div className="text-xs text-green-600 mt-1">
                         <span>Industry-standard united inch pricing methodology</span>
                       </div>
@@ -838,7 +872,29 @@ export default function OrderForm({
           )}
         </Card>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          {/* Discount Percentage */}
+          <FormField
+            control={form.control}
+            name="discountPercentage"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Discount %</FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max="100"
+                    placeholder="0.00"
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
           {/* Total Amount */}
           <FormField
             control={form.control}
