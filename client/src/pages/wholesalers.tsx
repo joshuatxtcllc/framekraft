@@ -38,6 +38,7 @@ export default function Wholesalers() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedWholesaler, setSelectedWholesaler] = useState<number | null>(null);
   const [uploadingCatalog, setUploadingCatalog] = useState<number | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
   const { toast } = useToast();
 
   const { data: wholesalers, isLoading } = useQuery({
@@ -566,6 +567,14 @@ export default function Wholesalers() {
                         </span>
                       )}
                     </CardTitle>
+                    <div className="mt-4">
+                      <Input
+                        placeholder="Search products by code or name (e.g., 210286)..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="max-w-md"
+                      />
+                    </div>
                   </CardHeader>
                   <CardContent>
                     {selectedProducts && (selectedProducts as any[]).length > 0 ? (
@@ -584,7 +593,13 @@ export default function Wholesalers() {
                             </TableRow>
                           </TableHeader>
                           <TableBody>
-                            {(selectedProducts as any[]).map((product: any) => (
+                            {(selectedProducts as any[])
+                              .filter((product: any) => 
+                                !searchQuery || 
+                                product.productCode?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                                product.productName?.toLowerCase().includes(searchQuery.toLowerCase())
+                              )
+                              .map((product: any) => (
                               <TableRow key={product.id}>
                                 <TableCell className="font-medium">{product.productCode}</TableCell>
                                 <TableCell>{product.productName}</TableCell>

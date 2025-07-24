@@ -38,4 +38,16 @@ export function registerWholesalerRoutes(app: Express) {
       res.status(500).json({ message: "Failed to fetch wholesaler products" });
     }
   });
+
+  // Search all wholesaler products
+  app.get("/api/wholesalers/products/search", isAuthenticated, async (req, res) => {
+    try {
+      const { q } = req.query;
+      const products = await storage.searchWholesalerProducts(q as string);
+      res.json(products);
+    } catch (error) {
+      console.error("Error searching wholesaler products:", error);
+      res.status(500).json({ message: "Failed to search products" });
+    }
+  });
 }

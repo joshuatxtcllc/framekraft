@@ -431,6 +431,25 @@ export class DatabaseStorage implements IStorage {
       .orderBy(wholesalerProducts.category, wholesalerProducts.productName);
   }
 
+  async searchWholesalerProducts(query: string): Promise<WholesalerProduct[]> {
+    if (!query) return [];
+    
+    return await db
+      .select()
+      .from(wholesalerProducts)
+      .leftJoin(wholesalers, eq(wholesalerProducts.wholesalerId, wholesalers.id))
+      .where(
+        and(
+          eq(wholesalerProducts.isActive, true),
+          or(
+            like(wholesalerProducts.productCode, `%${query}%`),
+            like(wholesalerProducts.productName, `%${query}%`)
+          )
+        )
+      )
+      .orderBy(wholesalerProducts.productCode);
+  }
+
   // Invoice methods
   async getInvoices(): Promise<InvoiceWithDetails[]> {
     const invoiceResults = await db
