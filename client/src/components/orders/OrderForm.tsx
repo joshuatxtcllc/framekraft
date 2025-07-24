@@ -595,6 +595,7 @@ export default function OrderForm({
                 {(() => {
                   const frameStyle = form.watch("frameStyle");
                   const glazing = form.watch("glazing");
+                  const matColor = form.watch("matColor");
                   const dimensions = form.watch("dimensions");
                   
                   if (!dimensions) {
@@ -606,50 +607,93 @@ export default function OrderForm({
                     return <p>Invalid dimension format. Use format like "16x20" or "16X20"</p>;
                   }
                   
-                  const width = parseFloat(dimensionMatch[1]);
-                  const height = parseFloat(dimensionMatch[2]);
-                  const perimeterFeet = ((width + height) * 2) / 12;
-                  const areaSquareFeet = (width * height) / 144;
+                  const artworkWidth = parseFloat(dimensionMatch[1]);
+                  const artworkHeight = parseFloat(dimensionMatch[2]);
+                  const matWidth = 2; // Standard 2" mat border
                   
-                  // Calculate frame price (0 if no frame)
+                  // Calculate frame price with mat border (if selected)
                   let framePrice = 0;
+                  let frameDetails = "";
                   if (frameStyle && frameStyle !== "none" && priceStructure && Array.isArray(priceStructure)) {
                     const frameItem = priceStructure.find((item: any) => 
                       item && item.category === "frame" && item.itemName === frameStyle
                     );
-                    framePrice = frameItem ? parseFloat(frameItem.retailPrice) * perimeterFeet : 0;
+                    if (frameItem) {
+                      const matBorder = matColor ? matWidth * 2 : 0;
+                      const framePerimeterInches = 2 * (artworkWidth + artworkHeight + matBorder * 2);
+                      const framePerimeterFeet = framePerimeterInches / 12;
+                      const retailPricePerFoot = parseFloat(frameItem.retailPrice);
+                      framePrice = framePerimeterFeet * retailPricePerFoot * 0.1667; // Houston adjustment
+                      frameDetails = `${framePerimeterFeet.toFixed(1)} ft × $${retailPricePerFoot}/ft × 16.67%`;
+                    }
                   }
                   
-                  // Calculate glazing price (0 if no glazing)
+                  // Calculate mat price
+                  let matPrice = 0;
+                  let matDetails = "";
+                  if (matColor && priceStructure && Array.isArray(priceStructure)) {
+                    const matItem = priceStructure.find((item: any) => 
+                      item && item.category === "mat" && item.itemName === matColor
+                    );
+                    if (matItem) {
+                      matPrice = parseFloat(matItem.retailPrice);
+                      matDetails = matItem.itemName;
+                    }
+                  }
+                  
+                  // Calculate glazing price with mat border (if selected)
                   let glazingPrice = 0;
+                  let glazingDetails = "";
                   if (glazing && glazing !== "none" && priceStructure && Array.isArray(priceStructure)) {
                     const glazingItem = priceStructure.find((item: any) => 
                       item && item.category === "glazing" && item.itemName === glazing
                     );
-                    glazingPrice = glazingItem ? parseFloat(glazingItem.retailPrice) * areaSquareFeet : 0;
+                    if (glazingItem) {
+                      const matBorder = matColor ? matWidth * 2 : 0;
+                      const glassWidthInches = artworkWidth + matBorder;
+                      const glassHeightInches = artworkHeight + matBorder;
+                      const glassAreaInches = glassWidthInches * glassHeightInches;
+                      const glassAreaFeet = glassAreaInches / 144;
+                      const retailPricePerSqFt = parseFloat(glazingItem.retailPrice);
+                      glazingPrice = glassAreaFeet * retailPricePerSqFt * 0.45; // Houston adjustment
+                      glazingDetails = `${glassAreaFeet.toFixed(2)} sq ft × $${retailPricePerSqFt}/sq ft × 45%`;
+                    }
                   }
                   
                   return (
                     <>
                       <div className="flex justify-between text-xs mb-1 text-blue-600">
-                        <span>Size: {width}"×{height}" ({perimeterFeet.toFixed(1)} linear ft, {areaSquareFeet.toFixed(1)} sq ft)</span>
+                        <span>Artwork: {artworkWidth}"×{artworkHeight}"</span>
+                        {matColor && <span>+ 2" mat border</span>}
                       </div>
-                      {frameStyle && frameStyle !== "none" && (
-                        <div className="flex justify-between">
-                          <span>Frame Cost (retail):</span>
-                          <span>${framePrice.toFixed(2)}</span>
+                      {frameStyle && frameStyle !== "none" && framePrice > 0 && (
+                        <div className="space-y-1">
+                          <div className="flex justify-between">
+                            <span>Frame ({frameStyle}):</span>
+                            <span>${framePrice.toFixed(2)}</span>
+                          </div>
+                          <div className="text-xs text-gray-500 pl-2">
+                            {frameDetails}
+                          </div>
                         </div>
                       )}
-                      {glazing && glazing !== "none" && (
-                        <div className="flex justify-between">
-                          <span>Glazing Cost (retail):</span>
-                          <span>${glazingPrice.toFixed(2)}</span>
+                      {matColor && matPrice > 0 && (
+                        <div className="space-y-1">
+                          <div className="flex justify-between">
+                            <span>Mat ({matDetails}):</span>
+                            <span>${matPrice.toFixed(2)}</span>
+                          </div>
                         </div>
                       )}
-                      {(!frameStyle || frameStyle === "none") && (!glazing || glazing === "none") && (
-                        <div className="flex justify-between text-amber-600">
-                          <span>Mat/Custom Only:</span>
-                          <span>No standard pricing</span>
+                      {glazing && glazing !== "none" && glazingPrice > 0 && (
+                        <div className="space-y-1">
+                          <div className="flex justify-between">
+                            <span>Glass ({glazing}):</span>
+                            <span>${glazingPrice.toFixed(2)}</span>
+                          </div>
+                          <div className="text-xs text-gray-500 pl-2">
+                            {glazingDetails}
+                          </div>
                         </div>
                       )}
                       <div className="flex justify-between">
@@ -657,14 +701,12 @@ export default function OrderForm({
                         <span>${laborCost.toFixed(2)}</span>
                       </div>
                       <div className="border-t pt-1 mt-1 font-semibold flex justify-between">
-                        <span>Customer Total (retail):</span>
+                        <span>Total (Houston Heights pricing):</span>
                         <span>${calculatedPrice.toFixed(2)}</span>
                       </div>
-                      {(frameStyle && frameStyle !== "none") || (glazing && glazing !== "none") ? (
-                        <div className="text-xs text-green-600 mt-1">
-                          <span>Your profit margin: ~30% markup from wholesale</span>
-                        </div>
-                      ) : null}
+                      <div className="text-xs text-green-600 mt-1">
+                        <span>Includes location-specific market adjustments</span>
+                      </div>
                     </>
                   );
                 })()}
