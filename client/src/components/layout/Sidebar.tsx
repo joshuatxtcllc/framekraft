@@ -36,6 +36,11 @@ export default function Sidebar() {
       icon: Users,
     },
     {
+      name: 'Customer Portal',
+      href: '/customer-portal',
+      icon: Frame,
+    },
+    {
       name: 'API Explorer',
       href: '/api-explorer',
       icon: Database,
