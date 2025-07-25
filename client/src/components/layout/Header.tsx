@@ -32,7 +32,7 @@ export default function Header() {
           {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
         </button>
 
-      <div className="flex-1 px-4 flex justify-between">
+        <div className="flex-1 px-4 flex justify-between">
         {/* Search */}
         <div className="flex-1 flex">
           <div className="w-full flex md:ml-0">
@@ -65,6 +65,7 @@ export default function Header() {
           </Button>
         </div>
       </div>
+    </div>
 
       {/* Mobile menu overlay */}
       {isMobileMenuOpen && (
