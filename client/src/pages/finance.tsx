@@ -8,8 +8,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DollarSign, TrendingUp, TrendingDown, FileText, CreditCard, AlertCircle } from "lucide-react";
+import PaymentDialog from "@/components/payments/PaymentDialog";
 
 export default function Finance() {
+  const [selectedInvoiceForPayment, setSelectedInvoiceForPayment] = useState<any>(null);
+  
   const { data: invoices = [] } = useQuery({
     queryKey: ["/api/invoices"],
     initialData: []
@@ -146,14 +149,26 @@ export default function Finance() {
                                   {new Date(invoice.createdAt).toLocaleDateString()}
                                 </div>
                               </div>
-                              <div className="text-right">
-                                <div className="font-semibold">${parseFloat(invoice.amount || 0).toFixed(2)}</div>
-                                <Badge 
-                                  variant={invoice.status === 'paid' ? 'default' : 'secondary'}
-                                  className={invoice.status === 'paid' ? 'bg-green-100 text-green-800' : ''}
-                                >
-                                  {invoice.status}
-                                </Badge>
+                              <div className="text-right flex items-center gap-3">
+                                <div>
+                                  <div className="font-semibold">${parseFloat(invoice.totalAmount || 0).toFixed(2)}</div>
+                                  <Badge 
+                                    variant={invoice.status === 'paid' ? 'default' : 'secondary'}
+                                    className={invoice.status === 'paid' ? 'bg-green-100 text-green-800' : ''}
+                                  >
+                                    {invoice.status}
+                                  </Badge>
+                                </div>
+                                {invoice.status !== 'paid' && (
+                                  <Button
+                                    size="sm"
+                                    onClick={() => setSelectedInvoiceForPayment(invoice)}
+                                    className="shrink-0"
+                                  >
+                                    <CreditCard className="w-4 h-4 mr-1" />
+                                    Pay
+                                  </Button>
+                                )}
                               </div>
                             </div>
                           ))}
@@ -234,6 +249,12 @@ export default function Finance() {
           </div>
         </main>
       </div>
+
+      <PaymentDialog
+        invoice={selectedInvoiceForPayment}
+        open={!!selectedInvoiceForPayment}
+        onOpenChange={(open) => !open && setSelectedInvoiceForPayment(null)}
+      />
     </div>
   );
 }

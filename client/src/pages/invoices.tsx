@@ -6,8 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
-import { Separator } from "@/components/ui/separator";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -25,10 +24,7 @@ import {
   CheckCircle,
   Clock,
   AlertCircle,
-  CreditCard,
-  UserPlus,
-  Trash2,
-  Mail
+  CreditCard
 } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -37,6 +33,7 @@ import Header from "@/components/layout/Header";
 import InvoiceDialog from "@/components/orders/InvoiceDialog";
 import StripePayment from "@/components/payments/StripePayment";
 import { exportToPDF } from "@/lib/pdfExport";
+import PaymentDialog from "@/components/payments/PaymentDialog";
 
 const customerSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
@@ -72,6 +69,7 @@ export default function Invoices() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [showNewCustomer, setShowNewCustomer] = useState(false);
   const { toast } = useToast();
+  const [selectedInvoiceForPayment, setSelectedInvoiceForPayment] = useState<any>(null);
 
   const { data: invoices, isLoading } = useQuery({
     queryKey: ["/api/invoices"],
@@ -195,7 +193,7 @@ export default function Invoices() {
   };
 
   const handleExportPDF = (invoice: any) => {
-    exportToPDF(invoice, "invoice");
+    exportInvoiceToPDF(invoice);
   };
 
   const getStatusBadge = (status: string) => {
@@ -284,7 +282,7 @@ export default function Invoices() {
   };
 
   const handleExportInvoice = (invoice: any) => {
-    exportToPDF(invoice, "invoice");
+    exportToPDF(invoice, printRef.current);
   };
 
   const handleEmailInvoice = (invoice: any) => {
@@ -801,6 +799,12 @@ export default function Invoices() {
             </Card>
           </div>
         </main>
+
+        <PaymentDialog
+          invoice={selectedInvoiceForPayment}
+          open={!!selectedInvoiceForPayment}
+          onOpenChange={(open) => !open && setSelectedInvoiceForPayment(null)}
+        />
       </div>
 
       {/* Email Dialog */}
