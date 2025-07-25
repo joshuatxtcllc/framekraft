@@ -11,6 +11,7 @@ import { registerPricingRoutes } from "./routes/pricing";
 import { registerWholesalerRoutes } from "./routes/wholesalers";
 import { registerInvoiceRoutes } from "./routes/invoices";
 import { registerFileUploadRoutes } from "./routes/fileUpload";
+import settingsRoutes from './routes/settings.js';
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
@@ -114,35 +115,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error updating customer:", error);
       res.status(400).json({ message: "Failed to update customer" });
-    }
-  });
-
-  // Public order tracking (no auth required)
-  app.get('/api/public/orders/:orderNumber/status', async (req, res) => {
-    try {
-      const orderNumber = req.params.orderNumber;
-      const order = await storage.getOrderByNumber(orderNumber);
-      
-      if (!order) {
-        return res.status(404).json({ message: "Order not found" });
-      }
-
-      // Return limited public information
-      const publicOrderInfo = {
-        id: order.id,
-        orderNumber: order.orderNumber,
-        status: order.status,
-        jobType: order.jobType || 'Custom Framing',
-        createdAt: order.createdAt,
-        dueDate: order.dueDate,
-        priority: order.priority,
-        // Don't expose sensitive customer data in public API
-      };
-
-      res.json(publicOrderInfo);
-    } catch (error) {
-      console.error("Error fetching public order status:", error);
-      res.status(500).json({ message: "Failed to fetch order status" });
     }
   });
 
@@ -325,61 +297,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Enhanced AI routes with Perplexity integration
-  app.post('/api/ai/market-research', isAuthenticated, async (req, res) => {
-    try {
-      const { topic } = req.body;
-      const research = await aiService.enhancedMarketResearch(topic || 'custom framing trends');
-      res.json(research);
-    } catch (error) {
-      console.error("Error conducting market research:", error);
-      res.status(500).json({ message: "Failed to conduct market research" });
-    }
-  });
-
-  app.post('/api/ai/framing-advice', isAuthenticated, async (req, res) => {
-    try {
-      const { artworkDescription, customerContext } = req.body;
-      const advice = await aiService.intelligentFramingAdvice(artworkDescription, customerContext);
-      res.json(advice);
-    } catch (error) {
-      console.error("Error generating framing advice:", error);
-      res.status(500).json({ message: "Failed to generate framing advice" });
-    }
-  });
-
-  app.get('/api/ai/competitor-analysis', isAuthenticated, async (req, res) => {
-    try {
-      const analysis = await aiService.realTimeCompetitorAnalysis();
-      res.json(analysis);
-    } catch (error) {
-      console.error("Error conducting competitor analysis:", error);
-      res.status(500).json({ message: "Failed to conduct competitor analysis" });
-    }
-  });
-
-  app.put('/api/ai/insights/:id/action-taken', isAuthenticated, async (req, res) => {
-    try {
-      const insightId = parseInt(req.params.id);
-      await storage.markInsightActionTaken(insightId);
-      res.json({ message: 'Insight marked as actioned' });
-    } catch (error) {
-      console.error("Error marking insight as actioned:", error);
-      res.status(500).json({ message: "Failed to mark insight as actioned" });
-    }
-  });
-
-  app.delete('/api/ai/insights/:id', isAuthenticated, async (req, res) => {
-    try {
-      const insightId = parseInt(req.params.id);
-      await storage.deleteAiInsight(insightId);
-      res.json({ message: 'Insight deleted successfully' });
-    } catch (error) {
-      console.error("Error deleting AI insight:", error);
-      res.status(500).json({ message: "Failed to delete insight" });
-    }
-  });
-
   // Document generation and email routes
   app.post('/api/orders/email-document', isAuthenticated, async (req, res) => {
     try {
@@ -477,9 +394,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           configured: !!process.env.STRIPE_SECRET_KEY,
           ...status.stripe
         },
-        perplexity: {
-          configured: !!process.env.PERPLEXITY_API_KEY,
-          ...status.perplexity
+        googleSearch: {
+          configured: !!(process.env.GOOGLE_API_KEY && process.env.GOOGLE_SEARCH_ENGINE_ID),
+          ...status.googleSearch
         }
       };
       res.json(health);
@@ -494,6 +411,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerWholesalerRoutes(app);
   registerInvoiceRoutes(app);
   registerFileUploadRoutes(app);
+  app.use('/api/pricing', pricingRoutes);
+  app.use('/api/wholesalers', wholesalersRoutes);
+  app.use('/api/invoices', invoicesRoutes);
+  app.use('/api/upload', fileUploadRoutes);
+  app.use('/api/settings', settingsRoutes);
 
   const httpServer = createServer(app);
   return httpServer;

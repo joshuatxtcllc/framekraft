@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { Frame, LayoutDashboard, ShoppingBag, Users, Brain, Sparkles, Package, DollarSign, Settings, BarChart3, Building2, FileText, Database, Kanban } from "lucide-react";
+import { Frame, LayoutDashboard, ShoppingBag, Users, Brain, Sparkles, Package, DollarSign, Settings, BarChart3, Building2, FileText, Database } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
@@ -23,45 +23,32 @@ export default function Sidebar() {
       name: 'Dashboard',
       href: '/',
       icon: LayoutDashboard,
+      current: location === '/',
     },
     {
       name: 'Orders',
       href: '/orders',
       icon: ShoppingBag,
+      current: location === '/orders',
       badge: activeOrdersCount > 0 ? activeOrdersCount : null,
     },
     {
       name: 'Customers',
       href: '/customers',
       icon: Users,
-    },
-    {
-      name: 'Customer Portal',
-      href: '/customer-portal',
-      icon: Frame,
+      current: location === '/customers',
     },
     {
       name: 'API Explorer',
       href: '/api-explorer',
       icon: Database,
+      current: location === '/api-explorer',
     },
-    {
+        {
       name: 'Integrations',
-      href: '/integration-settings',
+      href: '/settings',
       icon: Settings,
-    },
-  ];
-
-  const productionTools = [
-    {
-      name: 'Kanban Board',
-      href: '/kanban',
-      icon: Kanban,
-    },
-    {
-      name: 'Analytics',
-      href: '/analytics',
-      icon: BarChart3,
+      current: location === '/settings',
     },
   ];
 
@@ -70,66 +57,60 @@ export default function Sidebar() {
       name: 'AI Assistant',
       href: '/ai-assistant',
       icon: Brain,
+      current: location === '/ai-assistant',
     },
     {
       name: 'Frame Recommender',
       href: '/frame-recommender',
       icon: Sparkles,
+      current: location === '/frame-recommender',
     },
-  ];
-
-  const businessTools = [
+    {
+      name: 'Analytics',
+      href: '/analytics',
+      icon: BarChart3,
+      current: location === '/analytics',
+    },
     {
       name: 'Price Structure',
       href: '/pricing',
       icon: DollarSign,
+      current: location === '/pricing',
     },
     {
       name: 'Invoices',
       href: '/invoices',
       icon: FileText,
+      current: location === '/invoices',
     },
     {
       name: 'Wholesalers',
       href: '/wholesalers',
       icon: Building2,
+      current: location === '/wholesalers',
     },
+  ];
+
+  const businessTools = [
     {
       name: 'Inventory',
       href: '/inventory',
       icon: Package,
+      current: location === '/inventory',
     },
     {
       name: 'Finance',
       href: '/finance',
       icon: DollarSign,
+      current: location === '/finance',
+    },
+    {
+      name: 'Settings',
+      href: '/settings',
+      icon: Settings,
+      current: location === '/settings',
     },
   ];
-
-  const staffTools = [
-    {
-      name: 'Staff Dashboard',
-      href: '/staff/dashboard',
-      icon: LayoutDashboard,
-    },
-    {
-      name: 'Production Board',
-      href: '/staff/orders',
-      icon: Kanban,
-    },
-    {
-      name: 'Staff Customers',
-      href: '/staff/customers',
-      icon: Users,
-    },
-    {
-      name: 'Staff Reports',
-      href: '/staff/reports',
-      icon: BarChart3,
-    },
-  ];
-
-
 
   return (
     <div className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0">
@@ -150,15 +131,13 @@ export default function Sidebar() {
         {/* Navigation */}
         <nav className="mt-5 flex-1 px-2 pb-4 space-y-1">
           {/* Main Navigation */}
-          {navigationItems.map((item) => {
-          const isActive = location === item.href || (item.href !== '/' && location.startsWith(item.href));
-          return (
+          {navigationItems.map((item) => (
             <Link
               key={item.name}
               href={item.href}
               className={cn(
                 "sidebar-nav-item",
-                isActive
+                item.current
                   ? "sidebar-nav-item-active"
                   : "sidebar-nav-item-inactive"
               )}
@@ -171,35 +150,7 @@ export default function Sidebar() {
                 </Badge>
               )}
             </Link>
-          );
-        })}
-
-          {/* Production Tools Section */}
-          <div className="pt-4">
-            <h3 className="px-3 text-xs font-semibold text-wood-200 uppercase tracking-wider">
-              Production
-            </h3>
-            <div className="mt-2 space-y-1">
-              {productionTools.map((item) => {
-                const isActive = location === item.href || (item.href !== '/' && location.startsWith(item.href));
-                return (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  className={cn(
-                    "sidebar-nav-item",
-                    isActive
-                      ? "sidebar-nav-item-active"
-                      : "sidebar-nav-item-inactive"
-                  )}
-                >
-                  <item.icon className="text-wood-200 mr-3 h-6 w-6" />
-                  {item.name}
-                </Link>
-                );
-              })}
-            </div>
-          </div>
+          ))}
 
           {/* AI Tools Section */}
           <div className="pt-4">
@@ -207,15 +158,13 @@ export default function Sidebar() {
               AI Tools
             </h3>
             <div className="mt-2 space-y-1">
-              {aiTools.map((item) => {
-                const isActive = location === item.href || (item.href !== '/' && location.startsWith(item.href));
-                return (
+              {aiTools.map((item) => (
                 <Link
                   key={item.name}
                   href={item.href}
                   className={cn(
                     "sidebar-nav-item",
-                    isActive
+                    item.current
                       ? "sidebar-nav-item-active"
                       : "sidebar-nav-item-inactive"
                   )}
@@ -223,35 +172,7 @@ export default function Sidebar() {
                   <item.icon className="text-wood-200 mr-3 h-6 w-6" />
                   {item.name}
                 </Link>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Staff Tools */}
-          <div className="pt-4">
-            <h3 className="px-3 text-xs font-semibold text-wood-200 uppercase tracking-wider">
-              Staff Portal
-            </h3>
-            <div className="mt-2 space-y-1">
-              {staffTools.map((item) => {
-                const isActive = location === item.href || (item.href !== '/' && location.startsWith(item.href));
-                return (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  className={cn(
-                    "sidebar-nav-item",
-                    isActive
-                      ? "sidebar-nav-item-active"
-                      : "sidebar-nav-item-inactive"
-                  )}
-                >
-                  <item.icon className="text-wood-200 mr-3 h-6 w-6" />
-                  {item.name}
-                </Link>
-                );
-              })}
+              ))}
             </div>
           </div>
 
@@ -261,15 +182,13 @@ export default function Sidebar() {
               Business
             </h3>
             <div className="mt-2 space-y-1">
-              {businessTools.map((item) => {
-                const isActive = location === item.href || (item.href !== '/' && location.startsWith(item.href));
-                return (
+              {businessTools.map((item) => (
                 <Link
                   key={item.name}
                   href={item.href}
                   className={cn(
                     "sidebar-nav-item",
-                    isActive
+                    item.current
                       ? "sidebar-nav-item-active"
                       : "sidebar-nav-item-inactive"
                   )}
@@ -277,8 +196,7 @@ export default function Sidebar() {
                   <item.icon className="text-wood-200 mr-3 h-6 w-6" />
                   {item.name}
                 </Link>
-                );
-              })}
+              ))}
             </div>
           </div>
         </nav>
