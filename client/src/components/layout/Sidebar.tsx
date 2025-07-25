@@ -46,9 +46,9 @@ export default function Sidebar() {
     },
         {
       name: 'Integrations',
-      href: '/settings',
+      href: '/integration-settings',
       icon: Settings,
-      current: location === '/settings',
+      current: location === '/integration-settings',
     },
   ];
 
