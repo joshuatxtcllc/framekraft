@@ -237,27 +237,27 @@ export default function IntegrationSettings() {
                 </CardContent>
               </Card>
 
-              {/* Google Search Integration */}
+              {/* Perplexity Integration */}
               <Card>
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
-                      <Search className="w-6 h-6 text-red-600" />
+                      <Search className="w-6 h-6 text-purple-600" />
                       <div>
-                        <CardTitle>Google Search</CardTitle>
+                        <CardTitle>Perplexity AI Search</CardTitle>
                         <p className="text-sm text-muted-foreground">
-                          Market research and competitor analysis
+                          Real-time market research and intelligent search
                         </p>
                       </div>
                     </div>
                     <div className="flex items-center space-x-4">
-                      <Badge variant={getStatusColor(healthData?.googleSearch)}>
-                        {healthData?.googleSearch?.configured ? "Configured" : "Not Configured"}
+                      <Badge variant={getStatusColor(healthData?.perplexity)}>
+                        {healthData?.perplexity?.configured ? "Configured" : "Not Configured"}
                       </Badge>
                       <Switch
-                        checked={settingsData?.settings?.googleSearch?.enabled || false}
-                        onCheckedChange={(enabled) => handleToggle('googleSearch', enabled)}
-                        disabled={!healthData?.googleSearch?.configured || updateSettingsMutation.isPending}
+                        checked={settingsData?.settings?.perplexity?.enabled || false}
+                        onCheckedChange={(enabled) => handleToggle('perplexity', enabled)}
+                        disabled={!healthData?.perplexity?.configured || updateSettingsMutation.isPending}
                       />
                     </div>
                   </div>
@@ -267,13 +267,19 @@ export default function IntegrationSettings() {
                     <div className="space-y-1">
                       <Label className="text-sm font-medium">Status</Label>
                       <div className="flex items-center space-x-2">
-                        {healthData?.googleSearch && (() => {
-                          const StatusIcon = getStatusIcon(healthData.googleSearch);
+                        {healthData?.perplexity && (() => {
+                          const StatusIcon = getStatusIcon(healthData.perplexity);
                           return <StatusIcon className="w-4 h-4" />;
                         })()}
                         <span className="text-sm">
-                          {settingsData?.settings?.googleSearch?.enabled ? "Active" : "Disabled"}
+                          {settingsData?.settings?.perplexity?.enabled ? "Active" : "Disabled"}
                         </span>
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-sm font-medium">Features</Label>
+                      <div className="text-sm text-muted-foreground">
+                        Market trends • Competitor analysis • Real-time data
                       </div>
                     </div>
                   </div>

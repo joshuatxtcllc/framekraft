@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import OpenAI from 'openai';
+import { searchService } from './searchService';
 
 /*
 The newest Anthropic model is "claude-sonnet-4-20250514", not "claude-3-7-sonnet-20250219", "claude-3-5-sonnet-20241022" nor "claude-3-sonnet-20240229". 
@@ -270,6 +271,143 @@ Provide JSON response with:
     } catch (error) {
       console.error('Sentiment analysis error:', error);
       throw new Error('Failed to analyze customer sentiment');
+    }
+  }
+
+  async enhancedMarketResearch(topic: string): Promise<{
+    summary: string;
+    trends: string[];
+    recommendations: string[];
+    sources: string[];
+  }> {
+    try {
+      // Get real-time data from Perplexity
+      const marketData = await searchService.marketResearch(`${topic} custom picture framing industry trends`);
+      
+      // Use Claude to analyze and enhance the data
+      const prompt = `Analyze this market research data about ${topic} in the custom framing industry:
+
+${marketData.summary}
+
+Key Points:
+${marketData.keyPoints.join('\n')}
+
+Based on this real-time market data, provide:
+1. Executive summary
+2. Key trends to watch
+3. Actionable business recommendations
+4. Strategic insights for a custom framing business
+
+Respond in JSON format with: summary, trends, recommendations, sources`;
+
+      const response = await anthropic.messages.create({
+        model: DEFAULT_MODEL_STR,
+        max_tokens: 2048,
+        messages: [
+          { role: 'user', content: prompt }
+        ],
+      });
+
+      const content = response.content[0].type === 'text' ? response.content[0].text : '';
+      
+      try {
+        const analysis = JSON.parse(content);
+        return {
+          ...analysis,
+          sources: marketData.sources
+        };
+      } catch {
+        return {
+          summary: marketData.summary,
+          trends: marketData.keyPoints,
+          recommendations: ['Consider current market trends when planning business strategy'],
+          sources: marketData.sources
+        };
+      }
+    } catch (error) {
+      console.error('Enhanced market research error:', error);
+      throw new Error('Failed to conduct enhanced market research');
+    }
+  }
+
+  async intelligentFramingAdvice(artworkDescription: string, customerContext?: string): Promise<{
+    recommendation: FrameRecommendation;
+    techniques: string[];
+    marketInsights: string[];
+  }> {
+    try {
+      // Get current framing techniques from Perplexity
+      const techniques = await searchService.searchFramingTechniques(artworkDescription);
+      
+      // Get standard recommendation from Claude
+      const recommendation = await this.analyzeFrameRecommendation(
+        artworkDescription,
+        'Standard size',
+        customerContext
+      );
+
+      // Get market trends
+      const trendData = await searchService.searchFramingTrends();
+
+      return {
+        recommendation,
+        techniques: techniques.slice(0, 5),
+        marketInsights: trendData.insights.slice(0, 3)
+      };
+    } catch (error) {
+      console.error('Intelligent framing advice error:', error);
+      throw new Error('Failed to generate intelligent framing advice');
+    }
+  }
+
+  async realTimeCompetitorAnalysis(): Promise<{
+    trends: string[];
+    pricingInsights: any[];
+    opportunities: string[];
+  }> {
+    try {
+      const trendData = await searchService.searchFramingTrends();
+      
+      // Analyze with Claude
+      const prompt = `Based on these current market trends and competitor insights:
+
+Trends: ${JSON.stringify(trendData.trends)}
+Insights: ${JSON.stringify(trendData.insights)}
+
+Provide competitive analysis for a custom framing business:
+1. Key market opportunities
+2. Pricing strategy recommendations
+3. Service differentiation suggestions
+
+Respond in JSON format with: opportunities, pricingStrategy, differentiation`;
+
+      const response = await anthropic.messages.create({
+        model: DEFAULT_MODEL_STR,
+        max_tokens: 1500,
+        messages: [
+          { role: 'user', content: prompt }
+        ],
+      });
+
+      const content = response.content[0].type === 'text' ? response.content[0].text : '';
+      
+      try {
+        const analysis = JSON.parse(content);
+        return {
+          trends: trendData.trends,
+          pricingInsights: trendData.competitorPricing,
+          opportunities: analysis.opportunities || ['Focus on quality and customer service']
+        };
+      } catch {
+        return {
+          trends: trendData.trends,
+          pricingInsights: trendData.competitorPricing,
+          opportunities: ['Focus on unique value proposition', 'Emphasize quality craftsmanship']
+        };
+      }
+    } catch (error) {
+      console.error('Competitor analysis error:', error);
+      throw new Error('Failed to conduct competitor analysis');
     }
   }
 

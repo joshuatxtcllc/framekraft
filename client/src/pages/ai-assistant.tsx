@@ -428,6 +428,13 @@ export default function AIAssistant() {
                 <Button
                   variant="outline"
                   size="sm"
+                  onClick={() => setInputMessage("What are the latest framing trends right now?")}
+                >
+                  🔍 Market Research
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
                   onClick={() => setInputMessage("Help me optimize my production workflow")}
                 >
                   ⚙️ Production Optimization
@@ -435,16 +442,23 @@ export default function AIAssistant() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setInputMessage("Generate content for my social media")}
+                  onClick={() => setInputMessage("Analyze current competitor pricing strategies")}
                 >
-                  📱 Marketing Content
+                  💰 Competitor Analysis
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setInputMessage("Analyze my customer trends")}
+                  onClick={() => setInputMessage("Generate intelligent framing advice for a watercolor painting")}
                 >
-                  👥 Customer Analysis
+                  🎨 Smart Framing
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setInputMessage("Research sustainable framing materials and techniques")}
+                >
+                  🌱 Sustainability Research
                 </Button>
               </div>
             </div>

@@ -1,4 +1,3 @@
-
 interface IntegrationSettings {
   gmail: {
     enabled: boolean;
@@ -15,7 +14,7 @@ interface IntegrationSettings {
     maxRetries: number;
     cooldownMs: number;
   };
-  googleSearch: {
+  perplexity: {
     enabled: boolean;
     maxRetries: number;
     cooldownMs: number;
@@ -56,7 +55,7 @@ class CircuitBreaker {
   private recordFailure() {
     this.failures++;
     this.lastFailureTime = Date.now();
-    
+
     if (this.failures >= this.maxFailures) {
       this.state = 'OPEN';
     }
@@ -81,7 +80,7 @@ export class SettingsService {
     gmail: { enabled: true, maxRetries: 3, cooldownMs: 60000 },
     openai: { enabled: false, maxRetries: 3, cooldownMs: 60000 },
     stripe: { enabled: true, maxRetries: 3, cooldownMs: 30000 },
-    googleSearch: { enabled: false, maxRetries: 2, cooldownMs: 120000 }
+    perplexity: { enabled: false, maxRetries: 2, cooldownMs: 120000 }
   };
 
   private circuitBreakers = new Map<string, CircuitBreaker>();
@@ -111,14 +110,14 @@ export class SettingsService {
 
   getServiceStatus() {
     const status: Record<string, any> = {};
-    
+
     for (const [service, breaker] of this.circuitBreakers.entries()) {
       status[service] = {
         enabled: this.isEnabled(service as keyof IntegrationSettings),
         circuitBreaker: breaker.getState()
       };
     }
-    
+
     return status;
   }
 }

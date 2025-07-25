@@ -296,6 +296,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Enhanced AI routes with Perplexity integration
+  app.post('/api/ai/market-research', isAuthenticated, async (req, res) => {
+    try {
+      const { topic } = req.body;
+      const research = await aiService.enhancedMarketResearch(topic || 'custom framing trends');
+      res.json(research);
+    } catch (error) {
+      console.error("Error conducting market research:", error);
+      res.status(500).json({ message: "Failed to conduct market research" });
+    }
+  });
+
+  app.post('/api/ai/framing-advice', isAuthenticated, async (req, res) => {
+    try {
+      const { artworkDescription, customerContext } = req.body;
+      const advice = await aiService.intelligentFramingAdvice(artworkDescription, customerContext);
+      res.json(advice);
+    } catch (error) {
+      console.error("Error generating framing advice:", error);
+      res.status(500).json({ message: "Failed to generate framing advice" });
+    }
+  });
+
+  app.get('/api/ai/competitor-analysis', isAuthenticated, async (req, res) => {
+    try {
+      const analysis = await aiService.realTimeCompetitorAnalysis();
+      res.json(analysis);
+    } catch (error) {
+      console.error("Error conducting competitor analysis:", error);
+      res.status(500).json({ message: "Failed to conduct competitor analysis" });
+    }
+  });
+
   // Document generation and email routes
   app.post('/api/orders/email-document', isAuthenticated, async (req, res) => {
     try {
@@ -393,9 +426,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           configured: !!process.env.STRIPE_SECRET_KEY,
           ...status.stripe
         },
-        googleSearch: {
-          configured: !!(process.env.GOOGLE_API_KEY && process.env.GOOGLE_SEARCH_ENGINE_ID),
-          ...status.googleSearch
+        perplexity: {
+          configured: !!process.env.PERPLEXITY_API_KEY,
+          ...status.perplexity
         }
       };
       res.json(health);
