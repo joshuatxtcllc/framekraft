@@ -450,6 +450,70 @@ export default function APIExplorer() {
               </Card>
             </div>
 
+            {/* How to Use Section */}
+            <Card className="mt-6">
+              <CardHeader className="pb-4">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Eye className="w-5 h-5" />
+                  How the API Explorer Works
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="px-4">
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="font-semibold mb-3 text-blue-600">🔧 Use the API Explorer Page</h3>
+                    <p className="text-sm text-muted-foreground mb-2">Go to <code className="bg-muted px-1 py-0.5 rounded">/api-explorer</code> in your FrameCraft app (click "API Explorer" in the sidebar)</p>
+                  </div>
+
+                  <div>
+                    <h3 className="font-semibold mb-3 text-green-600">📡 Make API Calls from the Interface</h3>
+                    <ul className="text-sm space-y-1 ml-4">
+                      <li>• Select an endpoint from the list (like "GET /api/orders")</li>
+                      <li>• Click "Send Request"</li>
+                      <li>• View the response data right in the interface</li>
+                    </ul>
+                  </div>
+
+                  <div>
+                    <h3 className="font-semibold mb-3 text-purple-600">🎯 The Data Shows Up in Your App Pages</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                      <div className="bg-muted/50 p-3 rounded">
+                        <strong>Orders data</strong> → Shows up on <code>/orders</code> page
+                      </div>
+                      <div className="bg-muted/50 p-3 rounded">
+                        <strong>Customers data</strong> → Shows up on <code>/customers</code> page
+                      </div>
+                      <div className="bg-muted/50 p-3 rounded">
+                        <strong>Dashboard metrics</strong> → Shows up on <code>/dashboard</code> page
+                      </div>
+                      <div className="bg-muted/50 p-3 rounded">
+                        <strong>Inventory data</strong> → Shows up on <code>/inventory</code> page
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="font-semibold mb-3 text-orange-600">📍 Where to See Your Data</h3>
+                    <p className="text-sm text-muted-foreground mb-2">When you call <code className="bg-muted px-1 py-0.5 rounded">GET /api/orders</code>, the order data appears in these places in your app:</p>
+                    <ul className="text-sm space-y-1 ml-4">
+                      <li>• <strong>Orders Page</strong> (<code>/orders</code>) - Full table with all orders</li>
+                      <li>• <strong>Dashboard</strong> (<code>/dashboard</code>) - Recent orders widget</li>
+                      <li>• <strong>API Explorer</strong> (<code>/api-explorer</code>) - Raw JSON response</li>
+                    </ul>
+                  </div>
+
+                  <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
+                    <h4 className="font-semibold mb-2 text-blue-800">📋 Example Workflow</h4>
+                    <ol className="text-sm space-y-1 text-blue-700">
+                      <li>1. Go to <strong>API Explorer</strong> → Select <code>GET /api/orders</code> → Click "Send Request"</li>
+                      <li>2. Go to <strong>Orders page</strong> → See the same data in a user-friendly table</li>
+                      <li>3. Go to <strong>Dashboard</strong> → See recent orders in the dashboard widget</li>
+                    </ol>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Quick Actions */}
             <Card className="mt-6">
               <CardHeader className="pb-4">
