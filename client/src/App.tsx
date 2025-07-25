@@ -13,6 +13,7 @@ import Dashboard from "@/pages/dashboard";
 import Orders from "@/pages/orders";
 import Customers from "@/pages/customers";
 import AIAssistant from "@/pages/ai-assistant";
+import FrameRecommender from "@/pages/frame-recommender";
 import APIExplorer from "./pages/api-explorer";
 import IntegrationSettings from "./pages/integration-settings";
 import Pricing from "@/pages/pricing";
@@ -41,6 +42,7 @@ function Router() {
           <Route path="/orders" component={Orders} />
           <Route path="/customers" component={Customers} />
           <Route path="/ai-assistant" component={AIAssistant} />
+          <Route path="/frame-recommender" component={FrameRecommender} />
           <Route path="/api-explorer" component={APIExplorer} />
           <Route path="/integration-settings" component={IntegrationSettings} />
           <Route path="/pricing" component={Pricing} />
