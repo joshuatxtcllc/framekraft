@@ -344,6 +344,15 @@ export const insertOrderSchema = createInsertSchema(orders).omit({
 }).extend({
   totalAmount: z.string().min(1, "Total amount is required"),
   depositAmount: z.string().optional(),
+  frames: z.array(z.object({
+    style: z.string(),
+    quantity: z.number().int().positive().default(1),
+  })).optional(),
+  mats: z.array(z.object({
+    color: z.string(),
+    width: z.number().positive().default(2), // Mat width in inches
+    quantity: z.number().int().positive().default(1),
+  })).optional(),
 });
 
 export const insertProjectStepSchema = createInsertSchema(projectSteps).omit({

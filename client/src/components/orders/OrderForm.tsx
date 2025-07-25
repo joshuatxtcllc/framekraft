@@ -141,7 +141,7 @@ export default function OrderForm({
       const frameItem = priceStructure.find((item: any) => 
         item && item.category === "frame" && item.itemName === frameStyle
       );
-      
+
       if (frameItem) {
         // Frame size with mat: 16x20 becomes 20x24 with 2" mat (add 4" to each dimension)
         const frameWidth = artworkWidth + (matColor ? matWidth * 2 : 0);
@@ -149,10 +149,10 @@ export default function OrderForm({
         const framePerimeterInches = (frameWidth * 2) + (frameHeight * 2);
         const framePerimeterFeet = framePerimeterInches / 12;
         const pricePerFoot = parseFloat(frameItem.basePrice);
-        
+
         // Wholesale cost = feet × price per foot, then round up to nearest dollar
         const wholesaleCost = Math.ceil(framePerimeterFeet * pricePerFoot);
-        
+
         // Apply sliding scale retail markup based on price per foot
         const markupFactor = getFrameMarkupFactor(pricePerFoot);
         framePrice = wholesaleCost * markupFactor;
@@ -173,7 +173,7 @@ export default function OrderForm({
       const glazingItem = priceStructure.find((item: any) => 
         item && item.category === "glazing" && item.itemName === glazing
       );
-      
+
       if (glazingItem) {
         // Glass size matches frame size (includes mat border)
         const glassWidth = artworkWidth + (matColor ? matWidth * 2 : 0);
@@ -187,13 +187,13 @@ export default function OrderForm({
 
     // Calculate total with all components including overhead
     let totalPrice = framePrice + matPrice + glazingPrice + laborCost + overheadCost;
-    
+
     // Apply discount if specified
     const discountPercentage = parseFloat(form.watch("discountPercentage") || "0");
     if (discountPercentage > 0) {
       totalPrice = totalPrice * (1 - discountPercentage / 100);
     }
-    
+
     return Math.round(totalPrice * 100) / 100; // Round to 2 decimal places
   };
 
@@ -300,6 +300,19 @@ export default function OrderForm({
     onSubmit(transformedData);
   };
 
+  // Get matboard options with area-based pricing from pricing structure
+  const matColorOptions = [
+    { value: "none", label: "No Mat (Frame Only)", basePrice: 0, retailPrice: 0 },
+    ...(priceStructure && Array.isArray(priceStructure) ? priceStructure
+      .filter((item: any) => item && item.category === "mat")
+      .map((item: any) => ({
+        value: item.itemName,
+        label: `${item.itemName} - $${parseFloat(item.basePrice).toFixed(4)}/sq in wholesale → $${parseFloat(item.retailPrice).toFixed(4)}/sq in retail`,
+        basePrice: item.basePrice,
+        retailPrice: item.retailPrice
+      })) : [])
+  ];
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-6">
@@ -348,10 +361,10 @@ export default function OrderForm({
                                   firstName: customerSearch.split(' ')[0] || customerSearch,
                                   lastName: customerSearch.split(' ').slice(1).join(' ') || '',
                                 };
-                                
+
                                 // Add to customers list temporarily
                                 customers.push(newCustomer);
-                                
+
                                 // Set the form value
                                 field.onChange(tempId.toString());
                                 setCustomerOpen(false);
@@ -709,20 +722,20 @@ export default function OrderForm({
                   const glazing = form.watch("glazing");
                   const matColor = form.watch("matColor");
                   const dimensions = form.watch("dimensions");
-                  
+
                   if (!dimensions) {
                     return <p>Enter dimensions to see calculation</p>;
                   }
-                  
+
                   const dimensionMatch = dimensions.match(/(\d+(?:\.\d+)?)(?:["']?)(?:\s*[xX×]\s*)(\d+(?:\.\d+)?)(?:["']?)/i);
                   if (!dimensionMatch) {
                     return <p>Invalid dimension format. Use format like "16x20" or "16X20"</p>;
                   }
-                  
+
                   const artworkWidth = parseFloat(dimensionMatch[1]);
                   const artworkHeight = parseFloat(dimensionMatch[2]);
                   const matWidth = 2; // Standard 2" mat border
-                  
+
                   // Calculate frame price with mat border (if selected)
                   let framePrice = 0;
                   let frameDetails = "";
@@ -742,7 +755,7 @@ export default function OrderForm({
                       frameDetails = `${frameWidth}×${frameHeight} = ${framePerimeterInches}" = ${framePerimeterFeet.toFixed(2)} ft × $${pricePerFoot}/ft = $${wholesaleCost} × ${markupFactor}x`;
                     }
                   }
-                  
+
                   // Calculate mat price using united inches: 16+20=36 at $0.0109 per square inch
                   let matPrice = 0;
                   let matDetails = "";
@@ -752,7 +765,7 @@ export default function OrderForm({
                     matPrice = unitedInches * pricePerSquareInch;
                     matDetails = `${artworkWidth}+${artworkHeight} = ${unitedInches} united inches × $${pricePerSquareInch}`;
                   }
-                  
+
                   // Calculate glazing price - glass size matches frame size
                   let glazingPrice = 0;
                   let glazingDetails = "";
@@ -770,7 +783,7 @@ export default function OrderForm({
                       glazingDetails = `${glassWidth}×${glassHeight} = ${glassAreaFeet.toFixed(2)} sq ft × $${glazingItem.basePrice}/sq ft × ${markupFactor}x`;
                     }
                   }
-                  
+
                   return (
                     <>
                       <div className="flex justify-between text-xs mb-1 text-blue-600">
@@ -802,7 +815,7 @@ export default function OrderForm({
                             <span>Glass ({glazing}):</span>
                             <span>${glazingPrice.toFixed(2)}</span>
                           </div>
-                          <div className="text-xs text-gray-500 pl-2">
+                          <divThe code has been modified to update mat pricing to be calculated by area, similar to glass, and to support multiple mats and frames. className="text-xs text-gray-500 pl-2">
                             {glazingDetails}
                           </div>
                         </div>
@@ -818,7 +831,7 @@ export default function OrderForm({
                       {(() => {
                         const discountPercentage = parseFloat(form.watch("discountPercentage") || "0");
                         const subtotal = framePrice + matPrice + glazingPrice + laborCost + overheadCost;
-                        
+
                         if (discountPercentage > 0) {
                           return (
                             <>

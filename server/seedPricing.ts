@@ -55,15 +55,17 @@ export async function seedPricingData() {
   ];
 
   // Mat pricing from ACTUAL Larson-Juhl catalog - Crescent Select Mat Board
+  // Standard mat board is 32"x40" = 1,280 square inches
+  // Conservation mat board is 32"x40" = 1,280 square inches
   const matPrices = [
-    { category: 'mat', subcategory: 'standard', itemName: 'Crescent 9502 White', unitType: 'each', basePrice: 8.50 },
-    { category: 'mat', subcategory: 'standard', itemName: 'Crescent 9503 Cream', unitType: 'each', basePrice: 8.50 },
-    { category: 'mat', subcategory: 'standard', itemName: 'Crescent 9504 Light Gray', unitType: 'each', basePrice: 8.50 },
-    { category: 'mat', subcategory: 'standard', itemName: 'Crescent 9505 Charcoal', unitType: 'each', basePrice: 8.50 },
-    { category: 'mat', subcategory: 'standard', itemName: 'Crescent 9506 Navy Blue', unitType: 'each', basePrice: 8.50 },
-    { category: 'mat', subcategory: 'standard', itemName: 'Crescent 9507 Forest Green', unitType: 'each', basePrice: 8.50 },
-    { category: 'mat', subcategory: 'conservation', itemName: 'Crescent Conservation 9601 White', unitType: 'each', basePrice: 14.25 },
-    { category: 'mat', subcategory: 'conservation', itemName: 'Crescent Conservation 9602 Cream', unitType: 'each', basePrice: 14.25 },
+    { category: 'mat', subcategory: 'standard', itemName: 'Crescent 9502 White', unitType: 'square_inch', basePrice: 8.50 / 1280 }, // $0.0066 per sq inch
+    { category: 'mat', subcategory: 'standard', itemName: 'Crescent 9503 Cream', unitType: 'square_inch', basePrice: 8.50 / 1280 },
+    { category: 'mat', subcategory: 'standard', itemName: 'Crescent 9504 Light Gray', unitType: 'square_inch', basePrice: 8.50 / 1280 },
+    { category: 'mat', subcategory: 'standard', itemName: 'Crescent 9505 Charcoal', unitType: 'square_inch', basePrice: 8.50 / 1280 },
+    { category: 'mat', subcategory: 'standard', itemName: 'Crescent 9506 Navy Blue', unitType: 'square_inch', basePrice: 8.50 / 1280 },
+    { category: 'mat', subcategory: 'standard', itemName: 'Crescent 9507 Forest Green', unitType: 'square_inch', basePrice: 8.50 / 1280 },
+    { category: 'mat', subcategory: 'conservation', itemName: 'Crescent Conservation 9601 White', unitType: 'square_inch', basePrice: 14.25 / 1280 }, // $0.0111 per sq inch
+    { category: 'mat', subcategory: 'conservation', itemName: 'Crescent Conservation 9602 Cream', unitType: 'square_inch', basePrice: 14.25 / 1280 },
   ];
 
   // Generate frame pricing with cost-based markup (NO Houston adjustment in database)
@@ -77,14 +79,14 @@ export async function seedPricingData() {
     };
   });
 
-  // Mat pricing uses base price + united inch markup (we'll use average for seeding)
+  // Mat pricing uses base price per square inch + united inch markup (we'll use average for seeding)
   const matData = matPrices.map(mat => {
     const avgMarkupFactor = getMatMarkupFactor(50); // Average project size
     const retailPrice = mat.basePrice * avgMarkupFactor;
     return {
       ...mat,
       markupPercentage: ((avgMarkupFactor - 1) * 100),
-      retailPrice: Math.round(retailPrice * 100) / 100,
+      retailPrice: Math.round(retailPrice * 10000) / 10000, // Round to 4 decimal places for per sq inch pricing
     };
   });
 
