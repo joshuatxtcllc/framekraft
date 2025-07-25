@@ -198,11 +198,11 @@ export default function APIExplorer() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
               {/* API Endpoints List */}
-              <Card className="lg:col-span-1">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
+              <Card className="xl:col-span-1">
+                <CardHeader className="pb-4">
+                  <CardTitle className="flex items-center gap-2 text-lg">
                     <Database className="w-5 h-5" />
                     API Endpoints
                   </CardTitle>
@@ -219,9 +219,9 @@ export default function APIExplorer() {
                     </SelectContent>
                   </Select>
                 </CardHeader>
-                <CardContent>
-                  <ScrollArea className="h-[600px]">
-                    <div className="space-y-2">
+                <CardContent className="px-4">
+                  <ScrollArea className="h-[400px] md:h-[600px]">
+                    <div className="space-y-2 pr-4">
                       {filteredEndpoints.map((endpoint, index) => {
                         const Icon = CATEGORY_ICONS[endpoint.category] || Database;
                         const colorClass = CATEGORY_COLORS[endpoint.category] || 'bg-gray-500';
@@ -234,16 +234,16 @@ export default function APIExplorer() {
                             }`}
                             onClick={() => handleEndpointSelect(endpoint)}
                           >
-                            <div className="flex items-center gap-2 mb-1">
-                              <Badge variant={endpoint.method === 'GET' ? 'secondary' : 'default'}>
+                            <div className="flex items-center gap-2 mb-2">
+                              <Badge variant={endpoint.method === 'GET' ? 'secondary' : 'default'} className="text-xs">
                                 {endpoint.method}
                               </Badge>
                               <Icon className="w-4 h-4" />
                             </div>
-                            <div className="text-sm font-mono text-muted-foreground mb-1">
+                            <div className="text-sm font-mono text-muted-foreground mb-1 break-all">
                               {endpoint.path}
                             </div>
-                            <div className="text-xs text-muted-foreground">
+                            <div className="text-xs text-muted-foreground leading-relaxed">
                               {endpoint.description}
                             </div>
                           </div>
@@ -255,26 +255,26 @@ export default function APIExplorer() {
               </Card>
 
               {/* Request Builder */}
-              <Card className="lg:col-span-2">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
+              <Card className="xl:col-span-2">
+                <CardHeader className="pb-4">
+                  <CardTitle className="flex items-center gap-2 text-lg">
                     <Send className="w-5 h-5" />
                     Request Builder
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="px-4">
                   <Tabs defaultValue="request" className="w-full">
-                    <TabsList className="grid w-full grid-cols-2">
+                    <TabsList className="grid w-full grid-cols-2 mb-6">
                       <TabsTrigger value="request">Request</TabsTrigger>
                       <TabsTrigger value="response">Response</TabsTrigger>
                     </TabsList>
                     
-                    <TabsContent value="request" className="space-y-4">
-                      <div className="grid grid-cols-4 gap-4">
-                        <div>
-                          <Label htmlFor="method">Method</Label>
+                    <TabsContent value="request" className="space-y-6">
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div className="md:col-span-1">
+                          <Label htmlFor="method" className="text-sm font-medium">Method</Label>
                           <Select value={method} onValueChange={setMethod}>
-                            <SelectTrigger>
+                            <SelectTrigger className="mt-1">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -285,30 +285,32 @@ export default function APIExplorer() {
                             </SelectContent>
                           </Select>
                         </div>
-                        <div className="col-span-3">
-                          <Label htmlFor="path">Endpoint Path</Label>
+                        <div className="md:col-span-3">
+                          <Label htmlFor="path" className="text-sm font-medium">Endpoint Path</Label>
                           <Input
                             id="path"
                             value={path}
                             onChange={(e) => setPath(e.target.value)}
                             placeholder="/api/customers"
+                            className="mt-1 font-mono text-sm"
                           />
                         </div>
                       </div>
 
                       {/* Path Parameters */}
                       {selectedEndpoint?.params && (
-                        <div>
-                          <Label>Path Parameters</Label>
-                          <div className="grid grid-cols-2 gap-4 mt-2">
+                        <div className="space-y-3">
+                          <Label className="text-sm font-medium">Path Parameters</Label>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {selectedEndpoint.params.map(param => (
-                              <div key={param}>
-                                <Label htmlFor={param}>{param}</Label>
+                              <div key={param} className="space-y-1">
+                                <Label htmlFor={param} className="text-sm">{param}</Label>
                                 <Input
                                   id={param}
                                   value={params[param] || ''}
                                   onChange={(e) => setParams(prev => ({ ...prev, [param]: e.target.value }))}
                                   placeholder={`Enter ${param}`}
+                                  className="text-sm"
                                 />
                               </div>
                             ))}
@@ -318,19 +320,19 @@ export default function APIExplorer() {
 
                       {/* Request Body */}
                       {method !== 'GET' && (
-                        <div>
-                          <Label htmlFor="body">Request Body (JSON)</Label>
+                        <div className="space-y-2">
+                          <Label htmlFor="body" className="text-sm font-medium">Request Body (JSON)</Label>
                           <Textarea
                             id="body"
                             value={requestBody}
                             onChange={(e) => setRequestBody(e.target.value)}
                             placeholder='{"key": "value"}'
-                            className="font-mono text-sm h-32"
+                            className="font-mono text-sm h-32 resize-none"
                           />
                         </div>
                       )}
 
-                      <Button onClick={executeRequest} disabled={isLoading || !path} className="w-full">
+                      <Button onClick={executeRequest} disabled={isLoading || !path} className="w-full py-3 text-base">
                         {isLoading ? 'Sending...' : 'Send Request'}
                       </Button>
                     </TabsContent>
@@ -383,47 +385,47 @@ export default function APIExplorer() {
 
             {/* Quick Actions */}
             <Card className="mt-6">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+              <CardHeader className="pb-4">
+                <CardTitle className="flex items-center gap-2 text-lg">
                   <Calendar className="w-5 h-5" />
                   Quick Actions
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <CardContent className="px-4">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
                   <Button
                     variant="outline"
-                    className="h-20 flex flex-col gap-2"
+                    className="h-16 md:h-20 flex flex-col gap-1 md:gap-2 text-xs md:text-sm"
                     onClick={() => handleEndpointSelect(API_ENDPOINTS.find(e => e.path === '/api/orders')!)}
                   >
-                    <FileText className="w-6 h-6" />
+                    <FileText className="w-4 h-4 md:w-6 md:h-6" />
                     Check Orders
                   </Button>
                   
                   <Button
                     variant="outline"
-                    className="h-20 flex flex-col gap-2"
+                    className="h-16 md:h-20 flex flex-col gap-1 md:gap-2 text-xs md:text-sm"
                     onClick={() => handleEndpointSelect(API_ENDPOINTS.find(e => e.path === '/api/customers')!)}
                   >
-                    <Users className="w-6 h-6" />
+                    <Users className="w-4 h-4 md:w-6 md:h-6" />
                     View Customers
                   </Button>
                   
                   <Button
                     variant="outline"
-                    className="h-20 flex flex-col gap-2"
+                    className="h-16 md:h-20 flex flex-col gap-1 md:gap-2 text-xs md:text-sm"
                     onClick={() => handleEndpointSelect(API_ENDPOINTS.find(e => e.path === '/api/dashboard/metrics')!)}
                   >
-                    <Eye className="w-6 h-6" />
+                    <Eye className="w-4 h-4 md:w-6 md:h-6" />
                     Dashboard Data
                   </Button>
                   
                   <Button
                     variant="outline"
-                    className="h-20 flex flex-col gap-2"
+                    className="h-16 md:h-20 flex flex-col gap-1 md:gap-2 text-xs md:text-sm"
                     onClick={() => handleEndpointSelect(API_ENDPOINTS.find(e => e.path === '/api/wholesalers/products/search')!)}
                   >
-                    <Database className="w-6 h-6" />
+                    <Database className="w-4 h-4 md:w-6 md:h-6" />
                     Search Products
                   </Button>
                 </div>
