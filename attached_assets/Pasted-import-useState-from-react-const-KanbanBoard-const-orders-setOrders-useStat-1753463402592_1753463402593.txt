@@ -1,0 +1,308 @@
+import { useState } from 'react';
+
+const KanbanBoard = () => {
+  const [orders, setOrders] = useState([
+    { 
+      id: 'ORD-001', 
+      customerName: 'John Smith', 
+      phone: '(555) 123-4567',
+      jobType: 'Custom Mirror Frame', 
+      orderDescription: '24"x36" ornate gold frame, beveled mirror, wall mount hardware',
+      artLocation: 'Shelf A3 - wrapped',
+      priority: 'High', 
+      dueDate: '2025-07-26', 
+      status: 'Materials Ordered' 
+    },
+    { 
+      id: 'ORD-002', 
+      customerName: 'Sarah Johnson', 
+      phone: '(555) 987-6543',
+      jobType: 'Canvas Stretching', 
+      orderDescription: 'Oil painting 18"x24", museum-quality stretcher bars, gallery wrap',
+      artLocation: 'Storage Room B - flat file 2',
+      priority: 'Medium', 
+      dueDate: '2025-07-28', 
+      status: 'Order Processed' 
+    },
+    { 
+      id: 'ORD-003', 
+      customerName: 'Mike Davis', 
+      phone: '(555) 456-7890',
+      jobType: 'Photo Frame Set', 
+      orderDescription: '5 matching 8"x10" black frames, white mats, non-glare glass',
+      artLocation: 'Counter pickup area',
+      priority: 'Low', 
+      dueDate: '2025-07-25', 
+      status: 'Completed' 
+    },
+    { 
+      id: 'ORD-004', 
+      customerName: 'Lisa Wilson', 
+      phone: '(555) 234-5678',
+      jobType: 'Art Restoration Frame', 
+      orderDescription: 'Antique oil painting 16"x20", conservation mounting, UV glass',
+      artLocation: 'Climate controlled - Cabinet C',
+      priority: 'High', 
+      dueDate: '2025-07-30', 
+      status: 'Frame Cut' 
+    },
+    { 
+      id: 'ORD-005', 
+      customerName: 'Tom Brown', 
+      phone: '(555) 345-6789',
+      jobType: 'Diploma Frame', 
+      orderDescription: 'MBA diploma, mahogany frame with gold trim, cream mat',
+      artLocation: 'Office safe',
+      priority: 'Medium', 
+      dueDate: '2025-07-24', 
+      status: 'Materials Arrived' 
+    },
+    { 
+      id: 'ORD-006', 
+      customerName: 'Emma White', 
+      phone: '(555) 567-8901',
+      jobType: 'Large Canvas Frame', 
+      orderDescription: 'Contemporary art 30"x40", floating frame, black aluminum',
+      artLocation: 'Large item storage - Rack 1',
+      priority: 'High', 
+      dueDate: '2025-07-27', 
+      status: 'Mat Cut' 
+    },
+    { 
+      id: 'ORD-007', 
+      customerName: 'David Lee', 
+      phone: '(555) 678-9012',
+      jobType: 'Certificate Frame', 
+      orderDescription: 'Professional certificate 11"x14", silver frame, glass',
+      artLocation: 'Front desk drawer',
+      priority: 'Low', 
+      dueDate: '2025-08-01', 
+      status: 'Prepped' 
+    },
+    { 
+      id: 'ORD-008', 
+      customerName: 'Rachel Green', 
+      phone: '(555) 789-0123',
+      jobType: 'Photo Collage Frame', 
+      orderDescription: 'Wedding photos 16"x20", multi-opening mat, 12 photos',
+      artLocation: 'Photo bin - envelope marked RG',
+      priority: 'Medium', 
+      dueDate: '2025-07-29', 
+      status: 'Delayed' 
+    },
+  ]);
+
+  const [draggedOrder, setDraggedOrder] = useState(null);
+
+  const stages = [
+    { id: 'Order Processed', title: 'Order Processed', color: 'bg-blue-500', count: 0 },
+    { id: 'Materials Ordered', title: 'Materials Ordered', color: 'bg-orange-500', count: 0 },
+    { id: 'Materials Arrived', title: 'Materials Arrived', color: 'bg-yellow-500', count: 0 },
+    { id: 'Frame Cut', title: 'Frame Cut', color: 'bg-purple-500', count: 0 },
+    { id: 'Mat Cut', title: 'Mat Cut', color: 'bg-indigo-500', count: 0 },
+    { id: 'Prepped', title: 'Prepped', color: 'bg-cyan-500', count: 0 },
+    { id: 'Completed', title: 'Completed', color: 'bg-green-500', count: 0 },
+    { id: 'Picked Up', title: 'Picked Up', color: 'bg-gray-500', count: 0 },
+    { id: 'Delayed', title: 'Delayed', color: 'bg-red-500', count: 0 },
+  ];
+
+  // Count orders in each stage
+  stages.forEach(stage => {
+    stage.count = orders.filter(order => order.status === stage.id).length;
+  });
+
+  const handleDragStart = (e, order) => {
+    setDraggedOrder(order);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDrop = (e, newStatus) => {
+    e.preventDefault();
+    if (draggedOrder) {
+      setOrders(prevOrders =>
+        prevOrders.map(order =>
+          order.id === draggedOrder.id
+            ? { ...order, status: newStatus }
+            : order
+        )
+      );
+      setDraggedOrder(null);
+    }
+  };
+
+  const getPriorityColor = (priority) => {
+    switch (priority) {
+      case 'High': return 'border-l-red-500 bg-red-500/5';
+      case 'Medium': return 'border-l-yellow-500 bg-yellow-500/5';
+      case 'Low': return 'border-l-gray-500 bg-gray-500/5';
+      default: return 'border-l-gray-500';
+    }
+  };
+
+  const isOverdue = (dueDate) => {
+    return new Date(dueDate) < new Date();
+  };
+
+  const formatPhone = (phone) => {
+    // Quick format for display
+    return phone;
+  };
+
+  return (
+    <div className="p-6 bg-gray-950 min-h-screen">
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold text-green-400 mb-2">Production Board</h1>
+        <p className="text-gray-400">Drag orders between stages to update their status</p>
+      </div>
+
+      <div className="overflow-x-auto pb-4 kanban-scroll-container">
+        <div className="flex gap-4 min-w-max">
+          {stages.map((stage) => (
+            <div
+              key={stage.id}
+              className="bg-gray-900 rounded-lg border border-gray-800 w-80 flex-shrink-0"
+              onDragOver={handleDragOver}
+              onDrop={(e) => handleDrop(e, stage.id)}
+            >
+              {/* Column Header */}
+              <div className={`p-4 rounded-t-lg ${stage.color} text-white`}>
+                <div className="flex justify-between items-center">
+                  <h3 className="font-semibold text-sm">{stage.title}</h3>
+                  <span className="bg-white/20 px-2 py-1 rounded-full text-xs font-medium">
+                    {stage.count}
+                  </span>
+                </div>
+              </div>
+
+              {/* Orders in this stage */}
+              <div className="p-3 space-y-3 min-h-[200px]">
+                {orders
+                  .filter(order => order.status === stage.id)
+                  .map((order) => (
+                    <div
+                      key={order.id}
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, order)}
+                      className={`bg-gray-800 border-l-4 ${getPriorityColor(order.priority)} p-4 rounded-r-lg cursor-move hover:bg-gray-750 transition-all duration-200 hover:shadow-lg transform hover:-translate-y-1 order-card`}
+                    >
+                      {/* Header with Order ID and Priority */}
+                      <div className="flex justify-between items-start mb-3">
+                        <div>
+                          <p className="font-bold text-white text-lg">{order.id}</p>
+                          <p className="text-sm text-gray-400">{order.jobType}</p>
+                        </div>
+                        <div className="text-right">
+                          <span className={`text-xs px-2 py-1 rounded font-medium ${
+                            order.priority === 'High' ? 'bg-red-500/20 text-red-400' :
+                            order.priority === 'Medium' ? 'bg-yellow-500/20 text-yellow-400' :
+                            'bg-gray-500/20 text-gray-400'
+                          }`}>
+                            {order.priority}
+                          </span>
+                          {isOverdue(order.dueDate) && (
+                            <div className="bg-red-500/20 text-red-400 px-2 py-1 rounded text-xs font-medium mt-1">
+                              OVERDUE
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Customer Info */}
+                      <div className="mb-3">
+                        <p className="font-semibold text-green-400 text-lg">{order.customerName}</p>
+                        <p className="text-sm text-gray-300 font-mono">{formatPhone(order.phone)}</p>
+                      </div>
+
+                      {/* Order Description */}
+                      <div className="mb-3">
+                        <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Description</p>
+                        <p className="text-sm text-gray-200 leading-relaxed">{order.orderDescription}</p>
+                      </div>
+
+                      {/* Art Location */}
+                      <div className="mb-3">
+                        <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">📍 Art Location</p>
+                        <p className="text-sm text-yellow-300 font-medium bg-yellow-500/10 px-2 py-1 rounded">
+                          {order.artLocation}
+                        </p>
+                      </div>
+
+                      {/* Due Date */}
+                      <div className="flex justify-between items-center pt-2 border-t border-gray-700">
+                        <span className="text-xs text-gray-400">Due Date</span>
+                        <span className={`text-sm font-medium ${isOverdue(order.dueDate) ? 'text-red-400' : 'text-gray-300'}`}>
+                          {order.dueDate}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+
+                {/* Empty state for columns */}
+                {orders.filter(order => order.status === stage.id).length === 0 && (
+                  <div className="text-center py-8 text-gray-500">
+                    <p className="text-sm">No orders in this stage</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="mt-6 flex gap-4 flex-wrap">
+        <button className="bg-green-500 hover:bg-green-400 text-black font-semibold px-6 py-2 rounded-lg transition-colors">
+          + New Order
+        </button>
+        <button className="bg-blue-600 hover:bg-blue-500 text-white font-semibold px-6 py-2 rounded-lg transition-colors">
+          📱 Print Work Orders
+        </button>
+        <button className="bg-gray-800 hover:bg-gray-700 text-white font-semibold px-6 py-2 rounded-lg transition-colors border border-gray-700">
+          📊 View Analytics
+        </button>
+        <button className="bg-gray-800 hover:bg-gray-700 text-white font-semibold px-6 py-2 rounded-lg transition-colors border border-gray-700">
+          📋 Table View
+        </button>
+      </div>
+
+      {/* Quick Reference Legend */}
+      <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="bg-gray-900 p-4 rounded-lg border border-gray-800">
+          <h3 className="text-white font-semibold mb-3">Priority Levels</h3>
+          <div className="space-y-2">
+            <div className="flex items-center gap-3">
+              <div className="w-4 h-4 bg-red-500 rounded"></div>
+              <span className="text-gray-300 text-sm">High Priority - Rush orders, special clients</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="w-4 h-4 bg-yellow-500 rounded"></div>
+              <span className="text-gray-300 text-sm">Medium Priority - Standard turnaround</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="w-4 h-4 bg-gray-500 rounded"></div>
+              <span className="text-gray-300 text-sm">Low Priority - No rush, flexible timeline</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-gray-900 p-4 rounded-lg border border-gray-800">
+          <h3 className="text-white font-semibold mb-3">Card Information</h3>
+          <div className="space-y-1 text-sm text-gray-300">
+            <p><span className="text-green-400">Customer Name & Phone</span> - Contact information</p>
+            <p><span className="text-blue-400">Job Type</span> - Type of framing work</p>
+            <p><span className="text-gray-400">Description</span> - Detailed specifications</p>
+            <p><span className="text-yellow-400">📍 Art Location</span> - Where to find the artwork</p>
+            <p><span className="text-gray-400">Due Date</span> - Customer pickup date</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default KanbanBoard;

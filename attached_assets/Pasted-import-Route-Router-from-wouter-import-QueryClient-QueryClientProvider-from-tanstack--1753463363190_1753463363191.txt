@@ -1,0 +1,285 @@
+import { Route, Router } from 'wouter';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { useState } from 'react';
+
+// Mock components for now
+const Dashboard = () => (
+  <div className="p-8 bg-gray-950 min-h-screen">
+    <div className="max-w-7xl mx-auto">
+      <h1 className="text-3xl font-bold text-jade-400 mb-8">Jay's Frames Dashboard</h1>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="bg-gray-900 p-6 rounded-lg border border-gray-800">
+          <h3 className="text-lg font-semibold text-white mb-2">Active Orders</h3>
+          <p className="text-3xl font-bold text-jade-400">24</p>
+          <p className="text-gray-400 text-sm">+3 from yesterday</p>
+        </div>
+        
+        <div className="bg-gray-900 p-6 rounded-lg border border-gray-800">
+          <h3 className="text-lg font-semibold text-white mb-2">In Production</h3>
+          <p className="text-3xl font-bold text-yellow-400">12</p>
+          <p className="text-gray-400 text-sm">2 urgent orders</p>
+        </div>
+        
+        <div className="bg-gray-900 p-6 rounded-lg border border-gray-800">
+          <h3 className="text-lg font-semibold text-white mb-2">Ready for Pickup</h3>
+          <p className="text-3xl font-bold text-green-400">8</p>
+          <p className="text-gray-400 text-sm">3 overdue</p>
+        </div>
+        
+        <div className="bg-gray-900 p-6 rounded-lg border border-gray-800">
+          <h3 className="text-lg font-semibold text-white mb-2">Monthly Revenue</h3>
+          <p className="text-3xl font-bold text-jade-400">$12,450</p>
+          <p className="text-gray-400 text-sm">+15% from last month</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="bg-gray-900 p-6 rounded-lg border border-gray-800">
+          <h2 className="text-xl font-bold text-white mb-4">Recent Orders</h2>
+          <div className="space-y-3">
+            {[
+              { id: 'ORD-001', customer: 'John Smith', status: 'In Production', priority: 'High' },
+              { id: 'ORD-002', customer: 'Sarah Johnson', status: 'Material Ordered', priority: 'Medium' },
+              { id: 'ORD-003', customer: 'Mike Davis', status: 'Ready for Pickup', priority: 'Low' },
+              { id: 'ORD-004', customer: 'Lisa Wilson', status: 'Awaiting Approval', priority: 'High' },
+            ].map((order) => (
+              <div key={order.id} className="flex items-center justify-between p-3 bg-gray-800 rounded border border-gray-700">
+                <div>
+                  <p className="font-medium text-white">{order.id}</p>
+                  <p className="text-sm text-gray-400">{order.customer}</p>
+                </div>
+                <div className="text-right">
+                  <span className={`px-2 py-1 rounded text-xs font-medium ${
+                    order.status === 'Ready for Pickup' ? 'bg-green-500/20 text-green-400' :
+                    order.status === 'In Production' ? 'bg-yellow-500/20 text-yellow-400' :
+                    'bg-blue-500/20 text-blue-400'
+                  }`}>
+                    {order.status}
+                  </span>
+                  <p className={`text-xs mt-1 ${
+                    order.priority === 'High' ? 'text-red-400' :
+                    order.priority === 'Medium' ? 'text-yellow-400' :
+                    'text-gray-400'
+                  }`}>
+                    {order.priority} Priority
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="bg-gray-900 p-6 rounded-lg border border-gray-800">
+          <h2 className="text-xl font-bold text-white mb-4">Production Schedule</h2>
+          <div className="space-y-3">
+            <div className="p-3 bg-red-500/20 border border-red-500/30 rounded">
+              <div className="flex justify-between items-center">
+                <div>
+                  <p className="font-medium text-red-300">Urgent: Custom Mirror Frame</p>
+                  <p className="text-sm text-red-400">Due: Today</p>
+                </div>
+                <span className="text-red-400 font-bold">URGENT</span>
+              </div>
+            </div>
+            
+            <div className="p-3 bg-yellow-500/20 border border-yellow-500/30 rounded">
+              <div className="flex justify-between items-center">
+                <div>
+                  <p className="font-medium text-yellow-300">Canvas Stretching - Large</p>
+                  <p className="text-sm text-yellow-400">Due: Tomorrow</p>
+                </div>
+                <span className="text-yellow-400 font-medium">HIGH</span>
+              </div>
+            </div>
+            
+            <div className="p-3 bg-gray-800 border border-gray-700 rounded">
+              <div className="flex justify-between items-center">
+                <div>
+                  <p className="font-medium text-gray-300">Standard Photo Frames (x5)</p>
+                  <p className="text-sm text-gray-400">Due: This Week</p>
+                </div>
+                <span className="text-gray-400 font-medium">NORMAL</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
+const Orders = () => (
+  <div className="p-8 bg-gray-950 min-h-screen">
+    <div className="max-w-7xl mx-auto">
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-3xl font-bold text-jade-400">Orders Management</h1>
+        <button className="bg-jade-500 hover:bg-jade-400 text-black font-semibold px-6 py-2 rounded-lg transition-colors">
+          + New Order
+        </button>
+      </div>
+
+      <div className="bg-gray-900 rounded-lg border border-gray-800 overflow-hidden">
+        <div className="p-6 border-b border-gray-800">
+          <div className="flex gap-4">
+            <input 
+              type="text" 
+              placeholder="Search orders..." 
+              className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-400 focus:border-jade-500 focus:outline-none"
+            />
+            <select className="bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-jade-500 focus:outline-none">
+              <option>All Status</option>
+              <option>In Production</option>
+              <option>Ready for Pickup</option>
+              <option>Completed</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-gray-800">
+              <tr>
+                <th className="text-left p-4 font-semibold text-gray-300">Order ID</th>
+                <th className="text-left p-4 font-semibold text-gray-300">Customer</th>
+                <th className="text-left p-4 font-semibold text-gray-300">Type</th>
+                <th className="text-left p-4 font-semibold text-gray-300">Status</th>
+                <th className="text-left p-4 font-semibold text-gray-300">Due Date</th>
+                <th className="text-left p-4 font-semibold text-gray-300">Priority</th>
+                <th className="text-left p-4 font-semibold text-gray-300">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="text-white">
+              {[
+                { id: 'ORD-001', customer: 'John Smith', type: 'Custom Mirror Frame', status: 'In Production', due: '2025-07-26', priority: 'High' },
+                { id: 'ORD-002', customer: 'Sarah Johnson', type: 'Canvas Stretching', status: 'Material Ordered', due: '2025-07-28', priority: 'Medium' },
+                { id: 'ORD-003', customer: 'Mike Davis', type: 'Photo Frame Set', status: 'Ready for Pickup', due: '2025-07-25', priority: 'Low' },
+                { id: 'ORD-004', customer: 'Lisa Wilson', type: 'Art Restoration Frame', status: 'Awaiting Approval', due: '2025-07-30', priority: 'High' },
+                { id: 'ORD-005', customer: 'Tom Brown', type: 'Diploma Frame', status: 'Completed', due: '2025-07-24', priority: 'Medium' },
+              ].map((order) => (
+                <tr key={order.id} className="border-b border-gray-800 hover:bg-gray-800/50">
+                  <td className="p-4 font-medium">{order.id}</td>
+                  <td className="p-4">{order.customer}</td>
+                  <td className="p-4">{order.type}</td>
+                  <td className="p-4">
+                    <span className={`px-2 py-1 rounded text-xs font-medium ${
+                      order.status === 'Ready for Pickup' ? 'bg-green-500/20 text-green-400' :
+                      order.status === 'In Production' ? 'bg-yellow-500/20 text-yellow-400' :
+                      order.status === 'Completed' ? 'bg-blue-500/20 text-blue-400' :
+                      'bg-gray-500/20 text-gray-400'
+                    }`}>
+                      {order.status}
+                    </span>
+                  </td>
+                  <td className="p-4">{order.due}</td>
+                  <td className="p-4">
+                    <span className={`text-xs font-medium ${
+                      order.priority === 'High' ? 'text-red-400' :
+                      order.priority === 'Medium' ? 'text-yellow-400' :
+                      'text-gray-400'
+                    }`}>
+                      {order.priority}
+                    </span>
+                  </td>
+                  <td className="p-4">
+                    <div className="flex gap-2">
+                      <button className="text-jade-400 hover:text-jade-300 text-sm">Edit</button>
+                      <button className="text-blue-400 hover:text-blue-300 text-sm">View</button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
+const Customers = () => (
+  <div className="p-8 bg-gray-950 min-h-screen">
+    <div className="max-w-7xl mx-auto">
+      <h1 className="text-3xl font-bold text-jade-400 mb-8">Customer Management</h1>
+      <div className="text-white">
+        <p>Customer management features coming soon...</p>
+      </div>
+    </div>
+  </div>
+);
+
+const Navigation = () => {
+  const [currentPath, setCurrentPath] = useState(window.location.pathname);
+
+  const navItems = [
+    { path: '/dashboard', label: 'Dashboard', icon: '📊' },
+    { path: '/orders', label: 'Orders', icon: '📋' },
+    { path: '/customers', label: 'Customers', icon: '👥' },
+  ];
+
+  return (
+    <nav className="bg-gray-900 border-r border-gray-800 w-64 min-h-screen p-4">
+      <div className="mb-8">
+        <h2 className="text-2xl font-bold text-jade-400">Jay's Frames</h2>
+        <p className="text-gray-400 text-sm">Production Management</p>
+      </div>
+      
+      <ul className="space-y-2">
+        {navItems.map((item) => (
+          <li key={item.path}>
+            <a
+              href={item.path}
+              onClick={(e) => {
+                e.preventDefault();
+                setCurrentPath(item.path);
+                window.history.pushState({}, '', item.path);
+              }}
+              className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                currentPath === item.path
+                  ? 'bg-jade-500/20 text-jade-400 border border-jade-500/30'
+                  : 'text-gray-400 hover:text-white hover:bg-gray-800'
+              }`}
+            >
+              <span className="text-lg">{item.icon}</span>
+              {item.label}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  );
+};
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000,
+      retry: 2,
+    },
+  },
+});
+
+function AppContent() {
+  return (
+    <Router>
+      <div className="flex min-h-screen bg-gray-950">
+        <Navigation />
+        <div className="flex-1">
+          <Route path="/" component={() => { window.location.href = "/dashboard"; return null; }} />
+          <Route path="/dashboard" component={Dashboard} />
+          <Route path="/orders" component={Orders} />
+          <Route path="/customers" component={Customers} />
+          <Route path="*" component={() => <div className="text-white p-8">Page not found</div>} />
+        </div>
+      </div>
+    </Router>
+  );
+}
+
+export default function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <AppContent />
+    </QueryClientProvider>
+  );
+}
