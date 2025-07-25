@@ -9,16 +9,16 @@ export default function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const navigationItems = [
-    { name: 'Dashboard', href: '/', icon: LayoutDashboard },
+    { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
     { name: 'Orders', href: '/orders', icon: ShoppingBag },
     { name: 'Customers', href: '/customers', icon: Users },
     { name: 'API Explorer', href: '/api-explorer', icon: Database },
-    { name: 'Analytics', href: '/analytics', icon: BarChart3 },
+    { name: 'AI Assistant', href: '/ai-assistant', icon: Brain },
     { name: 'Price Structure', href: '/pricing', icon: DollarSign },
     { name: 'Invoices', href: '/invoices', icon: FileText },
     { name: 'Wholesalers', href: '/wholesalers', icon: Building2 },
+    { name: 'Finance', href: '/finance', icon: BarChart3 },
     { name: 'Inventory', href: '/inventory', icon: Package },
-    { name: 'Settings', href: '/settings', icon: Settings },
   ];
 
   return (
