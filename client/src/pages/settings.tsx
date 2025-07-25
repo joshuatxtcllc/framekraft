@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { 
-  Settings, 
+  Settings as SettingsIcon, 
   Building2, 
   Bell, 
   Palette, 
@@ -193,7 +193,7 @@ export default function Settings() {
                   <span className="hidden sm:inline">Integrations</span>
                 </TabsTrigger>
                 <TabsTrigger value="account" className="flex items-center space-x-2">
-                  <Settings className="w-4 h-4" />
+                  <SettingsIcon className="w-4 h-4" />
                   <span className="hidden sm:inline">Account</span>
                 </TabsTrigger>
               </TabsList>
@@ -498,7 +498,7 @@ export default function Settings() {
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center space-x-2">
-                      <Settings className="w-5 h-5" />
+                      <SettingsIcon className="w-5 h-5" />
                       <span>Account Information</span>
                     </CardTitle>
                   </CardHeader>

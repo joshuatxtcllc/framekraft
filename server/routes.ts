@@ -411,10 +411,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerWholesalerRoutes(app);
   registerInvoiceRoutes(app);
   registerFileUploadRoutes(app);
-  app.use('/api/pricing', pricingRoutes);
-  app.use('/api/wholesalers', wholesalersRoutes);
-  app.use('/api/invoices', invoicesRoutes);
-  app.use('/api/upload', fileUploadRoutes);
   app.use('/api/settings', settingsRoutes);
 
   const httpServer = createServer(app);

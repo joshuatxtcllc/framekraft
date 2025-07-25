@@ -1,6 +1,6 @@
 
 import { Router } from 'express';
-import { requireAuth } from '../middleware/auth.js';
+import { isAuthenticated } from '../middleware/auth.js';
 
 const router = Router();
 
@@ -39,31 +39,31 @@ let displaySettings = {
 };
 
 // Business Settings Routes
-router.get('/business', requireAuth, (req, res) => {
+router.get('/business', isAuthenticated, (req, res) => {
   res.json(businessSettings);
 });
 
-router.put('/business', requireAuth, (req, res) => {
+router.put('/business', isAuthenticated, (req, res) => {
   businessSettings = { ...businessSettings, ...req.body };
   res.json(businessSettings);
 });
 
 // Notification Settings Routes
-router.get('/notifications', requireAuth, (req, res) => {
+router.get('/notifications', isAuthenticated, (req, res) => {
   res.json(notificationSettings);
 });
 
-router.put('/notifications', requireAuth, (req, res) => {
+router.put('/notifications', isAuthenticated, (req, res) => {
   notificationSettings = { ...notificationSettings, ...req.body };
   res.json(notificationSettings);
 });
 
 // Display Settings Routes
-router.get('/display', requireAuth, (req, res) => {
+router.get('/display', isAuthenticated, (req, res) => {
   res.json(displaySettings);
 });
 
-router.put('/display', requireAuth, (req, res) => {
+router.put('/display', isAuthenticated, (req, res) => {
   displaySettings = { ...displaySettings, ...req.body };
   res.json(displaySettings);
 });
