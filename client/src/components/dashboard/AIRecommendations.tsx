@@ -139,7 +139,7 @@ export default function AIRecommendations() {
     }
   ];
 
-  const displayInsights = insights && insights.length > 0 ? insights : mockInsights;
+  const displayInsights = insights || [];
 
   return (
     <Card>
@@ -174,17 +174,76 @@ export default function AIRecommendations() {
         ) : (
           <div className="space-y-4">
             {displayInsights.length === 0 ? (
-              <div className="text-center py-8">
-                <Brain className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">No AI insights available</p>
-                <Button
-                  onClick={() => generateInsightsMutation.mutate()}
-                  disabled={generateInsightsMutation.isPending}
-                  className="mt-2"
-                  variant="outline"
-                >
-                  Generate Insights
-                </Button>
+              <div className="space-y-4">
+                <div className="text-center py-4">
+                  <Brain className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground">No AI insights available</p>
+                  <Button
+                    onClick={() => generateInsightsMutation.mutate()}
+                    disabled={generateInsightsMutation.isPending}
+                    className="mt-2"
+                    variant="outline"
+                  >
+                    Generate Insights
+                  </Button>
+                </div>
+                {/* Show sample insights when no real data exists */}
+                {(!insights || insights.length === 0) && mockInsights.map((insight: any) => {
+                  const Icon = getInsightIcon(insight.metadata?.type || 'general');
+                  const iconColor = getInsightColor(insight.metadata?.type || 'general');
+                  
+                  return (
+                    <div
+                      key={`mock-${insight.id}`}
+                      className="border border-wood-200 rounded-lg p-4 bg-wood-50/50 opacity-75"
+                    >
+                      <div className="flex items-start space-x-3">
+                        <div className="flex-shrink-0">
+                          <Icon className={`w-5 h-5 ${iconColor} mt-1`} />
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <h4 className="text-sm font-semibold text-foreground">
+                                {insight.title} <span className="text-xs text-muted-foreground">(Sample)</span>
+                              </h4>
+                              <p className="text-sm text-muted-foreground mt-1">
+                                {insight.description}
+                              </p>
+                              {insight.metadata?.actionItems && (
+                                <div className="mt-2">
+                                  <p className="text-xs text-muted-foreground mb-1">Suggested actions:</p>
+                                  <ul className="text-xs text-muted-foreground list-disc list-inside">
+                                    {insight.metadata.actionItems.slice(0, 2).map((action: string, index: number) => (
+                                      <li key={index}>{action}</li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex items-center space-x-2 ml-4">
+                              {insight.confidence && (
+                                <Badge variant="secondary" className="text-xs">
+                                  {Math.round(parseFloat(insight.confidence) * 100)}% confidence
+                                </Badge>
+                              )}
+                              {insight.metadata?.impactScore && (
+                                <Badge variant="outline" className="text-xs">
+                                  Impact: {insight.metadata.impactScore}/10
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center justify-between mt-3">
+                            <Badge variant="outline" className="text-xs">
+                              Sample Insight
+                            </Badge>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             ) : (
               displayInsights.map((insight: any) => {
