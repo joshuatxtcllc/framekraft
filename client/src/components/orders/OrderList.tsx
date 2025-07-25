@@ -10,6 +10,7 @@ import { Edit, Search, Filter, Eye, FileText, Printer, Mail, X } from "lucide-re
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { exportToPDF } from "@/lib/pdfExport";
+import { printOrderInvoice } from "@/lib/printUtils";
 
 interface Order {
   id: number;
@@ -144,7 +145,7 @@ export default function OrderList({
   });
 
   // Print invoice
-  const handlePrintInvoice = onPrintInvoice || (async (order: Order) => {
+  const handlePrintInvoice = onPrintInvoice || ((order: Order) => {
     try {
       const invoiceData = {
         orderNumber: order.orderNumber,
@@ -166,16 +167,12 @@ export default function OrderList({
         notes: order.notes || ''
       };
       
-      // Generate PDF and open print dialog
-      await exportToPDF(invoiceData, 'invoice');
-      // Attempt to trigger browser print dialog
-      setTimeout(() => {
-        window.print();
-      }, 1000);
+      // Open print window with specific order invoice
+      printOrderInvoice(invoiceData);
       
       toast({
-        title: "Print Ready",
-        description: `Invoice for order ${order.orderNumber} is ready to print.`,
+        title: "Print Window Opened",
+        description: `Invoice for order ${order.orderNumber} opened in new window for printing.`,
       });
     } catch (error) {
       console.error('Print preparation error:', error);

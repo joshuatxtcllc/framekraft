@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { printOrderInvoice } from "@/lib/printUtils";
 
 export default function Orders() {
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -179,9 +180,8 @@ export default function Orders() {
     }
   };
 
-  const handlePrintInvoice = async (order: any) => {
+  const handlePrintInvoice = (order: any) => {
     try {
-      const { exportToPDF } = await import("@/lib/pdfExport");
       const invoiceData = {
         orderNumber: order.orderNumber,
         customerName: `${order.customer.firstName} ${order.customer.lastName}`,
@@ -202,14 +202,12 @@ export default function Orders() {
         notes: order.notes || ''
       };
       
-      await exportToPDF(invoiceData, 'invoice');
-      setTimeout(() => {
-        window.print();
-      }, 1000);
+      // Open print window with specific order invoice
+      printOrderInvoice(invoiceData);
       
       toast({
-        title: "Print Ready",
-        description: `Invoice for order ${order.orderNumber} is ready to print.`,
+        title: "Print Window Opened",
+        description: `Invoice for order ${order.orderNumber} opened in new window for printing.`,
       });
     } catch (error) {
       console.error('Print preparation error:', error);
@@ -290,7 +288,7 @@ FrameCraft`;
                         </DialogTitle>
                       </DialogHeader>
                       <OrderForm
-                        customers={customers || []}
+                        customers={Array.isArray(customers) ? customers : []}
                         initialData={editingOrder}
                         onSubmit={handleSubmit}
                         isLoading={createOrderMutation.isPending || updateOrderMutation.isPending}
@@ -306,7 +304,7 @@ FrameCraft`;
 
               {/* Orders List */}
               <OrderList 
-                orders={orders || []} 
+                orders={Array.isArray(orders) ? orders : []} 
                 isLoading={isLoading}
                 onEdit={handleEdit}
                 onGenerateInvoice={handleGenerateInvoice}
