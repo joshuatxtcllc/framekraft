@@ -121,6 +121,8 @@ export default function APIExplorer() {
     if (!path) return;
 
     setIsLoading(true);
+    setResponse(null); // Clear previous response
+    
     try {
       let finalPath = path;
       
@@ -144,15 +146,28 @@ export default function APIExplorer() {
         }
       }
 
-      const result = await apiRequest(method as any, finalPath, requestOptions.body);
-      const data = await result.json();
+      console.log(`Making ${method} request to ${finalPath}`, requestOptions.body);
       
-      setResponse({
+      const result = await apiRequest(method as any, finalPath, requestOptions.body);
+      let data;
+      
+      try {
+        const responseText = await result.text();
+        data = responseText ? JSON.parse(responseText) : {};
+      } catch (parseError) {
+        data = { parseError: "Could not parse response as JSON" };
+      }
+      
+      const responseObj = {
         status: result.status,
         statusText: result.statusText,
         data: data,
         headers: Object.fromEntries(result.headers.entries()),
-      });
+        timestamp: new Date().toISOString(),
+      };
+      
+      console.log('API Response:', responseObj);
+      setResponse(responseObj);
 
       toast({
         title: "Request Successful",
@@ -160,12 +175,20 @@ export default function APIExplorer() {
       });
 
     } catch (error: any) {
-      setResponse({
+      console.error('API Request Error:', error);
+      
+      const errorResponse = {
         status: error.status || 500,
         statusText: error.statusText || 'Error',
-        data: { error: error.message },
+        data: { 
+          error: error.message,
+          details: error.toString()
+        },
         headers: {},
-      });
+        timestamp: new Date().toISOString(),
+      };
+      
+      setResponse(errorResponse);
 
       toast({
         title: "Request Failed",
@@ -342,10 +365,15 @@ export default function APIExplorer() {
                     <TabsContent value="response" className="space-y-4">
                       {response ? (
                         <>
-                          <div className="flex items-center gap-4">
+                          <div className="flex items-center gap-4 flex-wrap">
                             <Badge variant={response.status < 400 ? 'default' : 'destructive'}>
                               {response.status} {response.statusText}
                             </Badge>
+                            {response.timestamp && (
+                              <span className="text-xs text-muted-foreground">
+                                {new Date(response.timestamp).toLocaleTimeString()}
+                              </span>
+                            )}
                             <Button
                               variant="outline"
                               size="sm"
@@ -357,26 +385,38 @@ export default function APIExplorer() {
                           </div>
                           
                           <div>
-                            <Label>Response Body</Label>
-                            <ScrollArea className="h-64 w-full rounded-md border">
-                              <pre className="p-4 text-sm">
+                            <Label className="text-sm font-medium">Response Body</Label>
+                            <ScrollArea className="h-64 w-full rounded-md border bg-muted/50">
+                              <pre className="p-4 text-sm font-mono whitespace-pre-wrap">
                                 {JSON.stringify(response.data, null, 2)}
                               </pre>
                             </ScrollArea>
                           </div>
 
                           <div>
-                            <Label>Response Headers</Label>
-                            <ScrollArea className="h-32 w-full rounded-md border">
-                              <pre className="p-4 text-sm">
+                            <Label className="text-sm font-medium">Response Headers</Label>
+                            <ScrollArea className="h-32 w-full rounded-md border bg-muted/50">
+                              <pre className="p-4 text-sm font-mono">
                                 {JSON.stringify(response.headers, null, 2)}
                               </pre>
                             </ScrollArea>
                           </div>
+
+                          {/* Debug Info */}
+                          <div className="text-xs text-muted-foreground p-2 bg-muted rounded">
+                            <strong>Debug:</strong> Request completed at {response.timestamp} with status {response.status}
+                          </div>
                         </>
+                      ) : isLoading ? (
+                        <div className="text-center text-muted-foreground py-8">
+                          <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
+                          Sending request...
+                        </div>
                       ) : (
                         <div className="text-center text-muted-foreground py-8">
-                          No response yet. Send a request to see the response here.
+                          <div className="mb-4">📡</div>
+                          <p>No response yet. Send a request to see the response here.</p>
+                          <p className="text-xs mt-2">Select an endpoint from the left panel or manually enter a path above.</p>
                         </div>
                       )}
                     </TabsContent>
