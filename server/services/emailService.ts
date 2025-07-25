@@ -106,7 +106,6 @@ export class EmailService {
       }
     });
   }
-  }
 
   async sendOrderStatusUpdate(orderId: number, status: string, customerEmail: string): Promise<void> {
     if (!settingsService.isEnabled('gmail')) {
@@ -169,7 +168,6 @@ export class EmailService {
         throw new Error(`Failed to send order status email: ${error.message}`);
       }
     });
-  }
   }
 }
 
