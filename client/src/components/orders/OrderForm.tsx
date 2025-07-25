@@ -36,10 +36,15 @@ const orderSchema = z.object({
 
 type OrderFormData = z.infer<typeof orderSchema>;
 
+type OrderSubmitData = Omit<OrderFormData, 'customerId' | 'dueDate'> & {
+  customerId: number;
+  dueDate?: string;
+};
+
 interface OrderFormProps {
   customers: any[];
   initialData?: any;
-  onSubmit: (data: OrderFormData) => void;
+  onSubmit: (data: OrderSubmitData) => void;
   isLoading: boolean;
   onCancel: () => void;
 }
@@ -290,11 +295,9 @@ export default function OrderForm({
 
   const handleFormSubmit = (data: OrderFormData) => {
     // Transform the data before sending
-    const transformedData = {
+    const transformedData: OrderSubmitData = {
       ...data,
       customerId: parseInt(data.customerId),
-      totalAmount: data.totalAmount, // Keep as string
-      depositAmount: data.depositAmount || undefined, // Keep as string
       dueDate: data.dueDate ? data.dueDate.toISOString() : undefined, // Convert date to ISO string
     };
     onSubmit(transformedData);
@@ -815,7 +818,7 @@ export default function OrderForm({
                             <span>Glass ({glazing}):</span>
                             <span>${glazingPrice.toFixed(2)}</span>
                           </div>
-                          <divThe code has been modified to update mat pricing to be calculated by area, similar to glass, and to support multiple mats and frames. className="text-xs text-gray-500 pl-2">
+                          <div className="text-xs text-gray-500 pl-2">
                             {glazingDetails}
                           </div>
                         </div>
