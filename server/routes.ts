@@ -117,6 +117,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Public order tracking (no auth required)
+  app.get('/api/public/orders/:orderNumber/status', async (req, res) => {
+    try {
+      const orderNumber = req.params.orderNumber;
+      const order = await storage.getOrderByNumber(orderNumber);
+      
+      if (!order) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+
+      // Return limited public information
+      const publicOrderInfo = {
+        id: order.id,
+        orderNumber: order.orderNumber,
+        status: order.status,
+        jobType: order.jobType || 'Custom Framing',
+        createdAt: order.createdAt,
+        dueDate: order.dueDate,
+        priority: order.priority,
+        // Don't expose sensitive customer data in public API
+      };
+
+      res.json(publicOrderInfo);
+    } catch (error) {
+      console.error("Error fetching public order status:", error);
+      res.status(500).json({ message: "Failed to fetch order status" });
+    }
+  });
+
   // Order routes
   app.get('/api/orders', isAuthenticated, async (req, res) => {
     try {

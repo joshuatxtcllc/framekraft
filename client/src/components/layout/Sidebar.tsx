@@ -131,13 +131,16 @@ export default function Sidebar() {
         {/* Navigation */}
         <nav className="mt-5 flex-1 px-2 pb-4 space-y-1">
           {/* Main Navigation */}
-          {navigationItems.map((item) => (
+          {navigationItems.map((item) => {
+          const staffHref = item.href === '/' ? '/staff' : `/staff${item.href}`;
+          const isActive = location === staffHref || (staffHref !== '/staff' && location.startsWith(staffHref));
+          return (
             <Link
               key={item.name}
-              href={item.href}
+              href={staffHref}
               className={cn(
                 "sidebar-nav-item",
-                item.current
+                isActive
                   ? "sidebar-nav-item-active"
                   : "sidebar-nav-item-inactive"
               )}
@@ -150,7 +153,8 @@ export default function Sidebar() {
                 </Badge>
               )}
             </Link>
-          ))}
+          );
+        })}
 
           {/* AI Tools Section */}
           <div className="pt-4">
@@ -223,3 +227,4 @@ export default function Sidebar() {
     </div>
   );
 }
+```

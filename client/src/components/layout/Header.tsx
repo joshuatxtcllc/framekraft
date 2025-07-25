@@ -55,7 +55,7 @@ export default function Header() {
           <Button variant="ghost" size="icon">
             <Bell className="h-5 w-5" />
           </Button>
-          
+
           {/* AI Assistant Quick Access */}
           <Button
             className="bg-primary text-primary-foreground hover:bg-primary/90"
@@ -76,7 +76,7 @@ export default function Header() {
               className="fixed inset-0 bg-black opacity-25"
               onClick={() => setIsMobileMenuOpen(false)}
             />
-            
+
             {/* Mobile menu */}
             <div className="relative flex-1 flex flex-col max-w-xs w-full bg-wood-600 shadow-xl">
               <div className="absolute top-0 right-0 -mr-12 pt-2">
@@ -88,7 +88,7 @@ export default function Header() {
                   <X className="h-6 w-6 text-white" />
                 </button>
               </div>
-              
+
               {/* Logo */}
               <div className="flex items-center flex-shrink-0 px-4 py-6 bg-wood-700">
                 <div className="flex items-center">
@@ -101,7 +101,7 @@ export default function Header() {
                   </div>
                 </div>
               </div>
-              
+
               {/* Navigation */}
               <nav className="mt-5 flex-1 px-2 pb-4 space-y-1 overflow-y-auto">
                 {navigationItems.map((item) => (

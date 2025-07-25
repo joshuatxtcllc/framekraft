@@ -6,6 +6,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
+import CustomerPortal from "@/pages/customer-portal";
+import CustomerTracking from "@/pages/customer-tracking";
 import Dashboard from "@/pages/dashboard";
 import Orders from "@/pages/orders";
 import Customers from "@/pages/customers";
@@ -23,21 +25,27 @@ function Router() {
 
   return (
     <Switch>
+      {/* Public customer routes */}
+      <Route path="/" component={isLoading || !isAuthenticated ? Landing : CustomerPortal} />
+      <Route path="/track/:orderId" component={CustomerTracking} />
+      
+      {/* Staff portal routes - protected by authentication */}
       {isLoading || !isAuthenticated ? (
-        <Route path="/" component={Landing} />
+        <Route path="/staff/*" component={Landing} />
       ) : (
         <>
-          <Route path="/" component={Dashboard} />
-          <Route path="/orders" component={Orders} />
-          <Route path="/customers" component={Customers} />
-          <Route path="/ai-assistant" component={AIAssistant} />
-          <Route path="/api-explorer" component={APIExplorer} />
-          <Route path="/integration-settings" component={IntegrationSettings} />
-          <Route path="/pricing" component={Pricing} />
-          <Route path="/invoices" component={Invoices} />
-          <Route path="/wholesalers" component={Wholesalers} />
-          <Route path="/finance" component={Finance} />
-          <Route path="/inventory" component={Inventory} />
+          <Route path="/staff" component={Dashboard} />
+          <Route path="/staff/dashboard" component={Dashboard} />
+          <Route path="/staff/orders" component={Orders} />
+          <Route path="/staff/customers" component={Customers} />
+          <Route path="/staff/ai-assistant" component={AIAssistant} />
+          <Route path="/staff/api-explorer" component={APIExplorer} />
+          <Route path="/staff/integration-settings" component={IntegrationSettings} />
+          <Route path="/staff/pricing" component={Pricing} />
+          <Route path="/staff/invoices" component={Invoices} />
+          <Route path="/staff/wholesalers" component={Wholesalers} />
+          <Route path="/staff/finance" component={Finance} />
+          <Route path="/staff/inventory" component={Inventory} />
         </>
       )}
       <Route component={NotFound} />
