@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
+import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -24,7 +25,10 @@ import {
   CheckCircle,
   Clock,
   AlertCircle,
-  CreditCard
+  CreditCard,
+  UserPlus,
+  Trash2,
+  Mail
 } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -191,7 +195,7 @@ export default function Invoices() {
   };
 
   const handleExportPDF = (invoice: any) => {
-    exportInvoiceToPDF(invoice);
+    exportToPDF(invoice, "invoice");
   };
 
   const getStatusBadge = (status: string) => {
@@ -236,7 +240,6 @@ export default function Invoices() {
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
   const printRef = useRef<HTMLDivElement>(null);
-  const { toast } = useToast();
 
   const emailForm = useForm({
     resolver: zodResolver(
@@ -281,7 +284,7 @@ export default function Invoices() {
   };
 
   const handleExportInvoice = (invoice: any) => {
-    exportToPDF(invoice, printRef.current);
+    exportToPDF(invoice, "invoice");
   };
 
   const handleEmailInvoice = (invoice: any) => {
