@@ -19,6 +19,8 @@ import Invoices from "@/pages/invoices";
 import Wholesalers from "@/pages/wholesalers";
 import Finance from "@/pages/finance";
 import Inventory from "@/pages/inventory";
+import Analytics from "@/pages/analytics";
+import KanbanBoard from "@/pages/kanban";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -45,6 +47,8 @@ function Router() {
           <Route path="/wholesalers" component={Wholesalers} />
           <Route path="/finance" component={Finance} />
           <Route path="/inventory" component={Inventory} />
+          <Route path="/analytics" component={Analytics} />
+          <Route path="/kanban" component={KanbanBoard} />
         </>
       )}
       <Route component={NotFound} />

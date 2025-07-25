@@ -3,10 +3,11 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Sidebar from "@/components/layout/Sidebar";
 import Header from "@/components/layout/Header";
 import OrderList from "@/components/orders/OrderList";
+import KanbanView from "@/components/orders/KanbanView";
 import OrderForm from "@/components/orders/OrderForm";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus } from "lucide-react";
+import { Plus, Table, Kanban, Printer } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { printOrderInvoice } from "@/lib/printUtils";
@@ -14,6 +15,7 @@ import { printOrderInvoice } from "@/lib/printUtils";
 export default function Orders() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingOrder, setEditingOrder] = useState(null);
+  const [viewMode, setViewMode] = useState<'table' | 'kanban'>('table');
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -281,10 +283,34 @@ FrameCraft`;
                     Manage all your custom framing orders and track their progress.
                   </p>
                 </div>
-                <div className="mt-4 flex md:mt-0 md:ml-4">
+                <div className="mt-4 flex items-center space-x-3 md:mt-0 md:ml-4">
+                  {/* View Toggle */}
+                  <div className="flex items-center bg-muted rounded-lg p-1" data-testid="view-toggle">
+                    <Button
+                      size="sm"
+                      variant={viewMode === 'table' ? 'default' : 'ghost'}
+                      onClick={() => setViewMode('table')}
+                      className="h-8 px-3"
+                      data-testid="button-table-view"
+                    >
+                      <Table className="h-4 w-4 mr-1" />
+                      Table
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant={viewMode === 'kanban' ? 'default' : 'ghost'}
+                      onClick={() => setViewMode('kanban')}
+                      className="h-8 px-3"
+                      data-testid="button-kanban-view"
+                    >
+                      <Kanban className="h-4 w-4 mr-1" />
+                      Kanban
+                    </Button>
+                  </div>
+
                   <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
                     <DialogTrigger asChild>
-                      <Button className="btn-primary">
+                      <Button className="btn-primary" data-testid="button-new-order">
                         <Plus className="w-4 h-4 mr-2" />
                         New Order
                       </Button>
@@ -310,17 +336,30 @@ FrameCraft`;
                 </div>
               </div>
 
-              {/* Orders List */}
-              <OrderList 
-                orders={Array.isArray(orders) ? orders : []} 
-                isLoading={isLoading}
-                onEdit={handleEdit}
-                onGenerateInvoice={handleGenerateInvoice}
-                onGenerateWorkOrder={handleGenerateWorkOrder}
-                onPrintInvoice={handlePrintInvoice}
-                onEmailInvoice={handleEmailInvoice}
-                onProcessPayment={handleProcessPayment}
-              />
+              {/* Orders Content */}
+              {viewMode === 'table' ? (
+                <OrderList 
+                  orders={Array.isArray(orders) ? orders : []} 
+                  isLoading={isLoading}
+                  onEdit={handleEdit}
+                  onGenerateInvoice={handleGenerateInvoice}
+                  onGenerateWorkOrder={handleGenerateWorkOrder}
+                  onPrintInvoice={handlePrintInvoice}
+                  onEmailInvoice={handleEmailInvoice}
+                  onProcessPayment={handleProcessPayment}
+                />
+              ) : (
+                <KanbanView
+                  orders={Array.isArray(orders) ? orders : []} 
+                  isLoading={isLoading}
+                  onEdit={handleEdit}
+                  onGenerateInvoice={handleGenerateInvoice}
+                  onGenerateWorkOrder={handleGenerateWorkOrder}
+                  onPrintInvoice={handlePrintInvoice}
+                  onEmailInvoice={handleEmailInvoice}
+                  onProcessPayment={handleProcessPayment}
+                />
+              )}
             </div>
           </div>
         </main>

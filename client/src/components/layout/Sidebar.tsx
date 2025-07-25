@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { Frame, LayoutDashboard, ShoppingBag, Users, Brain, Sparkles, Package, DollarSign, Settings, BarChart3, Building2, FileText, Database } from "lucide-react";
+import { Frame, LayoutDashboard, ShoppingBag, Users, Brain, Sparkles, Package, DollarSign, Settings, BarChart3, Building2, FileText, Database, Kanban } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
@@ -47,6 +47,19 @@ export default function Sidebar() {
     },
   ];
 
+  const productionTools = [
+    {
+      name: 'Kanban Board',
+      href: '/kanban',
+      icon: Kanban,
+    },
+    {
+      name: 'Analytics',
+      href: '/analytics',
+      icon: BarChart3,
+    },
+  ];
+
   const aiTools = [
     {
       name: 'AI Assistant',
@@ -58,11 +71,9 @@ export default function Sidebar() {
       href: '/frame-recommender',
       icon: Sparkles,
     },
-    {
-      name: 'Analytics',
-      href: '/analytics',
-      icon: BarChart3,
-    },
+  ];
+
+  const businessTools = [
     {
       name: 'Price Structure',
       href: '/pricing',
@@ -78,9 +89,6 @@ export default function Sidebar() {
       href: '/wholesalers',
       icon: Building2,
     },
-  ];
-
-  const businessTools = [
     {
       name: 'Inventory',
       href: '/inventory',
@@ -92,6 +100,8 @@ export default function Sidebar() {
       icon: DollarSign,
     },
   ];
+
+
 
   return (
     <div className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0">
@@ -135,6 +145,33 @@ export default function Sidebar() {
             </Link>
           );
         })}
+
+          {/* Production Tools Section */}
+          <div className="pt-4">
+            <h3 className="px-3 text-xs font-semibold text-wood-200 uppercase tracking-wider">
+              Production
+            </h3>
+            <div className="mt-2 space-y-1">
+              {productionTools.map((item) => {
+                const isActive = location === item.href || (item.href !== '/' && location.startsWith(item.href));
+                return (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  className={cn(
+                    "sidebar-nav-item",
+                    isActive
+                      ? "sidebar-nav-item-active"
+                      : "sidebar-nav-item-inactive"
+                  )}
+                >
+                  <item.icon className="text-wood-200 mr-3 h-6 w-6" />
+                  {item.name}
+                </Link>
+                );
+              })}
+            </div>
+          </div>
 
           {/* AI Tools Section */}
           <div className="pt-4">
