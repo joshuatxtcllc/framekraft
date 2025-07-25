@@ -25,18 +25,18 @@ export default function Finance() {
 
   // Calculate financial metrics
   const totalRevenue = invoices.reduce((sum: number, invoice: any) => 
-    sum + parseFloat(invoice.amount || 0), 0
+    sum + parseFloat(invoice.totalAmount || 0), 0
   );
 
   const paidInvoices = invoices.filter((invoice: any) => invoice.status === 'paid');
   const unpaidInvoices = invoices.filter((invoice: any) => invoice.status === 'pending');
   
   const paidAmount = paidInvoices.reduce((sum: number, invoice: any) => 
-    sum + parseFloat(invoice.amount || 0), 0
+    sum + parseFloat(invoice.totalAmount || 0), 0
   );
   
   const outstandingAmount = unpaidInvoices.reduce((sum: number, invoice: any) => 
-    sum + parseFloat(invoice.amount || 0), 0
+    sum + parseFloat(invoice.totalAmount || 0), 0
   );
 
   const pendingOrders = orders.filter((order: any) => 
