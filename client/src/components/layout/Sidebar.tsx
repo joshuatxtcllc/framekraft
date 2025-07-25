@@ -105,10 +105,10 @@ export default function Sidebar() {
       current: location === '/finance',
     },
     {
-      name: 'Settings',
-      href: '/settings',
+      name: 'Integration Settings',
+      href: '/integration-settings',
       icon: Settings,
-      current: location === '/settings',
+      current: location === '/integration-settings',
     },
   ];
 

@@ -15,6 +15,8 @@ import IntegrationSettings from "./pages/integration-settings";
 import Pricing from "@/pages/pricing";
 import Invoices from "@/pages/invoices";
 import Wholesalers from "@/pages/wholesalers";
+import Finance from "@/pages/finance";
+import Inventory from "@/pages/inventory";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -34,6 +36,8 @@ function Router() {
           <Route path="/pricing" component={Pricing} />
           <Route path="/invoices" component={Invoices} />
           <Route path="/wholesalers" component={Wholesalers} />
+          <Route path="/finance" component={Finance} />
+          <Route path="/inventory" component={Inventory} />
         </>
       )}
       <Route component={NotFound} />
