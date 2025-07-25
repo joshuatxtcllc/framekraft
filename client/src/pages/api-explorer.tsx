@@ -159,23 +159,25 @@ export default function APIExplorer() {
       let data;
       
       try {
-        // Clone the response to read it multiple times if needed
-        const clonedResult = result.clone();
+        // First, get the response as text
+        const responseText = await result.text();
         
-        // Try to parse as JSON first
-        data = await result.json();
-      } catch (parseError) {
-        try {
-          // If JSON parsing fails, try to get as text
-          const responseText = await clonedResult.text();
-          data = responseText || "Empty response";
-        } catch (textError) {
-          data = { 
-            error: "Could not parse response", 
-            parseError: parseError.message,
-            textError: textError.message 
-          };
+        if (!responseText) {
+          data = "Empty response";
+        } else {
+          try {
+            // Try to parse the text as JSON
+            data = JSON.parse(responseText);
+          } catch (jsonError) {
+            // If it's not JSON, return the raw text
+            data = responseText;
+          }
         }
+      } catch (error) {
+        data = { 
+          error: "Could not read response", 
+          details: error.message 
+        };
       }
       
       const responseObj = {
