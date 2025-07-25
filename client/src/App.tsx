@@ -32,7 +32,7 @@ function Router() {
           <Route path="/invoices" component={Invoices} />
           <Route path="/wholesalers" component={Wholesalers} />
           <Route path="/ai-assistant" component={AIAssistant} />
-          <Route path="/api-explorer" element={<APIExplorer />} />
+          <Route path="/api-explorer" component={APIExplorer} />
         </>
       )}
       <Route component={NotFound} />
