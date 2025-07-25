@@ -99,12 +99,19 @@ export default function APIExplorer() {
   const [response, setResponse] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [showQuickRef, setShowQuickRef] = useState(false);
   
   const { toast } = useToast();
 
-  const filteredEndpoints = API_ENDPOINTS.filter(endpoint => 
-    selectedCategory === 'all' || endpoint.category === selectedCategory
-  );
+  const filteredEndpoints = API_ENDPOINTS.filter(endpoint => {
+    const categoryMatch = selectedCategory === 'all' || endpoint.category === selectedCategory;
+    const searchMatch = searchTerm === '' || 
+      endpoint.path.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      endpoint.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      endpoint.method.toLowerCase().includes(searchTerm.toLowerCase());
+    return categoryMatch && searchMatch;
+  });
 
   const categories = ['all', ...Array.from(new Set(API_ENDPOINTS.map(e => e.category)))];
 
@@ -221,6 +228,16 @@ export default function APIExplorer() {
                 <h1 className="text-2xl lg:text-3xl font-bold">API Explorer</h1>
                 <p className="text-sm lg:text-base text-muted-foreground">Test and interact with your FrameCraft APIs</p>
               </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowQuickRef(true)}
+                  className="text-sm"
+                >
+                  <Eye className="w-4 h-4 mr-2" />
+                  Quick Reference
+                </Button>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
@@ -231,18 +248,26 @@ export default function APIExplorer() {
                     <Database className="w-4 h-4 lg:w-5 lg:h-5" />
                     API Endpoints
                   </CardTitle>
-                  <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                    <SelectTrigger className="text-sm">
-                      <SelectValue placeholder="Filter by category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories.map(category => (
-                        <SelectItem key={category} value={category}>
-                          {category === 'all' ? 'All Categories' : category.charAt(0).toUpperCase() + category.slice(1)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="space-y-2">
+                    <Input
+                      placeholder="Search endpoints..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="text-sm"
+                    />
+                    <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                      <SelectTrigger className="text-sm">
+                        <SelectValue placeholder="Filter by category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {categories.map(category => (
+                          <SelectItem key={category} value={category}>
+                            {category === 'all' ? 'All Categories' : category.charAt(0).toUpperCase() + category.slice(1)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </CardHeader>
                 <CardContent className="px-3 lg:px-4">
                   <ScrollArea className="h-[300px] lg:h-[500px] xl:h-[600px]">
@@ -473,6 +498,79 @@ export default function APIExplorer() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Quick Reference Dialog */}
+            <div className={`fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 ${showQuickRef ? '' : 'hidden'}`}>
+              <div className="bg-background rounded-lg shadow-lg max-w-4xl w-full max-h-[80vh] overflow-y-auto">
+                <div className="p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-xl font-bold">API Quick Reference</h2>
+                    <Button variant="ghost" size="sm" onClick={() => setShowQuickRef(false)}>
+                      ✕
+                    </Button>
+                  </div>
+                  
+                  <div className="grid gap-6">
+                    <div>
+                      <h3 className="font-semibold mb-2 text-blue-600">🧑‍🤝‍🧑 Customer Management</h3>
+                      <div className="text-sm space-y-1 ml-4">
+                        <div><code className="bg-muted px-2 py-1 rounded">GET /api/customers</code> - List all customers</div>
+                        <div><code className="bg-muted px-2 py-1 rounded">GET /api/customers/1</code> - Get customer by ID</div>
+                        <div><code className="bg-muted px-2 py-1 rounded">POST /api/customers</code> - Create new customer</div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <h3 className="font-semibold mb-2 text-green-600">📋 Order Management</h3>
+                      <div className="text-sm space-y-1 ml-4">
+                        <div><code className="bg-muted px-2 py-1 rounded">GET /api/orders</code> - List all orders</div>
+                        <div><code className="bg-muted px-2 py-1 rounded">GET /api/orders/1</code> - Get order by ID</div>
+                        <div><code className="bg-muted px-2 py-1 rounded">POST /api/orders</code> - Create new order</div>
+                        <div><code className="bg-muted px-2 py-1 rounded">GET /api/orders/1/steps</code> - Get project steps</div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <h3 className="font-semibold mb-2 text-purple-600">📊 Dashboard & Analytics</h3>
+                      <div className="text-sm space-y-1 ml-4">
+                        <div><code className="bg-muted px-2 py-1 rounded">GET /api/dashboard/metrics</code> - Get business metrics</div>
+                        <div><code className="bg-muted px-2 py-1 rounded">GET /api/ai/insights</code> - Get AI insights</div>
+                        <div><code className="bg-muted px-2 py-1 rounded">POST /api/ai/generate-insights</code> - Generate new insights</div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <h3 className="font-semibold mb-2 text-orange-600">💰 Invoices & Pricing</h3>
+                      <div className="text-sm space-y-1 ml-4">
+                        <div><code className="bg-muted px-2 py-1 rounded">GET /api/invoices</code> - List all invoices</div>
+                        <div><code className="bg-muted px-2 py-1 rounded">GET /api/pricing/structure</code> - Get pricing structure</div>
+                        <div><code className="bg-muted px-2 py-1 rounded">POST /api/pricing/structure</code> - Add pricing item</div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <h3 className="font-semibold mb-2 text-red-600">🏪 Wholesalers & Inventory</h3>
+                      <div className="text-sm space-y-1 ml-4">
+                        <div><code className="bg-muted px-2 py-1 rounded">GET /api/wholesalers</code> - List wholesalers</div>
+                        <div><code className="bg-muted px-2 py-1 rounded">GET /api/inventory</code> - View inventory</div>
+                        <div><code className="bg-muted px-2 py-1 rounded">GET /api/inventory/low-stock</code> - Low stock items</div>
+                      </div>
+                    </div>
+
+                    <div className="bg-muted/50 p-4 rounded-lg">
+                      <h4 className="font-semibold mb-2">💡 Pro Tips:</h4>
+                      <ul className="text-sm space-y-1">
+                        <li>• Use the search box to quickly find endpoints</li>
+                        <li>• Click any endpoint from the list to auto-fill the request builder</li>
+                        <li>• Most GET endpoints don't require authentication in development</li>
+                        <li>• Replace :id in paths with actual numbers (e.g., :id → 1)</li>
+                        <li>• Check the Response tab to see what data comes back</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </main>
       </div>
