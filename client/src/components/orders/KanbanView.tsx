@@ -84,7 +84,25 @@ export default function KanbanView({
 
   const updateOrderMutation = useMutation({
     mutationFn: async ({ id, ...data }: any) => {
-      const response = await apiRequest("PUT", `/api/orders/${id}`, data);
+      // Clean and format the data properly
+      const updateData = {
+        customerId: parseInt(data.customerId),
+        orderNumber: data.orderNumber,
+        description: data.description,
+        artworkDescription: data.artworkDescription || null,
+        dimensions: data.dimensions || null,
+        frameStyle: data.frameStyle || null,
+        matColor: data.matColor || null,
+        glazing: data.glazing || null,
+        totalAmount: parseFloat(data.totalAmount),
+        depositAmount: data.depositAmount ? parseFloat(data.depositAmount) : 0,
+        status: data.status,
+        priority: data.priority,
+        dueDate: data.dueDate || null,
+        notes: data.notes || null,
+      };
+      
+      const response = await apiRequest("PUT", `/api/orders/${id}`, updateData);
       return response.json();
     },
     onSuccess: () => {
@@ -95,6 +113,7 @@ export default function KanbanView({
       });
     },
     onError: (error: any) => {
+      console.error('Order update error:', error);
       toast({
         title: "Error",
         description: error.message || "Failed to update order status",
@@ -121,6 +140,32 @@ export default function KanbanView({
         ...draggedOrder,
         status: newStatus,
       });
+    }
+    setDraggedOrder(null);
+  };
+
+  // Touch events for mobile support
+  const handleTouchStart = (e: React.TouchEvent, order: Order) => {
+    setDraggedOrder(order);
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (draggedOrder) {
+      // Get the element under the touch point
+      const touch = e.changedTouches[0];
+      const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY);
+      const dropZone = elementBelow?.closest('[data-drop-zone]');
+      
+      if (dropZone) {
+        const newStatus = dropZone.getAttribute('data-status');
+        if (newStatus && draggedOrder.status !== newStatus) {
+          updateOrderMutation.mutate({
+            id: draggedOrder.id,
+            ...draggedOrder,
+            status: newStatus,
+          });
+        }
+      }
     }
     setDraggedOrder(null);
   };
@@ -160,6 +205,13 @@ export default function KanbanView({
 
   return (
     <>
+      {/* Mobile Instructions */}
+      <div className="md:hidden bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+        <p className="text-sm text-blue-800">
+          <strong>Mobile Tip:</strong> Touch and hold an order card, then drag it to a different column to update its status.
+        </p>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         {stages.map((stage) => {
           const stageOrders = getOrdersByStatus(stage.id);
@@ -178,13 +230,17 @@ export default function KanbanView({
                 className="flex-1 p-2 bg-muted/30 rounded-b-lg min-h-[400px] space-y-2"
                 onDragOver={handleDragOver}
                 onDrop={(e) => handleDrop(e, stage.id)}
+                data-drop-zone="true"
+                data-status={stage.id}
               >
                 {stageOrders.map((order) => (
                   <Card 
                     key={order.id} 
-                    className="cursor-move hover:shadow-md transition-shadow"
+                    className="cursor-move hover:shadow-md transition-shadow touch-none"
                     draggable
                     onDragStart={(e) => handleDragStart(e, order)}
+                    onTouchStart={(e) => handleTouchStart(e, order)}
+                    onTouchEnd={handleTouchEnd}
                   >
                     <CardContent className="p-3">
                       <div className="space-y-2">

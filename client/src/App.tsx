@@ -15,7 +15,6 @@ import IntegrationSettings from "./pages/integration-settings";
 import Pricing from "@/pages/pricing";
 import Invoices from "@/pages/invoices";
 import Wholesalers from "@/pages/wholesalers";
-import AIAssistant from "./pages/ai-assistant";
 import APIExplorer from "./pages/api-explorer";
 import Settings from "./pages/settings";
 import NotFound from "./pages/not-found";
