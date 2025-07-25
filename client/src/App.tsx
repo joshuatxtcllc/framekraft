@@ -52,6 +52,11 @@ function Router() {
           <Route path="/kanban" component={KanbanBoard} />
           <Route path="/customer-portal" component={CustomerPortal} />
           <Route path="/customer-tracking/:orderId?" component={CustomerTracking} />
+          <Route path="/staff" component={Dashboard} />
+          <Route path="/staff/dashboard" component={Dashboard} />
+          <Route path="/staff/orders" component={KanbanBoard} />
+          <Route path="/staff/customers" component={Customers} />
+          <Route path="/staff/reports" component={Analytics} />
         </>
       )}
       <Route component={NotFound} />

@@ -106,6 +106,29 @@ export default function Sidebar() {
     },
   ];
 
+  const staffTools = [
+    {
+      name: 'Staff Dashboard',
+      href: '/staff/dashboard',
+      icon: LayoutDashboard,
+    },
+    {
+      name: 'Production Board',
+      href: '/staff/orders',
+      icon: Kanban,
+    },
+    {
+      name: 'Staff Customers',
+      href: '/staff/customers',
+      icon: Users,
+    },
+    {
+      name: 'Staff Reports',
+      href: '/staff/reports',
+      icon: BarChart3,
+    },
+  ];
+
 
 
   return (
@@ -185,6 +208,33 @@ export default function Sidebar() {
             </h3>
             <div className="mt-2 space-y-1">
               {aiTools.map((item) => {
+                const isActive = location === item.href || (item.href !== '/' && location.startsWith(item.href));
+                return (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  className={cn(
+                    "sidebar-nav-item",
+                    isActive
+                      ? "sidebar-nav-item-active"
+                      : "sidebar-nav-item-inactive"
+                  )}
+                >
+                  <item.icon className="text-wood-200 mr-3 h-6 w-6" />
+                  {item.name}
+                </Link>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Staff Tools */}
+          <div className="pt-4">
+            <h3 className="px-3 text-xs font-semibold text-wood-200 uppercase tracking-wider">
+              Staff Portal
+            </h3>
+            <div className="mt-2 space-y-1">
+              {staffTools.map((item) => {
                 const isActive = location === item.href || (item.href !== '/' && location.startsWith(item.href));
                 return (
                 <Link
