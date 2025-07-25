@@ -329,6 +329,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.put('/api/ai/insights/:id/action-taken', isAuthenticated, async (req, res) => {
+    try {
+      const insightId = parseInt(req.params.id);
+      await storage.markInsightActionTaken(insightId);
+      res.json({ message: 'Insight marked as actioned' });
+    } catch (error) {
+      console.error("Error marking insight as actioned:", error);
+      res.status(500).json({ message: "Failed to mark insight as actioned" });
+    }
+  });
+
+  app.delete('/api/ai/insights/:id', isAuthenticated, async (req, res) => {
+    try {
+      const insightId = parseInt(req.params.id);
+      await storage.deleteAiInsight(insightId);
+      res.json({ message: 'Insight deleted successfully' });
+    } catch (error) {
+      console.error("Error deleting AI insight:", error);
+      res.status(500).json({ message: "Failed to delete insight" });
+    }
+  });
+
   // Document generation and email routes
   app.post('/api/orders/email-document', isAuthenticated, async (req, res) => {
     try {

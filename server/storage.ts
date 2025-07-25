@@ -79,6 +79,7 @@ export interface IStorage {
   getAiInsights(limit?: number): Promise<AiInsight[]>;
   createAiInsight(insight: any): Promise<AiInsight>;
   markInsightActionTaken(id: number): Promise<void>;
+  deleteAiInsight(id: number): Promise<void>;
 
   // Business metrics
   getBusinessMetrics(type?: string, dateRange?: { start: Date; end: Date }): Promise<BusinessMetric[]>;
@@ -183,9 +184,9 @@ export class DatabaseStorage implements IStorage {
       .from(orders)
       .leftJoin(customers, eq(orders.customerId, customers.id))
       .where(eq(orders.id, id));
-    
+
     if (!result) return undefined;
-    
+
     return {
       ...result.orders,
       customer: result.customers!
@@ -195,7 +196,7 @@ export class DatabaseStorage implements IStorage {
   async createOrder(orderData: InsertOrder): Promise<Order> {
     // Generate order number
     const orderNumber = `FC${Date.now()}`;
-    
+
     const [order] = await db
       .insert(orders)
       .values({
@@ -318,14 +319,18 @@ export class DatabaseStorage implements IStorage {
       .where(eq(aiInsights.id, id));
   }
 
+  async deleteAiInsight(id: number): Promise<void> {
+    await db.delete(aiInsights).where(eq(aiInsights.id, id));
+  }
+
   // Business metrics
   async getBusinessMetrics(type?: string, dateRange?: { start: Date; end: Date }): Promise<BusinessMetric[]> {
     let conditions: any[] = [];
-    
+
     if (type) {
       conditions.push(eq(businessMetrics.metricType, type));
     }
-    
+
     if (dateRange) {
       conditions.push(
         and(
@@ -334,7 +339,7 @@ export class DatabaseStorage implements IStorage {
         )
       );
     }
-    
+
     if (conditions.length > 0) {
       return await db
         .select()
@@ -342,7 +347,7 @@ export class DatabaseStorage implements IStorage {
         .where(and(...conditions))
         .orderBy(desc(businessMetrics.date));
     }
-    
+
     return await db
       .select()
       .from(businessMetrics)
@@ -433,7 +438,7 @@ export class DatabaseStorage implements IStorage {
 
   async searchWholesalerProducts(query: string): Promise<WholesalerProduct[]> {
     if (!query) return [];
-    
+
     return await db
       .select()
       .from(wholesalerProducts)
@@ -460,12 +465,12 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(invoices.createdAt));
 
     const invoiceIds = invoiceResults.map(r => r.invoices.id);
-    
+
     const items = invoiceIds.length > 0 ? await db
       .select()
       .from(invoiceItems)
       .where(inArray(invoiceItems.invoiceId, invoiceIds)) : [];
-      
+
     const paymentsResult = invoiceIds.length > 0 ? await db
       .select()
       .from(payments)
@@ -505,7 +510,7 @@ export class DatabaseStorage implements IStorage {
   async createInvoice(invoiceData: InsertInvoice, items: InsertInvoiceItem[]): Promise<Invoice> {
     // Generate invoice number
     const invoiceNumber = `INV${Date.now()}`;
-    
+
     const [invoice] = await db
       .insert(invoices)
       .values({
@@ -559,7 +564,7 @@ export class DatabaseStorage implements IStorage {
     if (subscriptionId) {
       updateData.stripeSubscriptionId = subscriptionId;
     }
-    
+
     const [user] = await db
       .update(users)
       .set({ ...updateData, updatedAt: new Date() })

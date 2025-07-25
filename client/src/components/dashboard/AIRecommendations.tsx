@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Brain, TrendingUp, Frame, AlertTriangle, ArrowRight } from "lucide-react";
+import { Brain, TrendingUp, Frame, AlertTriangle, ArrowRight, X } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -46,6 +46,27 @@ export default function AIRecommendations() {
       toast({
         title: "Success",
         description: "Insight marked as actioned",
+      });
+    },
+  });
+
+  const deleteInsightMutation = useMutation({
+    mutationFn: async (insightId: number) => {
+      const response = await apiRequest("DELETE", `/api/ai/insights/${insightId}`, {});
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/ai/insights"] });
+      toast({
+        title: "Success",
+        description: "AI recommendation deleted",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to delete recommendation",
+        variant: "destructive",
       });
     },
   });
@@ -224,18 +245,29 @@ export default function AIRecommendations() {
                               </Badge>
                             )}
                           </div>
-                          {!insight.actionTaken && (
+                          <div className="flex items-center space-x-2">
+                            {!insight.actionTaken && (
+                              <Button
+                                onClick={() => markActionTakenMutation.mutate(insight.id)}
+                                disabled={markActionTakenMutation.isPending}
+                                variant="ghost"
+                                size="sm"
+                                className="text-primary hover:text-primary/80"
+                              >
+                                Apply suggestion
+                                <ArrowRight className="w-3 h-3 ml-1" />
+                              </Button>
+                            )}
                             <Button
-                              onClick={() => markActionTakenMutation.mutate(insight.id)}
-                              disabled={markActionTakenMutation.isPending}
+                              onClick={() => deleteInsightMutation.mutate(insight.id)}
+                              disabled={deleteInsightMutation.isPending}
                               variant="ghost"
                               size="sm"
-                              className="text-primary hover:text-primary/80"
+                              className="text-destructive hover:text-destructive/80"
                             >
-                              Apply suggestion
-                              <ArrowRight className="w-3 h-3 ml-1" />
+                              <X className="w-3 h-3" />
                             </Button>
-                          )}
+                          </div>
                         </div>
                       </div>
                     </div>
