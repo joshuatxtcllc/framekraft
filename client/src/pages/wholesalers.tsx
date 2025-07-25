@@ -185,13 +185,13 @@ export default function Wholesalers() {
                     Add Wholesaler
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="max-w-2xl">
+                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
                     <DialogTitle>Add New Wholesaler</DialogTitle>
                   </DialogHeader>
                   
                   <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pb-4 dialog-form">
                       <FormField
                         control={form.control}
                         name="companyName"

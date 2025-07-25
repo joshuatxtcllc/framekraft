@@ -5,6 +5,23 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Mobile scrolling improvements */
+@media (max-width: 768px) {
+  [data-radix-dialog-content] {
+    max-height: 90vh !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    overscroll-behavior: contain !important;
+  }
+  
+  /* Ensure forms can scroll on mobile */
+  .dialog-form {
+    max-height: calc(90vh - 120px) !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+}
+
 :root {
   --background: hsl(0, 0%, 98%);
   --foreground: hsl(186, 20%, 31%);
