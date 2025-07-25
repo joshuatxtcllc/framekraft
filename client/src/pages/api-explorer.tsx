@@ -185,29 +185,31 @@ export default function APIExplorer() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen flex bg-background">
       <Sidebar />
-      <div className="ml-64">
+      
+      <div className="lg:pl-64 flex flex-col flex-1">
         <Header />
-        <main className="p-6">
+        
+        <main className="flex-1 p-4 lg:p-6">
           <div className="max-w-7xl mx-auto">
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-6 space-y-2 lg:space-y-0">
               <div>
-                <h1 className="text-3xl font-bold">API Explorer</h1>
-                <p className="text-muted-foreground">Test and interact with your FrameCraft APIs</p>
+                <h1 className="text-2xl lg:text-3xl font-bold">API Explorer</h1>
+                <p className="text-sm lg:text-base text-muted-foreground">Test and interact with your FrameCraft APIs</p>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
               {/* API Endpoints List */}
-              <Card className="xl:col-span-1">
-                <CardHeader className="pb-4">
-                  <CardTitle className="flex items-center gap-2 text-lg">
-                    <Database className="w-5 h-5" />
+              <Card className="lg:col-span-1">
+                <CardHeader className="pb-3 lg:pb-4">
+                  <CardTitle className="flex items-center gap-2 text-base lg:text-lg">
+                    <Database className="w-4 h-4 lg:w-5 lg:h-5" />
                     API Endpoints
                   </CardTitle>
                   <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                    <SelectTrigger>
+                    <SelectTrigger className="text-sm">
                       <SelectValue placeholder="Filter by category" />
                     </SelectTrigger>
                     <SelectContent>
@@ -219,9 +221,9 @@ export default function APIExplorer() {
                     </SelectContent>
                   </Select>
                 </CardHeader>
-                <CardContent className="px-4">
-                  <ScrollArea className="h-[400px] md:h-[600px]">
-                    <div className="space-y-2 pr-4">
+                <CardContent className="px-3 lg:px-4">
+                  <ScrollArea className="h-[300px] lg:h-[500px] xl:h-[600px]">
+                    <div className="space-y-2 pr-2 lg:pr-4">
                       {filteredEndpoints.map((endpoint, index) => {
                         const Icon = CATEGORY_ICONS[endpoint.category] || Database;
                         const colorClass = CATEGORY_COLORS[endpoint.category] || 'bg-gray-500';
@@ -255,26 +257,26 @@ export default function APIExplorer() {
               </Card>
 
               {/* Request Builder */}
-              <Card className="xl:col-span-2">
-                <CardHeader className="pb-4">
-                  <CardTitle className="flex items-center gap-2 text-lg">
-                    <Send className="w-5 h-5" />
+              <Card className="lg:col-span-2">
+                <CardHeader className="pb-3 lg:pb-4">
+                  <CardTitle className="flex items-center gap-2 text-base lg:text-lg">
+                    <Send className="w-4 h-4 lg:w-5 lg:h-5" />
                     Request Builder
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="px-4">
+                <CardContent className="px-3 lg:px-4">
                   <Tabs defaultValue="request" className="w-full">
-                    <TabsList className="grid w-full grid-cols-2 mb-6">
-                      <TabsTrigger value="request">Request</TabsTrigger>
-                      <TabsTrigger value="response">Response</TabsTrigger>
+                    <TabsList className="grid w-full grid-cols-2 mb-4 lg:mb-6">
+                      <TabsTrigger value="request" className="text-sm">Request</TabsTrigger>
+                      <TabsTrigger value="response" className="text-sm">Response</TabsTrigger>
                     </TabsList>
                     
-                    <TabsContent value="request" className="space-y-6">
-                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                        <div className="md:col-span-1">
+                    <TabsContent value="request" className="space-y-4 lg:space-y-6">
+                      <div className="grid grid-cols-1 lg:grid-cols-4 gap-3 lg:gap-4">
+                        <div className="lg:col-span-1">
                           <Label htmlFor="method" className="text-sm font-medium">Method</Label>
                           <Select value={method} onValueChange={setMethod}>
-                            <SelectTrigger className="mt-1">
+                            <SelectTrigger className="mt-1 text-sm">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -285,14 +287,14 @@ export default function APIExplorer() {
                             </SelectContent>
                           </Select>
                         </div>
-                        <div className="md:col-span-3">
+                        <div className="lg:col-span-3">
                           <Label htmlFor="path" className="text-sm font-medium">Endpoint Path</Label>
                           <Input
                             id="path"
                             value={path}
                             onChange={(e) => setPath(e.target.value)}
                             placeholder="/api/customers"
-                            className="mt-1 font-mono text-sm"
+                            className="mt-1 font-mono text-xs lg:text-sm"
                           />
                         </div>
                       </div>

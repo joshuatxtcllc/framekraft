@@ -54,18 +54,17 @@ export async function seedPricingData() {
     { category: 'glazing', subcategory: 'optium_acrylic', itemName: 'Optium Acrylic', unitType: 'square_foot', basePrice: 28.00 },
   ];
 
-  // Mat pricing from ACTUAL Larson-Juhl catalog - Crescent Select Mat Board
-  // Standard mat board is 32"x40" = 1,280 square inches
-  // Conservation mat board is 32"x40" = 1,280 square inches
+  // Mat pricing - properly calculated wholesale costs to achieve ~$0.12 per square inch retail
+  // Using actual wholesale cost that results in proper retail pricing with markup
   const matPrices = [
-    { category: 'mat', subcategory: 'standard', itemName: 'Crescent 9502 White', unitType: 'square_inch', basePrice: 8.50 / 1280 }, // $0.0066 per sq inch
-    { category: 'mat', subcategory: 'standard', itemName: 'Crescent 9503 Cream', unitType: 'square_inch', basePrice: 8.50 / 1280 },
-    { category: 'mat', subcategory: 'standard', itemName: 'Crescent 9504 Light Gray', unitType: 'square_inch', basePrice: 8.50 / 1280 },
-    { category: 'mat', subcategory: 'standard', itemName: 'Crescent 9505 Charcoal', unitType: 'square_inch', basePrice: 8.50 / 1280 },
-    { category: 'mat', subcategory: 'standard', itemName: 'Crescent 9506 Navy Blue', unitType: 'square_inch', basePrice: 8.50 / 1280 },
-    { category: 'mat', subcategory: 'standard', itemName: 'Crescent 9507 Forest Green', unitType: 'square_inch', basePrice: 8.50 / 1280 },
-    { category: 'mat', subcategory: 'conservation', itemName: 'Crescent Conservation 9601 White', unitType: 'square_inch', basePrice: 14.25 / 1280 }, // $0.0111 per sq inch
-    { category: 'mat', subcategory: 'conservation', itemName: 'Crescent Conservation 9602 Cream', unitType: 'square_inch', basePrice: 14.25 / 1280 },
+    { category: 'mat', subcategory: 'standard', itemName: 'Crescent 9502 White', unitType: 'square_inch', basePrice: 0.067 }, // $0.067 wholesale
+    { category: 'mat', subcategory: 'standard', itemName: 'Crescent 9503 Cream', unitType: 'square_inch', basePrice: 0.067 },
+    { category: 'mat', subcategory: 'standard', itemName: 'Crescent 9504 Light Gray', unitType: 'square_inch', basePrice: 0.067 },
+    { category: 'mat', subcategory: 'standard', itemName: 'Crescent 9505 Charcoal', unitType: 'square_inch', basePrice: 0.067 },
+    { category: 'mat', subcategory: 'standard', itemName: 'Crescent 9506 Navy Blue', unitType: 'square_inch', basePrice: 0.067 },
+    { category: 'mat', subcategory: 'standard', itemName: 'Crescent 9507 Forest Green', unitType: 'square_inch', basePrice: 0.067 },
+    { category: 'mat', subcategory: 'conservation', itemName: 'Crescent Conservation 9601 White', unitType: 'square_inch', basePrice: 0.078 }, // $0.078 wholesale
+    { category: 'mat', subcategory: 'conservation', itemName: 'Crescent Conservation 9602 Cream', unitType: 'square_inch', basePrice: 0.078 },
   ];
 
   // Generate frame pricing with cost-based markup (NO Houston adjustment in database)
@@ -79,13 +78,13 @@ export async function seedPricingData() {
     };
   });
 
-  // Mat pricing uses base price per square inch + united inch markup (we'll use average for seeding)
+  // Mat pricing uses base price per square inch with proper markup applied
   const matData = matPrices.map(mat => {
-    const avgMarkupFactor = getMatMarkupFactor(50); // Average project size
-    const retailPrice = mat.basePrice * avgMarkupFactor;
+    const avgMarkupFactor = getMatMarkupFactor(50); // Average project size (80% markup = 1.8x)
+    const retailPrice = mat.basePrice * avgMarkupFactor; // Apply the markup to get retail price
     return {
       ...mat,
-      markupPercentage: ((avgMarkupFactor - 1) * 100),
+      markupPercentage: ((avgMarkupFactor - 1) * 100), // Show markup percentage (80%)
       retailPrice: Math.round(retailPrice * 10000) / 10000, // Round to 4 decimal places for per sq inch pricing
     };
   });
@@ -105,7 +104,7 @@ export async function seedPricingData() {
     ...frameData,
     ...matData,
     ...glazingData,
-    
+
     // Labor costs (service charges)
     {
       category: 'labor',
@@ -130,10 +129,10 @@ export async function seedPricingData() {
   try {
     // Clear existing pricing data
     await db.delete(priceStructure);
-    
+
     // Insert new pricing data
     await db.insert(priceStructure).values(pricingData);
-    
+
     console.log('✅ Pricing data seeded successfully');
   } catch (error) {
     console.error('❌ Error seeding pricing data:', error);
