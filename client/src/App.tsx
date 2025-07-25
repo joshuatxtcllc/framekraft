@@ -28,11 +28,12 @@ function Router() {
           <Route path="/" component={Dashboard} />
           <Route path="/orders" component={Orders} />
           <Route path="/customers" component={Customers} />
+          <Route path="/ai-assistant" component={AIAssistant} />
+          <Route path="/api-explorer" component={APIExplorer} />
+          <Route path="/integration-settings" component={IntegrationSettings} />
           <Route path="/pricing" component={Pricing} />
           <Route path="/invoices" component={Invoices} />
           <Route path="/wholesalers" component={Wholesalers} />
-          <Route path="/ai-assistant" component={AIAssistant} />
-          <Route path="/api-explorer" component={APIExplorer} />
         </>
       )}
       <Route component={NotFound} />
