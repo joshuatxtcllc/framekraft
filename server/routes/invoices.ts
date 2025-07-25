@@ -182,6 +182,29 @@ export function registerInvoiceRoutes(app: Express) {
     }
   });
 
+  // Update payment status
+  app.post("/api/invoices/:id/update-payment-status", isAuthenticated, async (req, res) => {
+    try {
+      const invoiceId = parseInt(req.params.id);
+      const { status, paymentIntentId } = req.body;
+      
+      if (status === 'paid') {
+        await storage.markInvoicePaid(invoiceId, {
+          invoiceId,
+          amount: req.body.amount,
+          paymentMethod: 'stripe',
+          stripePaymentIntentId: paymentIntentId,
+          status: 'completed',
+        });
+      }
+      
+      res.json({ message: "Payment status updated successfully" });
+    } catch (error) {
+      console.error("Error updating payment status:", error);
+      res.status(500).json({ message: "Failed to update payment status" });
+    }
+  });
+
   // Handle Stripe webhook for successful payments
   app.post("/api/invoices/stripe-webhook", async (req, res) => {
     try {

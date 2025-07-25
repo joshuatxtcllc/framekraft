@@ -126,7 +126,7 @@ export default function Orders() {
         createdAt: order.createdAt,
         notes: order.notes || ''
       };
-      
+
       await exportToPDF(invoiceData, 'invoice');
       toast({
         title: "Invoice Generated",
@@ -164,7 +164,7 @@ export default function Orders() {
         createdAt: order.createdAt,
         notes: order.notes || ''
       };
-      
+
       await exportToPDF(workOrderData, 'work-order');
       toast({
         title: "Work Order Generated",
@@ -201,10 +201,10 @@ export default function Orders() {
         createdAt: order.createdAt,
         notes: order.notes || ''
       };
-      
+
       // Open print window with specific order invoice
       printOrderInvoice(invoiceData);
-      
+
       toast({
         title: "Print Window Opened",
         description: `Invoice for order ${order.orderNumber} opened in new window for printing.`,
@@ -228,7 +228,7 @@ export default function Orders() {
       });
       return;
     }
-    
+
     const subject = `Invoice ${order.orderNumber} - ${order.description}`;
     const body = `Dear ${order.customer.firstName} ${order.customer.lastName},
 
@@ -243,15 +243,23 @@ Thank you for your business!
 
 Best regards,
 FrameCraft`;
-    
+
     const mailtoLink = `mailto:${order.customer.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     window.open(mailtoLink);
-    
+
     toast({
       title: "Email Client Opened",
       description: `Email client opened for ${order.customer.email}`,
     });
   };
+
+    // Placeholder function for payment processing
+    const handleProcessPayment = (order: any) => {
+        toast({
+            title: "Payment Processing",
+            description: `Payment processing initiated for order ${order.orderNumber}. This functionality is under construction.`,
+        });
+    };
 
   return (
     <div className="min-h-screen flex bg-background">
@@ -311,6 +319,7 @@ FrameCraft`;
                 onGenerateWorkOrder={handleGenerateWorkOrder}
                 onPrintInvoice={handlePrintInvoice}
                 onEmailInvoice={handleEmailInvoice}
+                onProcessPayment={handleProcessPayment}
               />
             </div>
           </div>

@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Edit, Search, Filter, Eye, FileText, Printer, Mail, X } from "lucide-react";
+import { Edit, Search, Filter, Eye, FileText, Printer, Mail, X, CreditCard } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { exportToPDF } from "@/lib/pdfExport";
@@ -44,6 +44,7 @@ interface OrderListProps {
   onGenerateWorkOrder?: (order: Order) => void;
   onPrintInvoice?: (order: Order) => void;
   onEmailInvoice?: (order: Order) => void;
+  onProcessPayment?: (order: Order) => void;
 }
 
 export default function OrderList({ 
@@ -53,7 +54,8 @@ export default function OrderList({
   onGenerateInvoice,
   onGenerateWorkOrder,
   onPrintInvoice,
-  onEmailInvoice
+  onEmailInvoice,
+  onProcessPayment
 }: OrderListProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -90,7 +92,7 @@ export default function OrderList({
         createdAt: order.createdAt,
         notes: order.notes || ''
       };
-      
+
       await exportToPDF(invoiceData, 'invoice');
       toast({
         title: "Invoice Generated",
@@ -128,7 +130,7 @@ export default function OrderList({
         createdAt: order.createdAt,
         notes: order.notes || ''
       };
-      
+
       await exportToPDF(workOrderData, 'work-order');
       toast({
         title: "Work Order Generated",
@@ -166,10 +168,10 @@ export default function OrderList({
         createdAt: order.createdAt,
         notes: order.notes || ''
       };
-      
+
       // Open print window with specific order invoice
       printOrderInvoice(invoiceData);
-      
+
       toast({
         title: "Print Window Opened",
         description: `Invoice for order ${order.orderNumber} opened in new window for printing.`,
@@ -194,7 +196,7 @@ export default function OrderList({
       });
       return;
     }
-    
+
     // Create mailto link with invoice details
     const subject = `Invoice ${order.orderNumber} - ${order.description}`;
     const body = `Dear ${order.customer.firstName} ${order.customer.lastName},
@@ -210,10 +212,10 @@ Thank you for your business!
 
 Best regards,
 FrameCraft`;
-    
+
     const mailtoLink = `mailto:${order.customer.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     window.open(mailtoLink);
-    
+
     toast({
       title: "Email Client Opened",
       description: `Email client opened for ${order.customer.email}`,
@@ -479,6 +481,17 @@ FrameCraft`;
                         >
                           <Mail className="w-4 h-4" />
                         </Button>
+                         {order.status !== 'completed' && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => onProcessPayment?.(order)}
+                            title="Process Payment"
+                            className="text-green-600 hover:text-green-700"
+                          >
+                            <CreditCard className="w-4 h-4" />
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -504,7 +517,7 @@ FrameCraft`;
               </Button>
             </DialogTitle>
           </DialogHeader>
-          
+
           {selectedOrder && (
             <div className="space-y-6">
               {/* Customer Information */}

@@ -1,25 +1,38 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Separator } from "@/components/ui/separator";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Plus, FileText, Mail, CreditCard, DollarSign, Eye, Download, UserPlus, Trash2, Printer } from "lucide-react";
+import { 
+  Plus, 
+  FileText, 
+  Eye,
+  Send,
+  Download,
+  DollarSign,
+  Calendar,
+  CheckCircle,
+  Clock,
+  AlertCircle,
+  CreditCard
+} from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import Sidebar from "@/components/layout/Sidebar";
 import Header from "@/components/layout/Header";
-import { exportInvoiceToPDF } from "@/lib/pdfExport";
+import InvoiceDialog from "@/components/orders/InvoiceDialog";
+import StripePayment from "@/components/payments/StripePayment";
+import { exportToPDF } from "@/lib/pdfExport";
 
 const customerSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
@@ -155,7 +168,7 @@ export default function Invoices() {
     const quantity = parseFloat(item.quantity || "0");
     const unitPrice = parseFloat(item.unitPrice || "0");
     const total = quantity * unitPrice;
-    
+
     const updatedItems = [...items];
     updatedItems[index] = { ...item, total: total.toFixed(2) };
     form.setValue("items", updatedItems);
@@ -217,13 +230,87 @@ export default function Invoices() {
     }).format(new Date(dateString));
   };
 
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
+  const printRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
+
+  const emailForm = useForm({
+    resolver: zodResolver(
+      z.object({
+        emailAddress: z.string().email({ message: "Please enter a valid email address" }),
+        customMessage: z.string().optional(),
+      })
+    ),
+    defaultValues: {
+      emailAddress: "",
+      customMessage: "",
+    },
+  });
+
+  const emailMutation = useMutation({
+    mutationFn: (data: any) =>
+      apiRequest("POST", `/api/invoices/${selectedInvoice?.id}/send-email`, data),
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Email sent successfully!",
+      });
+      setEmailDialogOpen(false);
+      emailForm.reset();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to send email",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const onEmailSubmit = (data: any) => {
+    emailMutation.mutate(data);
+  };
+
+  const handleViewInvoice = (invoice: any) => {
+    setSelectedInvoice(invoice);
+    setViewDialogOpen(true);
+  };
+
+  const handleExportInvoice = (invoice: any) => {
+    exportToPDF(invoice, printRef.current);
+  };
+
+  const handleEmailInvoice = (invoice: any) => {
+    setSelectedInvoice(invoice);
+    setEmailDialogOpen(true);
+  };
+
+  const handleProcessPayment = (invoice: any) => {
+    setSelectedInvoice(invoice);
+    setPaymentDialogOpen(true);
+  };
+
+  const handlePaymentSuccess = () => {
+    queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
+    setPaymentDialogOpen(false);
+    setSelectedInvoice(null);
+    toast({
+      title: "Payment Processed",
+      description: "Payment has been processed successfully and invoice has been marked as paid.",
+    });
+  };
+
   return (
     <div className="min-h-screen flex bg-background">
       <Sidebar />
-      
+
       <div className="lg:pl-64 flex flex-col flex-1">
         <Header />
-        
+
         <main className="flex-1 p-6">
           <div className="max-w-7xl mx-auto">
             <div className="flex justify-between items-center mb-8">
@@ -233,7 +320,7 @@ export default function Invoices() {
                   Manage customer invoices and payments
                 </p>
               </div>
-              
+
               <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
                 <DialogTrigger asChild>
                   <Button>
@@ -248,7 +335,7 @@ export default function Invoices() {
                       Create a new invoice for an existing customer or add a new customer
                     </DialogDescription>
                   </DialogHeader>
-                  
+
                   <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                       {/* Customer Selection */}
@@ -419,7 +506,7 @@ export default function Invoices() {
                             <div>Total</div>
                             <div>Actions</div>
                           </div>
-                          
+
                           {form.watch("items").map((item, index) => (
                             <div key={index} className="grid grid-cols-5 gap-2 items-end">
                               <FormField
@@ -506,7 +593,7 @@ export default function Invoices() {
                               </div>
                             </div>
                           ))}
-                          
+
                           <Button
                             type="button"
                             variant="outline"
@@ -712,6 +799,84 @@ export default function Invoices() {
           </div>
         </main>
       </div>
+
+      {/* Email Dialog */}
+            <Dialog open={emailDialogOpen} onOpenChange={setEmailDialogOpen}>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Send Invoice via Email</DialogTitle>
+                </DialogHeader>
+
+                <Form {...emailForm}>
+                  <form onSubmit={emailForm.handleSubmit(onEmailSubmit)} className="space-y-4">
+                    <FormField
+                      control={emailForm.control}
+                      name="emailAddress"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Email Address</FormLabel>
+                          <FormControl>
+                            <Input placeholder="customer@example.com" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={emailForm.control}
+                      name="customMessage"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Custom Message (Optional)</FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              placeholder="Add a personal message..." 
+                              rows={3}
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <div className="flex gap-2 pt-4">
+                      <Button type="submit" disabled={emailMutation.isPending}>
+                        <Send className="w-4 h-4 mr-2" />
+                        Send Invoice
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setEmailDialogOpen(false)}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </form>
+                </Form>
+              </DialogContent>
+            </Dialog>
+
+            {/* Payment Processing Dialog */}
+            <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
+              <DialogContent className="max-w-lg">
+                <DialogHeader>
+                  <DialogTitle>Process Payment</DialogTitle>
+                </DialogHeader>
+
+                {selectedInvoice && (
+                  <StripePayment
+                    invoiceId={selectedInvoice.id}
+                    amount={parseFloat(selectedInvoice.totalAmount)}
+                    customerName={`${selectedInvoice.order?.customer?.firstName || ''} ${selectedInvoice.order?.customer?.lastName || ''}`.trim()}
+                    onSuccess={handlePaymentSuccess}
+                    onCancel={() => setPaymentDialogOpen(false)}
+                  />
+                )}
+              </DialogContent>
+            </Dialog>
     </div>
   );
 }
