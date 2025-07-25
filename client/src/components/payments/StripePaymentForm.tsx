@@ -15,7 +15,6 @@ import { useToast } from "@/hooks/use-toast";
 
 const stripePromise = loadStripe(
   import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || 
-  process.env.STRIPE_PUBLISHABLE_KEY || 
   'pk_test_51234567890abcdef' // Replace with your actual publishable key
 );
 

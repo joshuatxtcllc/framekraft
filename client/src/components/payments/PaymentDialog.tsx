@@ -119,7 +119,7 @@ export default function PaymentDialog({ invoice, open, onOpenChange }: PaymentDi
               <div className="flex justify-between">
                 <span>Status:</span>
                 <Badge variant={invoice.status === 'paid' ? 'default' : 'secondary'}>
-                  {invoice status}
+                  {invoice.status}
                 </Badge>
               </div>
               <Separator />
