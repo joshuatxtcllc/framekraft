@@ -229,6 +229,140 @@ export default function APIExplorer() {
     });
   };
 
+  const renderFormattedResponse = (data: any): JSX.Element => {
+    if (typeof data === 'string') {
+      return <div className="text-sm">{data}</div>;
+    }
+
+    if (Array.isArray(data)) {
+      if (data.length === 0) {
+        return <div className="text-sm text-muted-foreground italic">No data available</div>;
+      }
+
+      return (
+        <div className="space-y-3">
+          <div className="text-sm font-medium text-blue-600">
+            Found {data.length} {data.length === 1 ? 'item' : 'items'}:
+          </div>
+          {data.slice(0, 10).map((item, index) => (
+            <div key={index} className="border rounded-lg p-3 bg-muted/20">
+              {renderObjectView(item, index + 1)}
+            </div>
+          ))}
+          {data.length > 10 && (
+            <div className="text-sm text-muted-foreground italic">
+              ... and {data.length - 10} more items
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    if (typeof data === 'object' && data !== null) {
+      return (
+        <div className="border rounded-lg p-3 bg-muted/20">
+          {renderObjectView(data)}
+        </div>
+      );
+    }
+
+    return <div className="text-sm">{String(data)}</div>;
+  };
+
+  const renderObjectView = (obj: any, itemNumber?: number): JSX.Element => {
+    const entries = Object.entries(obj);
+    
+    return (
+      <div className="space-y-2">
+        {itemNumber && (
+          <div className="text-sm font-semibold text-primary">
+            Item #{itemNumber}
+          </div>
+        )}
+        {entries.map(([key, value]) => (
+          <div key={key} className="grid grid-cols-1 md:grid-cols-3 gap-2">
+            <div className="text-sm font-medium text-muted-foreground capitalize">
+              {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}:
+            </div>
+            <div className="md:col-span-2 text-sm">
+              {renderValue(value)}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  const renderValue = (value: any): JSX.Element => {
+    if (value === null || value === undefined) {
+      return <span className="text-muted-foreground italic">Not set</span>;
+    }
+    
+    if (typeof value === 'boolean') {
+      return (
+        <Badge variant={value ? 'default' : 'secondary'}>
+          {value ? 'Yes' : 'No'}
+        </Badge>
+      );
+    }
+    
+    if (typeof value === 'number') {
+      return <span className="font-mono">{value.toLocaleString()}</span>;
+    }
+    
+    if (typeof value === 'string') {
+      // Handle dates
+      if (value.match(/^\d{4}-\d{2}-\d{2}/) && !isNaN(Date.parse(value))) {
+        return <span>{new Date(value).toLocaleString()}</span>;
+      }
+      
+      // Handle status values
+      if (['pending', 'completed', 'in_progress', 'cancelled'].includes(value.toLowerCase())) {
+        const statusColors = {
+          'pending': 'bg-yellow-500',
+          'completed': 'bg-green-500',
+          'in_progress': 'bg-blue-500',
+          'cancelled': 'bg-red-500'
+        };
+        return (
+          <Badge className={statusColors[value.toLowerCase() as keyof typeof statusColors] || 'bg-gray-500'}>
+            {value.replace('_', ' ').toUpperCase()}
+          </Badge>
+        );
+      }
+      
+      // Handle email addresses
+      if (value.includes('@')) {
+        return <span className="text-blue-600">{value}</span>;
+      }
+      
+      // Handle phone numbers
+      if (value.match(/^\+?[\d\s\-\(\)]+$/) && value.length > 7) {
+        return <span className="font-mono">{value}</span>;
+      }
+      
+      // Handle currency values
+      if (value.match(/^\d+\.\d{2}$/)) {
+        return <span className="font-mono text-green-600">${value}</span>;
+      }
+      
+      return <span>{value}</span>;
+    }
+    
+    if (typeof value === 'object') {
+      return (
+        <details className="text-xs">
+          <summary className="cursor-pointer text-blue-600">View details</summary>
+          <pre className="mt-2 p-2 bg-muted rounded text-xs">
+            {JSON.stringify(value, null, 2)}
+          </pre>
+        </details>
+      );
+    }
+    
+    return <span>{String(value)}</span>;
+  };
+
   return (
     <div className="min-h-screen flex bg-background">
       <Sidebar />
@@ -426,11 +560,28 @@ export default function APIExplorer() {
                           
                           <div>
                             <Label className="text-sm font-medium">Response Body</Label>
-                            <ScrollArea className="h-64 w-full rounded-md border bg-muted/50">
-                              <pre className="p-4 text-sm font-mono whitespace-pre-wrap">
-                                {JSON.stringify(response.data, null, 2)}
-                              </pre>
-                            </ScrollArea>
+                            <Tabs defaultValue="formatted" className="w-full">
+                              <TabsList className="grid w-full grid-cols-2">
+                                <TabsTrigger value="formatted">Formatted View</TabsTrigger>
+                                <TabsTrigger value="raw">Raw JSON</TabsTrigger>
+                              </TabsList>
+                              
+                              <TabsContent value="formatted" className="mt-4">
+                                <ScrollArea className="h-64 w-full rounded-md border bg-background">
+                                  <div className="p-4">
+                                    {renderFormattedResponse(response.data)}
+                                  </div>
+                                </ScrollArea>
+                              </TabsContent>
+                              
+                              <TabsContent value="raw" className="mt-4">
+                                <ScrollArea className="h-64 w-full rounded-md border bg-muted/50">
+                                  <pre className="p-4 text-sm font-mono whitespace-pre-wrap">
+                                    {JSON.stringify(response.data, null, 2)}
+                                  </pre>
+                                </ScrollArea>
+                              </TabsContent>
+                            </Tabs>
                           </div>
 
                           <div>
