@@ -29,11 +29,22 @@ export default function Orders() {
 
   const createOrderMutation = useMutation({
     mutationFn: async (data: any) => {
-      // Data is already properly formatted from OrderForm
+      // Clean and format the data properly
       const orderData = {
-        ...data,
+        customerId: parseInt(data.customerId),
+        description: data.description,
+        artworkDescription: data.artworkDescription || null,
+        dimensions: data.dimensions || null,
+        frameStyle: data.frameStyle || null,
+        matColor: data.matColor || null,
+        glazing: data.glazing || null,
+        totalAmount: parseFloat(data.totalAmount),
+        depositAmount: data.depositAmount ? parseFloat(data.depositAmount) : 0,
+        discountPercentage: data.discountPercentage ? parseFloat(data.discountPercentage) : 0,
         status: data.status || 'pending',
         priority: data.priority || 'normal',
+        dueDate: data.dueDate || null,
+        notes: data.notes || null,
       };
 
       const response = await apiRequest("POST", "/api/orders", orderData);
@@ -62,11 +73,22 @@ export default function Orders() {
 
   const updateOrderMutation = useMutation({
     mutationFn: async ({ id, ...data }: any) => {
+      // Clean and format the data properly
       const orderData = {
-        ...data,
         customerId: parseInt(data.customerId),
+        description: data.description,
+        artworkDescription: data.artworkDescription || null,
+        dimensions: data.dimensions || null,
+        frameStyle: data.frameStyle || null,
+        matColor: data.matColor || null,
+        glazing: data.glazing || null,
         totalAmount: parseFloat(data.totalAmount),
         depositAmount: data.depositAmount ? parseFloat(data.depositAmount) : 0,
+        discountPercentage: data.discountPercentage ? parseFloat(data.discountPercentage) : 0,
+        status: data.status,
+        priority: data.priority,
+        dueDate: data.dueDate || null,
+        notes: data.notes || null,
       };
 
       const response = await apiRequest("PUT", `/api/orders/${id}`, orderData);
