@@ -139,19 +139,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/orders', isAuthenticated, async (req, res) => {
     try {
+      // Parse and validate the request body with the updated schema
       const orderData = insertOrderSchema.parse(req.body);
-      // Generate shorter order number (e.g., FC2401)
-  const orderNumber = `FC${new Date().getFullYear().toString().slice(-2)}${String(orderData.nextOrderId).padStart(2, '0')}`;
+      
+      // Generate order number using current orders count for unique ID
+      const existingOrders = await storage.getOrders();
+      const nextOrderId = existingOrders.length + 1;
+      const orderNumber = `FC${new Date().getFullYear().toString().slice(-2)}${String(nextOrderId).padStart(2, '0')}`;
+      
+      // Create the order with validated data
       const order = await storage.createOrder({
         ...orderData,
-        orderNumber,
-        totalAmount: parseFloat(req.body.totalAmount),
-        depositAmount: req.body.depositAmount ? parseFloat(req.body.depositAmount) : 0,
-        discountPercentage: req.body.discountPercentage ? parseFloat(req.body.discountPercentage) : 0,
-        status: req.body.status || 'pending',
-        priority: req.body.priority || 'normal',
-        dueDate: req.body.dueDate || null,
-        notes: req.body.notes || '',
+        // Convert date strings to Date objects if provided
+        dueDate: orderData.dueDate ? new Date(orderData.dueDate) : undefined,
+        completedAt: orderData.completedAt ? new Date(orderData.completedAt) : undefined,
       });
       res.status(201).json(order);
     } catch (error) {

@@ -342,8 +342,18 @@ export const insertOrderSchema = createInsertSchema(orders).omit({
   createdAt: true,
   updatedAt: true,
 }).extend({
-  totalAmount: z.string().min(1, "Total amount is required"),
-  depositAmount: z.string().optional(),
+  // Accept numbers for amount fields since the API will handle them as numbers
+  totalAmount: z.number().min(0, "Total amount must be a positive number"),
+  depositAmount: z.number().optional(),
+  discountPercentage: z.number().min(0).max(100).optional(),
+  balanceAmount: z.number().optional(),
+  taxAmount: z.number().optional(),
+  discountAmount: z.number().optional(),
+  laborCost: z.number().optional(),
+  materialsCost: z.number().optional(),
+  // Convert date strings to Date objects
+  dueDate: z.string().datetime().optional().or(z.date().optional()),
+  completedAt: z.string().datetime().optional().or(z.date().optional()),
   frames: z.array(z.object({
     style: z.string(),
     quantity: z.number().int().positive().default(1),

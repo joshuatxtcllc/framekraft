@@ -47,7 +47,7 @@ import {
   insertPaymentSchema,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, sql, and, gte, lte, inArray } from "drizzle-orm";
+import { eq, desc, sql, and, gte, lte, inArray, or, like } from "drizzle-orm";
 
 export interface IStorage {
   // User operations (mandatory for Replit Auth)
@@ -197,14 +197,35 @@ export class DatabaseStorage implements IStorage {
     // Generate order number
     const orderNumber = `FC${Date.now()}`;
 
+    // Prepare data for database insertion, converting numbers to strings for decimal fields
+    const insertData = {
+      customerId: orderData.customerId,
+      orderNumber,
+      description: orderData.description,
+      artworkDescription: orderData.artworkDescription,
+      dimensions: orderData.dimensions,
+      frameStyle: orderData.frameStyle,
+      matColor: orderData.matColor,
+      glazing: orderData.glazing,
+      totalAmount: orderData.totalAmount.toString(),
+      depositAmount: orderData.depositAmount?.toString() || "0",
+      discountPercentage: orderData.discountPercentage?.toString() || "0",
+      balanceAmount: orderData.balanceAmount?.toString(),
+      taxAmount: orderData.taxAmount?.toString() || "0",
+      discountAmount: orderData.discountAmount?.toString() || "0",
+      laborCost: orderData.laborCost?.toString(),
+      materialsCost: orderData.materialsCost?.toString(),
+      status: orderData.status || "pending",
+      priority: orderData.priority || "normal",
+      dueDate: orderData.dueDate,
+      completedAt: orderData.completedAt,
+      notes: orderData.notes,
+      aiRecommendations: orderData.aiRecommendations,
+    };
+
     const [order] = await db
       .insert(orders)
-      .values({
-        ...orderData,
-        orderNumber,
-        totalAmount: orderData.totalAmount.toString(),
-        depositAmount: orderData.depositAmount || "0",
-      })
+      .values([insertData])
       .returning();
 
     // Create initial project steps
@@ -240,9 +261,37 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateOrder(id: number, orderData: Partial<InsertOrder>): Promise<Order> {
+    // Convert number fields to strings for database storage, exclude problematic fields
+    const updateData: any = {
+      updatedAt: new Date()
+    };
+
+    // Only include defined fields and convert numbers to strings
+    if (orderData.customerId !== undefined) updateData.customerId = orderData.customerId;
+    if (orderData.description !== undefined) updateData.description = orderData.description;
+    if (orderData.artworkDescription !== undefined) updateData.artworkDescription = orderData.artworkDescription;
+    if (orderData.dimensions !== undefined) updateData.dimensions = orderData.dimensions;
+    if (orderData.frameStyle !== undefined) updateData.frameStyle = orderData.frameStyle;
+    if (orderData.matColor !== undefined) updateData.matColor = orderData.matColor;
+    if (orderData.glazing !== undefined) updateData.glazing = orderData.glazing;
+    if (orderData.totalAmount !== undefined) updateData.totalAmount = orderData.totalAmount.toString();
+    if (orderData.depositAmount !== undefined) updateData.depositAmount = orderData.depositAmount.toString();
+    if (orderData.discountPercentage !== undefined) updateData.discountPercentage = orderData.discountPercentage.toString();
+    if (orderData.balanceAmount !== undefined) updateData.balanceAmount = orderData.balanceAmount.toString();
+    if (orderData.taxAmount !== undefined) updateData.taxAmount = orderData.taxAmount.toString();
+    if (orderData.discountAmount !== undefined) updateData.discountAmount = orderData.discountAmount.toString();
+    if (orderData.laborCost !== undefined) updateData.laborCost = orderData.laborCost.toString();
+    if (orderData.materialsCost !== undefined) updateData.materialsCost = orderData.materialsCost.toString();
+    if (orderData.status !== undefined) updateData.status = orderData.status;
+    if (orderData.priority !== undefined) updateData.priority = orderData.priority;
+    if (orderData.dueDate !== undefined) updateData.dueDate = orderData.dueDate;
+    if (orderData.completedAt !== undefined) updateData.completedAt = orderData.completedAt;
+    if (orderData.notes !== undefined) updateData.notes = orderData.notes;
+    if (orderData.aiRecommendations !== undefined) updateData.aiRecommendations = orderData.aiRecommendations;
+
     const [order] = await db
       .update(orders)
-      .set({ ...orderData, updatedAt: new Date() })
+      .set(updateData)
       .where(eq(orders.id, id))
       .returning();
     return order;
