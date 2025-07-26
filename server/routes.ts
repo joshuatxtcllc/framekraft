@@ -139,25 +139,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/orders', isAuthenticated, async (req, res) => {
     try {
+      console.log("Raw order data received:", JSON.stringify(req.body, null, 2));
+      
       // Parse and validate the request body with the updated schema
       const orderData = insertOrderSchema.parse(req.body);
+      console.log("Parsed order data:", JSON.stringify(orderData, null, 2));
       
       // Generate order number using current orders count for unique ID
       const existingOrders = await storage.getOrders();
       const nextOrderId = existingOrders.length + 1;
       const orderNumber = `FC${new Date().getFullYear().toString().slice(-2)}${String(nextOrderId).padStart(2, '0')}`;
+      console.log("Generated order number:", orderNumber);
       
       // Create the order with validated data
       const order = await storage.createOrder({
         ...orderData,
+        orderNumber,
         // Convert date strings to Date objects if provided
         dueDate: orderData.dueDate ? new Date(orderData.dueDate) : undefined,
         completedAt: orderData.completedAt ? new Date(orderData.completedAt) : undefined,
       });
+      console.log("Order created successfully:", order.id);
       res.status(201).json(order);
     } catch (error) {
       console.error("Error creating order:", error);
-      res.status(400).json({ message: "Failed to create order" });
+      console.error("Error details:", error.message);
+      if (error.issues) {
+        console.error("Validation issues:", error.issues);
+      }
+      res.status(400).json({ 
+        message: "Failed to create order",
+        error: error.message,
+        issues: error.issues || undefined
+      });
     }
   });
 
