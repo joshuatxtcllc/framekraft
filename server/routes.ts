@@ -141,14 +141,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       console.log("Raw order data received:", JSON.stringify(req.body, null, 2));
       
+      // Clean up the request body to handle null values properly
+      const cleanedBody = {
+        ...req.body,
+        dueDate: req.body.dueDate === null || req.body.dueDate === "" ? undefined : req.body.dueDate,
+        completedAt: req.body.completedAt === null || req.body.completedAt === "" ? undefined : req.body.completedAt,
+      };
+      
       // Parse and validate the request body with the updated schema
-      const orderData = insertOrderSchema.parse(req.body);
+      const orderData = insertOrderSchema.parse(cleanedBody);
       console.log("Parsed order data:", JSON.stringify(orderData, null, 2));
       
       // Generate order number using current orders count for unique ID
       const existingOrders = await storage.getOrders();
       const nextOrderId = existingOrders.length + 1;
-      const orderNumber = `FC${new Date().getFullYear().toString().slice(-2)}${String(nextOrderId).padStart(2, '0')}`;
+      const orderNumber = `FC${new Date().getFullYear().toString().slice(-2)}${String(nextOrderId).padStart(4, '0')}`;
       console.log("Generated order number:", orderNumber);
       
       // Create the order with validated data
