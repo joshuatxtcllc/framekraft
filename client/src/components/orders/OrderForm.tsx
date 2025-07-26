@@ -910,6 +910,25 @@ export default function OrderForm({
               </FormItem>
             )}
           />
+                    {/* Quantity */}
+          <FormField
+            control={form.control}
+            name="quantity"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Quantity</FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    min="1"
+                    defaultValue="1"
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
           {/* Total Amount */}
           <FormField

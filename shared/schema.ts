@@ -73,6 +73,7 @@ export const orders = pgTable("orders", {
   balanceAmount: decimal("balance_amount", { precision: 10, scale: 2 }),
   taxAmount: decimal("tax_amount", { precision: 10, scale: 2 }).default("0"),
   discountAmount: decimal("discount_amount", { precision: 10, scale: 2 }).default("0"),
+  quantity: integer("quantity").default(1),
   laborCost: decimal("labor_cost", { precision: 10, scale: 2 }),
   materialsCost: decimal("materials_cost", { precision: 10, scale: 2 }),
   status: varchar("status").default("pending").notNull(), // pending, measuring, production, ready, completed, cancelled
@@ -348,6 +349,7 @@ export const insertOrderSchema = createInsertSchema(orders).omit({
   balanceAmount: z.number().optional(),
   taxAmount: z.number().optional(),
   discountAmount: z.number().optional(),
+  quantity: z.number().int().positive().default(1),
   laborCost: z.number().optional(),
   materialsCost: z.number().optional(),
   // Allow orderNumber to be optional - it will be generated if not provided
