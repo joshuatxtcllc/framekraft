@@ -161,16 +161,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       console.log("Order created successfully:", order.id);
       res.status(201).json(order);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating order:", error);
-      console.error("Error details:", error.message);
-      if (error.issues) {
+      console.error("Error details:", error?.message);
+      console.error("Error stack:", error?.stack);
+      if (error?.issues) {
         console.error("Validation issues:", error.issues);
       }
+      
+      // Enhanced error response with database-specific errors
+      let errorMessage = "Failed to create order";
+      let errorDetails: any = {};
+      
+      if (error?.message?.includes('duplicate key')) {
+        errorMessage = "Order number already exists";
+        errorDetails.type = "duplicate_key";
+      } else if (error?.message?.includes('foreign key')) {
+        errorMessage = "Invalid customer ID provided";
+        errorDetails.type = "foreign_key";
+      } else if (error?.issues) {
+        errorMessage = "Validation failed";
+        errorDetails.type = "validation";
+        errorDetails.issues = error.issues;
+      } else if (error?.message) {
+        errorMessage = error.message;
+        errorDetails.type = "database";
+      }
+      
       res.status(400).json({ 
-        message: "Failed to create order",
-        error: error.message,
-        issues: error.issues || undefined
+        message: errorMessage,
+        error: error?.message,
+        details: errorDetails,
+        timestamp: new Date().toISOString()
       });
     }
   });

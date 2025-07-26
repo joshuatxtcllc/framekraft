@@ -194,70 +194,98 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createOrder(orderData: InsertOrder): Promise<Order> {
-    // Generate order number
-    const orderNumber = `FC${Date.now()}`;
+    try {
+      console.log("Storage createOrder called with:", JSON.stringify(orderData, null, 2));
+      
+      // Validate required fields
+      if (!orderData.customerId) {
+        throw new Error("Customer ID is required");
+      }
+      if (!orderData.description) {
+        throw new Error("Order description is required");
+      }
+      if (!orderData.totalAmount || orderData.totalAmount <= 0) {
+        throw new Error("Valid total amount is required");
+      }
 
-    // Prepare data for database insertion, converting numbers to strings for decimal fields
-    const insertData = {
-      customerId: orderData.customerId,
-      orderNumber,
-      description: orderData.description,
-      artworkDescription: orderData.artworkDescription,
-      dimensions: orderData.dimensions,
-      frameStyle: orderData.frameStyle,
-      matColor: orderData.matColor,
-      glazing: orderData.glazing,
-      totalAmount: orderData.totalAmount.toString(),
-      depositAmount: orderData.depositAmount?.toString() || "0",
-      discountPercentage: orderData.discountPercentage?.toString() || "0",
-      balanceAmount: orderData.balanceAmount?.toString(),
-      taxAmount: orderData.taxAmount?.toString() || "0",
-      discountAmount: orderData.discountAmount?.toString() || "0",
-      laborCost: orderData.laborCost?.toString(),
-      materialsCost: orderData.materialsCost?.toString(),
-      status: orderData.status || "pending",
-      priority: orderData.priority || "normal",
-      dueDate: orderData.dueDate ? (typeof orderData.dueDate === 'string' ? new Date(orderData.dueDate) : orderData.dueDate) : null,
-      completedAt: orderData.completedAt ? (typeof orderData.completedAt === 'string' ? new Date(orderData.completedAt) : orderData.completedAt) : null,
-      notes: orderData.notes,
-      aiRecommendations: orderData.aiRecommendations,
-    };
+      // Generate order number
+      const orderNumber = orderData.orderNumber || `FC${Date.now()}`;
+      console.log("Generated order number:", orderNumber);
 
-    const [order] = await db
-      .insert(orders)
-      .values([insertData])
-      .returning();
+      // Prepare data for database insertion, converting numbers to strings for decimal fields
+      const insertData = {
+        customerId: orderData.customerId,
+        orderNumber,
+        description: orderData.description,
+        artworkDescription: orderData.artworkDescription || null,
+        dimensions: orderData.dimensions || null,
+        frameStyle: orderData.frameStyle || null,
+        matColor: orderData.matColor || null,
+        glazing: orderData.glazing || null,
+        totalAmount: orderData.totalAmount.toString(),
+        depositAmount: orderData.depositAmount?.toString() || "0",
+        discountPercentage: orderData.discountPercentage?.toString() || "0",
+        balanceAmount: orderData.balanceAmount?.toString() || null,
+        taxAmount: orderData.taxAmount?.toString() || "0",
+        discountAmount: orderData.discountAmount?.toString() || "0",
+        laborCost: orderData.laborCost?.toString() || null,
+        materialsCost: orderData.materialsCost?.toString() || null,
+        status: orderData.status || "pending",
+        priority: orderData.priority || "normal",
+        dueDate: orderData.dueDate ? (typeof orderData.dueDate === 'string' ? new Date(orderData.dueDate) : orderData.dueDate) : null,
+        completedAt: orderData.completedAt ? (typeof orderData.completedAt === 'string' ? new Date(orderData.completedAt) : orderData.completedAt) : null,
+        notes: orderData.notes || null,
+        aiRecommendations: orderData.aiRecommendations || null,
+      };
 
-    // Create initial project steps
-    const defaultSteps = [
-      'consultation',
-      'measuring',
-      'ordering',
-      'production',
-      'assembly',
-      'quality_check',
-      'ready'
-    ];
+      console.log("Prepared data for database insertion:", JSON.stringify(insertData, null, 2));
 
-    for (const stepName of defaultSteps) {
-      await db.insert(projectSteps).values({
-        orderId: order.id,
-        stepName,
-        status: stepName === 'consultation' ? 'completed' : 'pending',
-        completedAt: stepName === 'consultation' ? new Date() : null,
-      });
+      const [order] = await db
+        .insert(orders)
+        .values(insertData)
+        .returning();
+
+      console.log("Order inserted successfully:", order);
+
+      // Create initial project steps
+      const defaultSteps = [
+        'consultation',
+        'measuring',
+        'ordering',
+        'production',
+        'assembly',
+        'quality_check',
+        'ready'
+      ];
+
+      for (const stepName of defaultSteps) {
+        await db.insert(projectSteps).values({
+          orderId: order.id,
+          stepName,
+          status: stepName === 'consultation' ? 'completed' : 'pending',
+          completedAt: stepName === 'consultation' ? new Date() : null,
+        });
+      }
+
+      // Update customer order count and total spent
+      await db
+        .update(customers)
+        .set({
+          orderCount: sql`${customers.orderCount} + 1`,
+          totalSpent: sql`${customers.totalSpent} + ${orderData.totalAmount}`,
+        })
+        .where(eq(customers.id, orderData.customerId));
+
+      return order;
+    } catch (error: any) {
+      console.error("Storage createOrder error:", error);
+      console.error("Error message:", error?.message);
+      console.error("Error stack:", error?.stack);
+      console.error("Error code:", error?.code);
+      
+      // Re-throw with enhanced error information
+      throw new Error(`Database insertion failed: ${error?.message || 'Unknown database error'}`);
     }
-
-    // Update customer order count and total spent
-    await db
-      .update(customers)
-      .set({
-        orderCount: sql`${customers.orderCount} + 1`,
-        totalSpent: sql`${customers.totalSpent} + ${orderData.totalAmount}`,
-      })
-      .where(eq(customers.id, orderData.customerId));
-
-    return order;
   }
 
   async updateOrder(id: number, orderData: Partial<InsertOrder>): Promise<Order> {

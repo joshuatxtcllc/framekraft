@@ -63,9 +63,40 @@ export default function Orders() {
     },
     onError: (error: any) => {
       console.error("Order creation error:", error);
+      console.error("Error details:", {
+        message: error?.message,
+        stack: error?.stack,
+        response: error?.response,
+        status: error?.status
+      });
+      
+      let errorMessage = "Failed to create order. Please try again.";
+      
+      // Parse API error response if available
+      if (error?.response) {
+        try {
+          const errorData = error.response;
+          console.log("API error response:", errorData);
+          
+          if (errorData?.details?.type === 'validation') {
+            errorMessage = `Validation failed: ${errorData.details.issues?.map((i: any) => i.message).join(', ') || 'Invalid data provided'}`;
+          } else if (errorData?.details?.type === 'foreign_key') {
+            errorMessage = "Invalid customer selected. Please choose a valid customer.";
+          } else if (errorData?.details?.type === 'duplicate_key') {
+            errorMessage = "Order number already exists. Please try again.";
+          } else if (errorData?.message) {
+            errorMessage = errorData.message;
+          }
+        } catch (parseError) {
+          console.error("Error parsing API response:", parseError);
+        }
+      } else if (error?.message) {
+        errorMessage = error.message;
+      }
+      
       toast({
-        title: "Error",
-        description: error.message || "Failed to create order. Please try again.",
+        title: "Error Creating Order",
+        description: errorMessage,
         variant: "destructive",
       });
     },

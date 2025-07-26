@@ -338,7 +338,6 @@ export const insertCustomerSchema = createInsertSchema(customers).omit({
 
 export const insertOrderSchema = createInsertSchema(orders).omit({
   id: true,
-  orderNumber: true,
   createdAt: true,
   updatedAt: true,
 }).extend({
@@ -351,9 +350,11 @@ export const insertOrderSchema = createInsertSchema(orders).omit({
   discountAmount: z.number().optional(),
   laborCost: z.number().optional(),
   materialsCost: z.number().optional(),
-  // Convert date strings to Date objects
-  dueDate: z.string().datetime().optional().or(z.date().optional()),
-  completedAt: z.string().datetime().optional().or(z.date().optional()),
+  // Allow orderNumber to be optional - it will be generated if not provided
+  orderNumber: z.string().optional(),
+  // Accept both date strings and Date objects
+  dueDate: z.union([z.string().datetime(), z.date()]).optional(),
+  completedAt: z.union([z.string().datetime(), z.date()]).optional(),
   frames: z.array(z.object({
     style: z.string(),
     quantity: z.number().int().positive().default(1),
