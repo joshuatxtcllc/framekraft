@@ -217,8 +217,8 @@ export class DatabaseStorage implements IStorage {
       materialsCost: orderData.materialsCost?.toString(),
       status: orderData.status || "pending",
       priority: orderData.priority || "normal",
-      dueDate: orderData.dueDate,
-      completedAt: orderData.completedAt,
+      dueDate: orderData.dueDate ? (typeof orderData.dueDate === 'string' ? new Date(orderData.dueDate) : orderData.dueDate) : null,
+      completedAt: orderData.completedAt ? (typeof orderData.completedAt === 'string' ? new Date(orderData.completedAt) : orderData.completedAt) : null,
       notes: orderData.notes,
       aiRecommendations: orderData.aiRecommendations,
     };
@@ -488,10 +488,24 @@ export class DatabaseStorage implements IStorage {
   async searchWholesalerProducts(query: string): Promise<WholesalerProduct[]> {
     if (!query) return [];
 
-    return await db
-      .select()
+    const results = await db
+      .select({
+        id: wholesalerProducts.id,
+        wholesalerId: wholesalerProducts.wholesalerId,
+        productCode: wholesalerProducts.productCode,
+        productName: wholesalerProducts.productName,
+        category: wholesalerProducts.category,
+        description: wholesalerProducts.description,
+        unitType: wholesalerProducts.unitType,
+        wholesalePrice: wholesalerProducts.wholesalePrice,
+        suggestedRetail: wholesalerProducts.suggestedRetail,
+        minQuantity: wholesalerProducts.minQuantity,
+        leadTime: wholesalerProducts.leadTime,
+        isActive: wholesalerProducts.isActive,
+        lastUpdated: wholesalerProducts.lastUpdated,
+        createdAt: wholesalerProducts.createdAt,
+      })
       .from(wholesalerProducts)
-      .leftJoin(wholesalers, eq(wholesalerProducts.wholesalerId, wholesalers.id))
       .where(
         and(
           eq(wholesalerProducts.isActive, true),
@@ -502,6 +516,8 @@ export class DatabaseStorage implements IStorage {
         )
       )
       .orderBy(wholesalerProducts.productCode);
+
+    return results;
   }
 
   // Invoice methods
