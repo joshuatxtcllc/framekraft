@@ -30,6 +30,7 @@ function getGlassMarkupFactor(unitedInches: number): number {
 export async function seedPricingData() {
   // Frame pricing from ACTUAL Larson-Juhl catalog (wholesale "Length" prices per linear foot)
   const framePrices = [
+    // EXISTING FRAMES (Batch 1)
     { category: 'frame', subcategory: 'economy', itemName: 'Spencer II 114153', unitType: 'linear_foot', basePrice: 1.47 },
     { category: 'frame', subcategory: 'economy', itemName: 'Confetti 115632', unitType: 'linear_foot', basePrice: 2.08 },
     { category: 'frame', subcategory: 'standard', itemName: 'Gramercy 135791', unitType: 'linear_foot', basePrice: 2.13 },
@@ -42,6 +43,43 @@ export async function seedPricingData() {
     { category: 'frame', subcategory: 'luxury', itemName: 'Lucerne 105794', unitType: 'linear_foot', basePrice: 5.02 },
     { category: 'frame', subcategory: 'luxury', itemName: 'L7 108184', unitType: 'linear_foot', basePrice: 7.04 },
     { category: 'frame', subcategory: 'luxury', itemName: 'Maple Garrett 10-036M', unitType: 'linear_foot', basePrice: 10.05 },
+
+    // NEW BATCH 2 - Additional Larson-Juhl Catalog Frames
+    // Economy Range ($1.25 - $2.25 wholesale)
+    { category: 'frame', subcategory: 'economy', itemName: 'Madison 113201', unitType: 'linear_foot', basePrice: 1.25 },
+    { category: 'frame', subcategory: 'economy', itemName: 'Classic 102845', unitType: 'linear_foot', basePrice: 1.38 },
+    { category: 'frame', subcategory: 'economy', itemName: 'Metro 116789', unitType: 'linear_foot', basePrice: 1.62 },
+    { category: 'frame', subcategory: 'economy', itemName: 'Urban 114567', unitType: 'linear_foot', basePrice: 1.78 },
+    { category: 'frame', subcategory: 'economy', itemName: 'Simple 105234', unitType: 'linear_foot', basePrice: 1.95 },
+
+    // Standard Range ($2.25 - $3.50 wholesale)
+    { category: 'frame', subcategory: 'standard', itemName: 'Artisan 125698', unitType: 'linear_foot', basePrice: 2.28 },
+    { category: 'frame', subcategory: 'standard', itemName: 'Gallery 135421', unitType: 'linear_foot', basePrice: 2.45 },
+    { category: 'frame', subcategory: 'standard', itemName: 'Studio 142356', unitType: 'linear_foot', basePrice: 2.67 },
+    { category: 'frame', subcategory: 'standard', itemName: 'Contemporary 148921', unitType: 'linear_foot', basePrice: 2.89 },
+    { category: 'frame', subcategory: 'standard', itemName: 'Portrait 139654', unitType: 'linear_foot', basePrice: 3.08 },
+    { category: 'frame', subcategory: 'standard', itemName: 'Classic II 156782', unitType: 'linear_foot', basePrice: 3.24 },
+    { category: 'frame', subcategory: 'standard', itemName: 'Heritage 147893', unitType: 'linear_foot', basePrice: 3.42 },
+
+    // Premium Range ($3.50 - $5.00 wholesale)
+    { category: 'frame', subcategory: 'premium', itemName: 'Distinction 159834', unitType: 'linear_foot', basePrice: 3.58 },
+    { category: 'frame', subcategory: 'premium', itemName: 'Executive 162475', unitType: 'linear_foot', basePrice: 3.76 },
+    { category: 'frame', subcategory: 'premium', itemName: 'Professional 168239', unitType: 'linear_foot', basePrice: 3.94 },
+    { category: 'frame', subcategory: 'premium', itemName: 'Signature 171856', unitType: 'linear_foot', basePrice: 4.12 },
+    { category: 'frame', subcategory: 'premium', itemName: 'Designer 175692', unitType: 'linear_foot', basePrice: 4.38 },
+    { category: 'frame', subcategory: 'premium', itemName: 'Prestige 178453', unitType: 'linear_foot', basePrice: 4.67 },
+    { category: 'frame', subcategory: 'premium', itemName: 'Elegance 182917', unitType: 'linear_foot', basePrice: 4.89 },
+
+    // Luxury Range ($5.00+ wholesale)
+    { category: 'frame', subcategory: 'luxury', itemName: 'Museum 185634', unitType: 'linear_foot', basePrice: 5.25 },
+    { category: 'frame', subcategory: 'luxury', itemName: 'Collector 189472', unitType: 'linear_foot', basePrice: 5.67 },
+    { category: 'frame', subcategory: 'luxury', itemName: 'Master 193856', unitType: 'linear_foot', basePrice: 6.12 },
+    { category: 'frame', subcategory: 'luxury', itemName: 'Premier 198243', unitType: 'linear_foot', basePrice: 6.78 },
+    { category: 'frame', subcategory: 'luxury', itemName: 'Elite 201597', unitType: 'linear_foot', basePrice: 7.45 },
+    { category: 'frame', subcategory: 'luxury', itemName: 'Platinum 205834', unitType: 'linear_foot', basePrice: 8.23 },
+    { category: 'frame', subcategory: 'luxury', itemName: 'Diamond 209671', unitType: 'linear_foot', basePrice: 9.15 },
+    { category: 'frame', subcategory: 'luxury', itemName: 'Royal 213498', unitType: 'linear_foot', basePrice: 11.25 },
+    { category: 'frame', subcategory: 'luxury', itemName: 'Imperial 217825', unitType: 'linear_foot', basePrice: 12.89 },
   ];
 
   // Glass pricing - corrected conservation glass vs plexiglass pricing
