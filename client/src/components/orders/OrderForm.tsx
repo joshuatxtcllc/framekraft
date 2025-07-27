@@ -16,6 +16,7 @@ import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { calculateFramingPrice, PricingBreakdown } from "@/lib/pricingCalculator";
 
 const orderSchema = z.object({
   customerId: z.string().min(1, "Customer is required"),
@@ -120,86 +121,66 @@ export default function OrderForm({
     return 1.25; // 25% markup for 80+ united inches
   };
 
-  // Advanced united inch-based pricing calculation
-  const calculatePrice = () => {
+  // Houston Heights market adjustments (as per pricing logic document)
+  const FRAME_PRICE_ADJUSTMENT = 0.1667; // Reduce to 1/6th (16.67%)
+  const GLASS_PRICE_ADJUSTMENT = 0.45;   // Reduce by 55% (keep 45%)
+
+  // State for detailed pricing breakdown
+  const [pricingBreakdown, setPricingBreakdown] = useState<PricingBreakdown | null>(null);
+
+  // Advanced pricing calculation using the comprehensive pricing calculator
+  const calculatePrice = (): number => {
     const frameStyle = form.watch("frameStyle");
     const glazing = form.watch("glazing");
     const dimensions = form.watch("dimensions");
     const matColor = form.watch("matColor");
+    const discountPercentage = parseFloat(form.watch("discountPercentage") || "0");
 
-    if (!dimensions) return 0;
+    if (!dimensions) {
+      setPricingBreakdown(null);
+      return 0;
+    }
 
     // Parse dimensions (handles formats like "16x20", "16 x 20", "16\"x20\"", "16X20")
     const dimensionMatch = dimensions.match(/(\d+(?:\.\d+)?)(?:["']?)(?:\s*[xX×]\s*)(\d+(?:\.\d+)?)(?:["']?)/i);
-    if (!dimensionMatch) return 0;
+    if (!dimensionMatch) {
+      setPricingBreakdown(null);
+      return 0;
+    }
 
     const artworkWidth = parseFloat(dimensionMatch[1]);
     const artworkHeight = parseFloat(dimensionMatch[2]);
-    const matWidth = 2; // Standard 2" mat border
 
-    // Calculate united inches (core measurement for custom framing)
-    const unitedInches = artworkWidth + artworkHeight + (matWidth * 4);
+    // Find items from pricing structure
+    const frameItem = frameStyle && frameStyle !== "none" && priceStructure 
+      ? priceStructure.find((item: any) => item?.category === "frame" && item?.itemName === frameStyle)
+      : null;
+    
+    const matItem = matColor && matColor !== "none" && priceStructure
+      ? priceStructure.find((item: any) => item?.category === "mat" && item?.itemName === matColor)
+      : null;
+    
+    const glassItem = glazing && glazing !== "none" && priceStructure
+      ? priceStructure.find((item: any) => item?.category === "glazing" && item?.itemName === glazing)
+      : null;
 
-    // Calculate frame price with advanced pricing
-    let framePrice = 0;
-    if (frameStyle && frameStyle !== "none" && priceStructure && Array.isArray(priceStructure)) {
-      const frameItem = priceStructure.find((item: any) => 
-        item && item.category === "frame" && item.itemName === frameStyle
-      );
+    // Calculate comprehensive pricing using the pricing calculator
+    const breakdown = calculateFramingPrice({
+      artworkWidth,
+      artworkHeight,
+      matWidth: 2, // Standard 2" mat border
+      frameItem,
+      matItem,
+      glassItem,
+      laborCost,
+      overheadCost,
+      discountPercentage,
+      taxRate: 0, // No tax in calculation, handled separately
+      isWholesale: false
+    });
 
-      if (frameItem) {
-        // Frame size with mat: 16x20 becomes 20x24 with 2" mat (add 4" to each dimension)
-        const frameWidth = artworkWidth + (matColor ? matWidth * 2 : 0);
-        const frameHeight = artworkHeight + (matColor ? matWidth * 2 : 0);
-        const framePerimeterInches = (frameWidth * 2) + (frameHeight * 2);
-        const framePerimeterFeet = framePerimeterInches / 12;
-        const pricePerFoot = parseFloat(frameItem.basePrice);
-
-        // Wholesale cost = feet × price per foot, then round up to nearest dollar
-        const wholesaleCost = Math.ceil(framePerimeterFeet * pricePerFoot);
-
-        // Apply sliding scale retail markup based on price per foot
-        const markupFactor = getFrameMarkupFactor(pricePerFoot);
-        framePrice = wholesaleCost * markupFactor;
-      }
-    }
-
-    // Calculate mat price using united inches: 16+20=36 united inches at $0.0109 per square inch
-    let matPrice = 0;
-    if (matColor && matColor !== "none") {
-      const unitedInches = artworkWidth + artworkHeight; // 16+20=36 for your example
-      const pricePerSquareInch = 0.0109; // $0.0109 per square inch
-      matPrice = unitedInches * pricePerSquareInch;
-    }
-
-    // Calculate glass price using proper united inch-based markup without location discounts
-    let glazingPrice = 0;
-    if (glazing && glazing !== "none" && priceStructure && Array.isArray(priceStructure)) {
-      const glazingItem = priceStructure.find((item: any) => 
-        item && item.category === "glazing" && item.itemName === glazing
-      );
-
-      if (glazingItem) {
-        // Glass size matches frame size (includes mat border)
-        const glassWidth = artworkWidth + (matColor ? matWidth * 2 : 0);
-        const glassHeight = artworkHeight + (matColor ? matWidth * 2 : 0);
-        const glassAreaFeet = (glassWidth * glassHeight) / 144;
-        const unitedInches = glassWidth + glassHeight;
-        const markupFactor = getGlassMarkupFactor(unitedInches);
-        glazingPrice = glassAreaFeet * parseFloat(glazingItem.basePrice) * markupFactor;
-      }
-    }
-
-    // Calculate total with all components including overhead
-    let totalPrice = framePrice + matPrice + glazingPrice + laborCost + overheadCost;
-
-    // Apply discount if specified
-    const discountPercentage = parseFloat(form.watch("discountPercentage") || "0");
-    if (discountPercentage > 0) {
-      totalPrice = totalPrice * (1 - discountPercentage / 100);
-    }
-
-    return Math.round(totalPrice * 100) / 100; // Round to 2 decimal places
+    setPricingBreakdown(breakdown);
+    return breakdown.discountedSubtotal; // Return subtotal without tax for form
   };
 
   // Watch for changes and recalculate price (include matColor for united inch calculations)
@@ -910,19 +891,20 @@ export default function OrderForm({
               </FormItem>
             )}
           />
-                    {/* Quantity */}
+          {/* Labor Cost */}
           <FormField
             control={form.control}
-            name="quantity"
-            render={({ field }) => (
+            name="notes"
+            render={() => (
               <FormItem>
-                <FormLabel>Quantity</FormLabel>
+                <FormLabel>Labor Cost</FormLabel>
                 <FormControl>
                   <Input
                     type="number"
-                    min="1"
-                    defaultValue="1"
-                    {...field}
+                    step="0.01"
+                    value={laborCost}
+                    onChange={(e) => setLaborCost(parseFloat(e.target.value) || 38)}
+                    placeholder="38.00"
                   />
                 </FormControl>
                 <FormMessage />
