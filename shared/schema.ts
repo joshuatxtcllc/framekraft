@@ -5,6 +5,7 @@ import {
   timestamp,
   jsonb,
   index,
+  uniqueIndex,
   serial,
   integer,
   decimal,
@@ -56,7 +57,7 @@ export const customers = pgTable("customers", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// Orders table
+// Orders table with enhanced vendor item tracking
 export const orders = pgTable("orders", {
   id: serial("id").primaryKey(),
   customerId: integer("customer_id").references(() => customers.id).notNull(),
@@ -84,6 +85,33 @@ export const orders = pgTable("orders", {
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
+
+// Order line items with precise vendor product tracking
+export const orderLineItems = pgTable("order_line_items", {
+  id: serial("id").primaryKey(),
+  orderId: integer("order_id").references(() => orders.id).notNull(),
+  itemType: varchar("item_type").notNull(), // frame, mat, glazing, hardware, labor
+  wholesalerProductId: integer("wholesaler_product_id").references(() => wholesalerProducts.id),
+  productCode: varchar("product_code").notNull(), // Vendor SKU for ordering
+  productName: varchar("product_name").notNull(),
+  supplierName: varchar("supplier_name").notNull(), // Larson-Juhl, Crescent, etc.
+  specifications: jsonb("specifications"), // size, finish, color details
+  quantity: decimal("quantity", { precision: 8, scale: 2 }).notNull(),
+  unitType: varchar("unit_type").notNull(), // linear_foot, square_foot, each
+  wholesalePrice: decimal("wholesale_price", { precision: 8, scale: 2 }).notNull(),
+  retailPrice: decimal("retail_price", { precision: 8, scale: 2 }).notNull(),
+  lineTotal: decimal("line_total", { precision: 8, scale: 2 }).notNull(),
+  orderStatus: varchar("order_status").default("pending"), // pending, ordered, received, used
+  vendorOrderNumber: varchar("vendor_order_number"), // PO number to supplier
+  expectedDelivery: timestamp("expected_delivery"),
+  receivedDate: timestamp("received_date"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, 
+(table) => [
+  index("IDX_order_items").on(table.orderId),
+  index("IDX_product_code_supplier").on(table.productCode, table.supplierName),
+]);
 
 // Project tracking for order workflow
 export const projectSteps = pgTable("project_steps", {
@@ -176,23 +204,35 @@ export const wholesalers = pgTable("wholesalers", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// Wholesaler product catalog
+// Enhanced wholesaler product catalog with precise tracking
 export const wholesalerProducts = pgTable("wholesaler_products", {
   id: serial("id").primaryKey(),
   wholesalerId: integer("wholesaler_id").references(() => wholesalers.id).notNull(),
-  productCode: varchar("product_code").notNull(),
+  productCode: varchar("product_code").notNull(), // Vendor's exact SKU/part number
   productName: varchar("product_name").notNull(),
-  category: varchar("category").notNull(),
+  category: varchar("category").notNull(), // frame, mat, glazing, hardware
+  subcategory: varchar("subcategory"), // wood, metal, conservation, etc.
   description: text("description"),
+  specifications: jsonb("specifications"), // dimensions, materials, finishes, etc.
   unitType: varchar("unit_type").default("linear_foot"),
   wholesalePrice: decimal("wholesale_price", { precision: 8, scale: 2 }).notNull(),
   suggestedRetail: decimal("suggested_retail", { precision: 8, scale: 2 }),
   minQuantity: integer("min_quantity").default(1),
+  packSize: integer("pack_size").default(1), // sold in packs of X
   leadTime: varchar("lead_time"), // "5-7 days", "2-3 weeks"
+  stockStatus: varchar("stock_status").default("available"), // available, backordered, discontinued
+  vendorCatalogPage: varchar("vendor_catalog_page"), // page reference in catalog
+  imageUrl: varchar("image_url"), // product image
+  dataSheetUrl: varchar("data_sheet_url"), // technical specs
   isActive: boolean("is_active").default(true),
   lastUpdated: timestamp("last_updated").defaultNow(),
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, 
+(table) => [
+  index("IDX_product_code").on(table.productCode),
+  index("IDX_category_subcategory").on(table.category, table.subcategory),
+  uniqueIndex("UNX_wholesaler_product_code").on(table.wholesalerId, table.productCode),
+]);
 
 // Invoices
 export const invoices = pgTable("invoices", {

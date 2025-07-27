@@ -12,6 +12,7 @@ import { registerWholesalerRoutes } from "./routes/wholesalers";
 import { registerInvoiceRoutes } from "./routes/invoices";
 import { registerFileUploadRoutes } from "./routes/fileUpload";
 import settingsRoutes from './routes/settings.js';
+import vendorCatalogRoutes from './routes/vendorCatalog.js';
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
@@ -449,6 +450,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerInvoiceRoutes(app);
   registerFileUploadRoutes(app);
   app.use('/api/settings', settingsRoutes);
+  app.use('/api/vendor', vendorCatalogRoutes);
 
   const httpServer = createServer(app);
   return httpServer;
