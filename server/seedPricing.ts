@@ -44,13 +44,13 @@ export async function seedPricingData() {
     { category: 'frame', subcategory: 'luxury', itemName: 'Maple Garrett 10-036M', unitType: 'linear_foot', basePrice: 10.05 },
   ];
 
-  // Glass pricing - specific requested types
+  // Glass pricing - corrected conservation glass vs plexiglass pricing
   const glazingPrices = [
     { category: 'glazing', subcategory: 'standard_glass', itemName: 'Regular Glass', unitType: 'square_foot', basePrice: 6.25 },
-    { category: 'glazing', subcategory: 'conservation_glass', itemName: 'Conservation Plexiglass', unitType: 'square_foot', basePrice: 22.50 },
+    { category: 'glazing', subcategory: 'conservation_glass', itemName: 'Conservation Clear Glass', unitType: 'square_foot', basePrice: 15.25 },
     { category: 'glazing', subcategory: 'museum_glass', itemName: 'Museum Glass', unitType: 'square_foot', basePrice: 39.00 },
     { category: 'glazing', subcategory: 'acrylic', itemName: 'Regular Plexiglass', unitType: 'square_foot', basePrice: 8.50 },
-    { category: 'glazing', subcategory: 'conservation_acrylic', itemName: 'Conservation Clear Glass', unitType: 'square_foot', basePrice: 15.25 },
+    { category: 'glazing', subcategory: 'conservation_acrylic', itemName: 'Conservation Plexiglass', unitType: 'square_foot', basePrice: 22.50 },
     { category: 'glazing', subcategory: 'optium_acrylic', itemName: 'Optium Acrylic', unitType: 'square_foot', basePrice: 28.00 },
   ];
 
