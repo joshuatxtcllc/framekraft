@@ -8,17 +8,7 @@ FrameCraft is a comprehensive full-stack web application designed to streamline 
 
 Preferred communication style: Simple, everyday language.
 
-## Recent Changes (July 27, 2025)
-
-### Comprehensive Pricing Logic Integration (July 27, 2025)
-✓ **Implemented Complete Houston Heights Pricing Formula**: Integrated exact pricing logic from pricing_logic_1753223216760.md with Houston Heights market adjustments (frame reduced to 16.67%, glass reduced to 45%)
-✓ **Added Sliding Scale Markup System**: Frame markup varies from 2.5× to 4.5× based on price per foot ($5+ luxury to $0.99-$1.99 low cost), mat markup from 1.4× to 2.0× based on united inches, glass markup from 1.25× to 2.0× based on size
-✓ **Created Comprehensive Pricing Calculator**: New `client/src/lib/pricingCalculator.ts` module with `calculateFramingPrice()` function implementing all pricing formulas, markup calculations, and Houston Heights adjustments
-✓ **Enhanced Order Form with Detailed Breakdowns**: Order creation now shows comprehensive pricing details including frame perimeter calculations, united inches methodology, markup factors, and Houston Heights adjustments
-✓ **Fixed All Schema and Type Issues**: Resolved LSP diagnostics errors and ensured proper data flow between pricing calculator and order form components
-✓ **Added Industry-Standard United Inches System**: Proper implementation of custom framing industry standard where united inches = artwork width + height + (mat width × 4 sides)
-
-## Previous Changes (July 25, 2025)
+## Recent Changes (July 25, 2025)
 
 ### Production Readiness Updates (July 25, 2025)
 ✓ **Enhanced Security**: Added comprehensive security middleware including rate limiting (100 req/15min API, 10 req/15min auth), security headers (XSS protection, content-type sniffing prevention), and request sanitization to prevent malicious input
