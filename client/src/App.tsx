@@ -16,6 +16,7 @@ import Pricing from "@/pages/pricing";
 import Invoices from "@/pages/invoices";
 import Wholesalers from "@/pages/wholesalers";
 import Settings from "./pages/settings";
+import VendorCatalog from "./pages/vendor-catalog";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -35,6 +36,7 @@ function Router() {
           <Route path="/ai-assistant" component={AIAssistant} />
           <Route path="/api-explorer" component={APIExplorer} />
           <Route path="/integration-settings" component={IntegrationSettings} />
+          <Route path="/vendor-catalog" component={VendorCatalog} />
           <Route path="/settings" component={Settings} />
         </>
       )}

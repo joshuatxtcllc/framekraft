@@ -93,6 +93,12 @@ export default function Sidebar() {
 
   const businessTools = [
     {
+      name: 'Vendor Catalog',
+      href: '/vendor-catalog',
+      icon: Package,
+      current: location === '/vendor-catalog',
+    },
+    {
       name: 'Inventory',
       href: '/inventory',
       icon: Package,
