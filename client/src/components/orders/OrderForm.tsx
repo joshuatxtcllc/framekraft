@@ -128,6 +128,7 @@ export default function OrderForm({
     const glazing = form.watch("glazing");
     const dimensions = form.watch("dimensions");
     const matColor = form.watch("matColor");
+    const quantity = parseInt(form.watch("quantity") || "1");
 
     if (!dimensions) return 0;
 
@@ -196,7 +197,6 @@ export default function OrderForm({
     let totalPrice = framePrice + matPrice + glazingPrice + laborCost + overheadCost;
 
     // Multiply by quantity
-    const quantity = parseInt(form.watch("quantity") || "1");
     totalPrice = totalPrice * quantity;
 
     // Apply discount if specified
@@ -752,6 +752,7 @@ export default function OrderForm({
                   const glazing = form.watch("glazing");
                   const matColor = form.watch("matColor");
                   const dimensions = form.watch("dimensions");
+                  const quantity = parseInt(form.watch("quantity") || "1");
 
                   if (!dimensions) {
                     return <p>Enter dimensions to see calculation</p>;
@@ -765,7 +766,6 @@ export default function OrderForm({
                   const artworkWidth = parseFloat(dimensionMatch[1]);
                   const artworkHeight = parseFloat(dimensionMatch[2]);
                   const matWidth = 2; // Standard 2" mat border
-                  const quantity = parseInt(form.watch("quantity") || "1");
 
                   // Calculate frame price with mat border (if selected)
                   let framePrice = 0;
@@ -819,7 +819,7 @@ export default function OrderForm({
                     <>
                       <div className="flex justify-between text-xs mb-1 text-blue-600">
                         <span>Artwork: {artworkWidth}"×{artworkHeight}" × {quantity}</span>
-                        {matColor && <span>Frame/Glass: {artworkWidth + matWidth * 2}"×{artworkHeight + matWidth * 2}"</span>}
+                        {matColor && <span>Frame/Glass: {artworkWidth + matWidth * 2}"×{artworkHeight + matWidth * 2}""</span>}
                       </div>
                       {frameStyle && frameStyle !== "none" && framePrice > 0 && (
                         <div className="space-y-1">
