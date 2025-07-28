@@ -390,6 +390,8 @@ export const insertOrderSchema = createInsertSchema(orders).omit({
   discountAmount: z.number().optional(),
   laborCost: z.number().optional(),
   materialsCost: z.number().optional(),
+  // Allow customerId to be any number (including negative temporary IDs)
+  customerId: z.number(),
   // Allow orderNumber to be optional - it will be generated if not provided
   orderNumber: z.string().optional(),
   // Accept both date strings and Date objects, or null

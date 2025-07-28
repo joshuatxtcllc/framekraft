@@ -145,6 +145,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Parse and validate the request body with the updated schema
       const orderData = insertOrderSchema.parse(req.body);
       console.log("Parsed order data:", JSON.stringify(orderData, null, 2));
+
+      // Handle temporary customer creation if customerId is negative
+      let finalCustomerId = orderData.customerId;
+      if (orderData.customerId < 0) {
+        console.log("Creating new customer for temporary ID:", orderData.customerId);
+        
+        // Find the temporary customer in the customers array (added by the frontend)
+        const customers = await storage.getCustomers();
+        const tempCustomer = customers.find(c => c.id === orderData.customerId);
+        
+        if (tempCustomer) {
+          // Create a real customer
+          const newCustomer = await storage.createCustomer({
+            firstName: tempCustomer.firstName,
+            lastName: tempCustomer.lastName,
+            email: tempCustomer.email || undefined,
+            phone: tempCustomer.phone || undefined,
+            address: tempCustomer.address || undefined,
+            notes: tempCustomer.notes || undefined,
+          });
+          finalCustomerId = newCustomer.id;
+          console.log("Created new customer with ID:", finalCustomerId);
+        } else {
+          throw new Error("Temporary customer not found");
+        }
+      }
       
       // Generate order number using current orders count for unique ID
       const existingOrders = await storage.getOrders();
@@ -155,6 +181,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create the order with validated data
       const order = await storage.createOrder({
         ...orderData,
+        customerId: finalCustomerId,
         orderNumber,
         // Convert date strings to Date objects if provided
         dueDate: orderData.dueDate ? new Date(orderData.dueDate) : undefined,
