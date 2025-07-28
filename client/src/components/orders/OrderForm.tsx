@@ -765,6 +765,7 @@ export default function OrderForm({
                   const artworkWidth = parseFloat(dimensionMatch[1]);
                   const artworkHeight = parseFloat(dimensionMatch[2]);
                   const matWidth = 2; // Standard 2" mat border
+                  const quantity = parseInt(form.watch("quantity") || "1");
 
                   // Calculate frame price with mat border (if selected)
                   let framePrice = 0;
