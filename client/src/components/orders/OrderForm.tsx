@@ -821,7 +821,7 @@ export default function OrderForm({
                         <span>Artwork: {artworkWidth}"×{artworkHeight}" × {quantity}</span>
                         {matColor && <span>Frame/Glass: {artworkWidth + matWidth * 2}"×{artworkHeight + matWidth * 2}""</span>}
                       </div>
-                      {frameStyle && frameStyle !== "none" && framerice > 0 && (
+                      {frameStyle && frameStyle !== "none" && framePrice > 0 && (
                         <div className="space-y-1">
                           <div className="flex justify-between">
                             <span>Frame ({frameStyle}):</span>
