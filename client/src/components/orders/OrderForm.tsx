@@ -22,6 +22,7 @@ const orderSchema = z.object({
   description: z.string().min(1, "Description is required"),
   artworkDescription: z.string().optional(),
   dimensions: z.string().optional(),
+  quantity: z.string().min(1, "Quantity is required").default("1"),
   frameStyle: z.string().optional(),
   matColor: z.string().optional(),
   glazing: z.string().optional(),
@@ -82,6 +83,7 @@ export default function OrderForm({
       description: initialData?.description || "",
       artworkDescription: initialData?.artworkDescription || "",
       dimensions: initialData?.dimensions || "",
+      quantity: initialData?.quantity ? initialData.quantity.toString() : "1",
       frameStyle: initialData?.frameStyle || "",
       matColor: initialData?.matColor || "",
       glazing: initialData?.glazing || "",
@@ -193,6 +195,10 @@ export default function OrderForm({
     // Calculate total with all components including overhead
     let totalPrice = framePrice + matPrice + glazingPrice + laborCost + overheadCost;
 
+    // Multiply by quantity
+    const quantity = parseInt(form.watch("quantity") || "1");
+    totalPrice = totalPrice * quantity;
+
     // Apply discount if specified
     const discountPercentage = parseFloat(form.watch("discountPercentage") || "0");
     if (discountPercentage > 0) {
@@ -209,7 +215,7 @@ export default function OrderForm({
     if (newPrice > 0 && useCalculatedPrice) {
       form.setValue("totalAmount", newPrice.toFixed(2));
     }
-  }, [form.watch("frameStyle"), form.watch("glazing"), form.watch("dimensions"), form.watch("matColor"), form.watch("discountPercentage"), priceStructure, laborCost, useCalculatedPrice]);
+  }, [form.watch("frameStyle"), form.watch("glazing"), form.watch("dimensions"), form.watch("matColor"), form.watch("quantity"), form.watch("discountPercentage"), priceStructure, laborCost, useCalculatedPrice]);
 
   // Get frame options with wholesale prices from pricing structure
   const frameOptions = [
@@ -476,7 +482,7 @@ export default function OrderForm({
           )}
         />
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Dimensions */}
           <FormField
             control={form.control}
@@ -486,6 +492,27 @@ export default function OrderForm({
                 <FormLabel>Dimensions</FormLabel>
                 <FormControl>
                   <Input placeholder='e.g., 16"x20"' {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          {/* Quantity */}
+          <FormField
+            control={form.control}
+            name="quantity"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Quantity *</FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    min="1"
+                    step="1"
+                    placeholder="1"
+                    {...field}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -790,7 +817,7 @@ export default function OrderForm({
                   return (
                     <>
                       <div className="flex justify-between text-xs mb-1 text-blue-600">
-                        <span>Artwork: {artworkWidth}"×{artworkHeight}"</span>
+                        <span>Artwork: {artworkWidth}"×{artworkHeight}" × {quantity}</span>
                         {matColor && <span>Frame/Glass: {artworkWidth + matWidth * 2}"×{artworkHeight + matWidth * 2}"</span>}
                       </div>
                       {frameStyle && frameStyle !== "none" && framePrice > 0 && (
