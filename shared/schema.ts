@@ -392,9 +392,9 @@ export const insertOrderSchema = createInsertSchema(orders).omit({
   materialsCost: z.number().optional(),
   // Allow orderNumber to be optional - it will be generated if not provided
   orderNumber: z.string().optional(),
-  // Accept both date strings and Date objects
-  dueDate: z.union([z.string().datetime(), z.date()]).optional(),
-  completedAt: z.union([z.string().datetime(), z.date()]).optional(),
+  // Accept both date strings and Date objects, or null
+  dueDate: z.union([z.string().datetime(), z.date()]).optional().nullable(),
+  completedAt: z.union([z.string().datetime(), z.date()]).optional().nullable(),
   frames: z.array(z.object({
     style: z.string(),
     quantity: z.number().int().positive().default(1),

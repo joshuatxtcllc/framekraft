@@ -39,7 +39,7 @@ type OrderFormData = z.infer<typeof orderSchema>;
 
 type OrderSubmitData = Omit<OrderFormData, 'customerId' | 'dueDate'> & {
   customerId: number;
-  dueDate?: string;
+  dueDate?: string | null;
 };
 
 interface OrderFormProps {
@@ -304,7 +304,7 @@ export default function OrderForm({
     const transformedData: OrderSubmitData = {
       ...data,
       customerId: parseInt(data.customerId),
-      dueDate: data.dueDate ? data.dueDate.toISOString() : undefined, // Convert date to ISO string
+      dueDate: data.dueDate ? data.dueDate.toISOString() : null, // Convert date to ISO string
     };
     onSubmit(transformedData);
   };
@@ -821,7 +821,7 @@ export default function OrderForm({
                         <span>Artwork: {artworkWidth}"×{artworkHeight}" × {quantity}</span>
                         {matColor && <span>Frame/Glass: {artworkWidth + matWidth * 2}"×{artworkHeight + matWidth * 2}""</span>}
                       </div>
-                      {frameStyle && frameStyle !== "none" && framePrice > 0 && (
+                      {frameStyle && frameStyle !== "none" && framerice > 0 && (
                         <div className="space-y-1">
                           <div className="flex justify-between">
                             <span>Frame ({frameStyle}):</span>
