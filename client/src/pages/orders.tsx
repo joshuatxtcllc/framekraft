@@ -316,6 +316,36 @@ FrameCraft`;
         });
     };
 
+    // Handle balance payment
+    const handlePayBalance = async (order: any) => {
+        try {
+            const remainingBalance = parseFloat(order.totalAmount) - parseFloat(order.depositAmount || '0');
+            
+            // Update order to mark balance as paid
+            const updatedOrderData = {
+                ...order,
+                depositAmount: order.totalAmount, // Set deposit to full amount
+                status: order.status === 'ready' ? 'completed' : order.status, // Mark as completed if ready
+                notes: order.notes ? `${order.notes}\n\nBalance paid: $${remainingBalance.toFixed(2)} on ${new Date().toLocaleDateString()}` 
+                    : `Balance paid: $${remainingBalance.toFixed(2)} on ${new Date().toLocaleDateString()}`
+            };
+
+            updateOrderMutation.mutate({ id: order.id, ...updatedOrderData });
+            
+            toast({
+                title: "Balance Payment Recorded",
+                description: `Remaining balance of $${remainingBalance.toFixed(2)} has been marked as paid for order ${order.orderNumber}.`,
+            });
+        } catch (error) {
+            console.error('Balance payment error:', error);
+            toast({
+                title: "Error",
+                description: "Failed to record balance payment. Please try again.",
+                variant: "destructive",
+            });
+        }
+    };
+
   return (
     <div className="min-h-screen flex bg-background">
       <Sidebar />
@@ -400,6 +430,7 @@ FrameCraft`;
                   onPrintInvoice={handlePrintInvoice}
                   onEmailInvoice={handleEmailInvoice}
                   onProcessPayment={handleProcessPayment}
+                  onPayBalance={handlePayBalance}
                 />
               ) : (
                 <KanbanView
@@ -411,6 +442,7 @@ FrameCraft`;
                   onPrintInvoice={handlePrintInvoice}
                   onEmailInvoice={handleEmailInvoice}
                   onProcessPayment={handleProcessPayment}
+                  onPayBalance={handlePayBalance}
                 />
               )}
             </div>

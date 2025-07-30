@@ -41,6 +41,7 @@ interface KanbanViewProps {
   onPrintInvoice?: (order: Order) => void;
   onEmailInvoice?: (order: Order) => void;
   onProcessPayment?: (order: Order) => void;
+  onPayBalance?: (order: Order) => void;
 }
 
 const getPriorityColor = (priority: string) => {

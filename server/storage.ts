@@ -314,7 +314,9 @@ export class DatabaseStorage implements IStorage {
     if (orderData.materialsCost !== undefined) updateData.materialsCost = orderData.materialsCost.toString();
     if (orderData.status !== undefined) updateData.status = orderData.status;
     if (orderData.priority !== undefined) updateData.priority = orderData.priority;
-    if (orderData.dueDate !== undefined) updateData.dueDate = orderData.dueDate;
+    if (orderData.dueDate !== undefined) {
+      updateData.dueDate = orderData.dueDate ? new Date(orderData.dueDate) : null;
+    }
     if (orderData.completedAt !== undefined) updateData.completedAt = orderData.completedAt;
     if (orderData.notes !== undefined) updateData.notes = orderData.notes;
     if (orderData.aiRecommendations !== undefined) updateData.aiRecommendations = orderData.aiRecommendations;

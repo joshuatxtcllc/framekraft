@@ -304,7 +304,7 @@ export default function OrderForm({
     const transformedData: OrderSubmitData = {
       ...data,
       customerId: parseInt(data.customerId),
-      dueDate: data.dueDate ? data.dueDate.toISOString() : null, // Convert date to ISO string
+      dueDate: data.dueDate ? data.dueDate.toISOString().split('T')[0] : null, // Convert date to YYYY-MM-DD format
     };
     onSubmit(transformedData);
   };

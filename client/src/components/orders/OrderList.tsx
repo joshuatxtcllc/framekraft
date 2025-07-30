@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Edit, Search, Filter, Eye, FileText, Printer, Mail, X, CreditCard } from "lucide-react";
+import { Edit, Search, Filter, Eye, FileText, Printer, Mail, X, CreditCard, DollarSign } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { exportToPDF } from "@/lib/pdfExport";
@@ -45,6 +45,7 @@ interface OrderListProps {
   onPrintInvoice?: (order: Order) => void;
   onEmailInvoice?: (order: Order) => void;
   onProcessPayment?: (order: Order) => void;
+  onPayBalance?: (order: Order) => void;
 }
 
 export default function OrderList({ 
@@ -55,7 +56,8 @@ export default function OrderList({
   onGenerateWorkOrder,
   onPrintInvoice,
   onEmailInvoice,
-  onProcessPayment
+  onProcessPayment,
+  onPayBalance
 }: OrderListProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -492,6 +494,17 @@ FrameCraft`;
                             <CreditCard className="w-4 h-4" />
                           </Button>
                         )}
+                        {order.depositAmount && parseFloat(order.depositAmount) > 0 && parseFloat(order.depositAmount) < parseFloat(order.totalAmount) && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => onPayBalance?.(order)}
+                            title="Pay Remaining Balance"
+                            className="text-blue-600 hover:text-blue-700"
+                          >
+                            <DollarSign className="w-4 h-4" />
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -677,6 +690,16 @@ FrameCraft`;
                   >
                     <Mail className="w-4 h-4" />
                     Email Invoice
+                  </Button>
+                )}
+                {selectedOrder.depositAmount && parseFloat(selectedOrder.depositAmount) > 0 && parseFloat(selectedOrder.depositAmount) < parseFloat(selectedOrder.totalAmount) && (
+                  <Button 
+                    variant="outline" 
+                    onClick={() => onPayBalance?.(selectedOrder)}
+                    className="flex items-center gap-2 text-blue-600 hover:text-blue-700"
+                  >
+                    <DollarSign className="w-4 h-4" />
+                    Pay Balance
                   </Button>
                 )}
               </div>
