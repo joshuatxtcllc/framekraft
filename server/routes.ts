@@ -141,7 +141,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/orders', isAuthenticated, async (req, res) => {
     try {
       console.log("Raw order data received:", JSON.stringify(req.body, null, 2));
-      
+
       // Parse and validate the request body with the updated schema
       const orderData = insertOrderSchema.parse(req.body);
       console.log("Parsed order data:", JSON.stringify(orderData, null, 2));
@@ -150,11 +150,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let finalCustomerId = orderData.customerId;
       if (orderData.customerId < 0) {
         console.log("Creating new customer for temporary ID:", orderData.customerId);
-        
+
         // Find the temporary customer in the customers array (added by the frontend)
         const customers = await storage.getCustomers();
         const tempCustomer = customers.find(c => c.id === orderData.customerId);
-        
+
         if (tempCustomer) {
           // Create a real customer
           const newCustomer = await storage.createCustomer({
@@ -171,13 +171,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           throw new Error("Temporary customer not found");
         }
       }
-      
+
       // Generate order number using current orders count for unique ID
       const existingOrders = await storage.getOrders();
       const nextOrderId = existingOrders.length + 1;
       const orderNumber = `FC${new Date().getFullYear().toString().slice(-2)}${String(nextOrderId).padStart(2, '0')}`;
       console.log("Generated order number:", orderNumber);
-      
+
       // Create the order with validated data
       const order = await storage.createOrder({
         ...orderData,
@@ -196,11 +196,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (error?.issues) {
         console.error("Validation issues:", error.issues);
       }
-      
+
       // Enhanced error response with database-specific errors
       let errorMessage = "Failed to create order";
       let errorDetails: any = {};
-      
+
       if (error?.message?.includes('duplicate key')) {
         errorMessage = "Order number already exists";
         errorDetails.type = "duplicate_key";
@@ -215,7 +215,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         errorMessage = error.message;
         errorDetails.type = "database";
       }
-      
+
       res.status(400).json({ 
         message: errorMessage,
         error: error?.message,
@@ -285,82 +285,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // AI routes
-  app.post('/api/ai/message', isAuthenticated, async (req, res) => {
-    try {
-      const { message, context } = req.body;
-      const response = await aiService.sendMessage(message, context);
-      res.json(response);
-    } catch (error) {
-      console.error("Error processing AI message:", error);
-      res.status(500).json({ message: "Failed to process AI request" });
-    }
-  });
-
-  app.post('/api/ai/frame-recommendation', isAuthenticated, async (req, res) => {
-    try {
-      const { artworkDescription, dimensions, customerPreferences, budget } = req.body;
-      const recommendation = await aiService.analyzeFrameRecommendation(
-        artworkDescription,
-        dimensions,
-        customerPreferences,
-        budget
-      );
-      res.json(recommendation);
-    } catch (error) {
-      console.error("Error generating frame recommendation:", error);
-      res.status(500).json({ message: "Failed to generate frame recommendation" });
-    }
-  });
-
-  app.get('/api/ai/insights', isAuthenticated, async (req, res) => {
-    try {
-      const insights = await storage.getAiInsights(10);
-      res.json(insights);
-    } catch (error) {
-      console.error("Error fetching AI insights:", error);
-      res.status(500).json({ message: "Failed to fetch AI insights" });
-    }
-  });
-
-  app.post('/api/ai/generate-insights', isAuthenticated, async (req, res) => {
-    try {
-      // Gather business data for AI analysis
-      const orders = await storage.getOrders();
-      const customers = await storage.getCustomers();
-
-      const businessData = {
-        recentOrders: orders.slice(0, 50),
-        monthlyRevenue: orders.reduce((sum, order) => sum + parseFloat(order.totalAmount), 0),
-        customerCount: customers.length,
-        averageOrderValue: orders.length > 0 ? 
-          orders.reduce((sum, order) => sum + parseFloat(order.totalAmount), 0) / orders.length : 0,
-        popularFrames: orders.map(o => o.frameStyle).filter(Boolean),
-      };
-
-      const insights = await aiService.generateBusinessInsights(businessData);
-
-      // Store insights in database
-      for (const insight of insights) {
-        await storage.createAiInsight({
-          type: 'business_insight',
-          title: insight.title,
-          description: insight.description,
-          confidence: insight.confidence.toString(),
-          metadata: {
-            actionItems: insight.action_items,
-            impactScore: insight.impact_score,
-            type: insight.type
-          }
-        });
-      }
-
-      res.json(insights);
-    } catch (error) {
-      console.error("Error generating business insights:", error);
-      res.status(500).json({ message: "Failed to generate business insights" });
-    }
-  });
+  // Communication routes
+  app.use('/api/communication', require('./routes/communication').default);
 
   // Document generation and email routes
   app.post('/api/orders/email-document', isAuthenticated, async (req, res) => {
@@ -452,7 +378,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ...status.gmail
         },
         openai: {
-          configured: !!process.env.OPENAI_API_KEY,
+          configured: false,
           ...status.openai
         },
         stripe: {

@@ -52,45 +52,6 @@ export default function Sidebar() {
     },
   ];
 
-  const aiTools = [
-    {
-      name: 'AI Assistant',
-      href: '/ai-assistant',
-      icon: Brain,
-      current: location === '/ai-assistant',
-    },
-    {
-      name: 'Frame Recommender',
-      href: '/frame-recommender',
-      icon: Sparkles,
-      current: location === '/frame-recommender',
-    },
-    {
-      name: 'Analytics',
-      href: '/analytics',
-      icon: BarChart3,
-      current: location === '/analytics',
-    },
-    {
-      name: 'Price Structure',
-      href: '/pricing',
-      icon: DollarSign,
-      current: location === '/pricing',
-    },
-    {
-      name: 'Invoices',
-      href: '/invoices',
-      icon: FileText,
-      current: location === '/invoices',
-    },
-    {
-      name: 'Wholesalers',
-      href: '/wholesalers',
-      icon: Building2,
-      current: location === '/wholesalers',
-    },
-  ];
-
   const businessTools = [
     {
       name: 'Vendor Catalog',
@@ -157,30 +118,6 @@ export default function Sidebar() {
               )}
             </Link>
           ))}
-
-          {/* AI Tools Section */}
-          <div className="pt-4">
-            <h3 className="px-3 text-xs font-semibold text-wood-200 uppercase tracking-wider">
-              AI Tools
-            </h3>
-            <div className="mt-2 space-y-1">
-              {aiTools.map((item) => (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  className={cn(
-                    "sidebar-nav-item",
-                    item.current
-                      ? "sidebar-nav-item-active"
-                      : "sidebar-nav-item-inactive"
-                  )}
-                >
-                  <item.icon className="text-wood-200 mr-3 h-6 w-6" />
-                  {item.name}
-                </Link>
-              ))}
-            </div>
-          </div>
 
           {/* Business Tools */}
           <div className="pt-4">

@@ -127,17 +127,28 @@ export const projectSteps = pgTable("project_steps", {
 });
 
 // AI recommendations and insights
-export const aiInsights = pgTable("ai_insights", {
+export const communicationSettings = pgTable("communication_settings", {
   id: serial("id").primaryKey(),
-  type: varchar("type").notNull(), // frame_recommendation, business_insight, inventory_alert, customer_suggestion
-  title: varchar("title").notNull(),
-  description: text("description").notNull(),
-  confidence: decimal("confidence", { precision: 3, scale: 2 }),
-  metadata: jsonb("metadata"),
+  twilioEnabled: boolean("twilio_enabled").default(false),
+  emailEnabled: boolean("email_enabled").default(true),
+  smsEnabled: boolean("sms_enabled").default(false),
+  autoCallsEnabled: boolean("auto_calls_enabled").default(false),
+  callScript: text("call_script"),
+  notificationPhone: varchar("notification_phone", { length: 20 }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const communicationLogs = pgTable("communication_logs", {
+  id: serial("id").primaryKey(),
+  type: varchar("type", { length: 20 }).notNull(), // 'voice', 'sms', 'email'
+  recipient: varchar("recipient", { length: 255 }).notNull(),
   orderId: integer("order_id").references(() => orders.id),
-  customerId: integer("customer_id").references(() => customers.id),
-  actionTaken: boolean("action_taken").default(false),
-  createdAt: timestamp("created_at").defaultNow(),
+  status: varchar("status", { length: 50 }).notNull(),
+  message: text("message"),
+  twilioSid: varchar("twilio_sid", { length: 100 }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 // Business metrics and analytics

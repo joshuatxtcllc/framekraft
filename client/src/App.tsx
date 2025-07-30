@@ -9,14 +9,12 @@ import Landing from "@/pages/landing";
 import Dashboard from "@/pages/dashboard";
 import Orders from "@/pages/orders";
 import Customers from "@/pages/customers";
-import AIAssistant from "@/pages/ai-assistant";
-import APIExplorer from "./pages/api-explorer";
-import IntegrationSettings from "./pages/integration-settings";
 import Pricing from "@/pages/pricing";
 import Invoices from "@/pages/invoices";
 import Wholesalers from "@/pages/wholesalers";
 import Settings from "./pages/settings";
 import VendorCatalog from "./pages/vendor-catalog";
+import Communication from "@/pages/communication";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -33,7 +31,7 @@ function Router() {
           <Route path="/pricing" component={Pricing} />
           <Route path="/invoices" component={Invoices} />
           <Route path="/wholesalers" component={Wholesalers} />
-          <Route path="/ai-assistant" component={AIAssistant} />
+          <Route path="/communication" component={Communication} />
           <Route path="/api-explorer" component={APIExplorer} />
           <Route path="/integration-settings" component={IntegrationSettings} />
           <Route path="/vendor-catalog" component={VendorCatalog} />

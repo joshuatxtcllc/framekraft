@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Edit, Eye, FileText, Printer, Mail, CreditCard } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
@@ -105,8 +105,20 @@ export default function KanbanView({
       const response = await apiRequest("PUT", `/api/orders/${id}`, updateData);
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (updatedOrder) => {
       queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
+      
+      // Trigger communication if status changed and customer has phone
+      if (draggedOrder && draggedOrder.status !== updatedOrder.status && updatedOrder.customer?.phone) {
+        apiRequest("POST", "/api/communication/trigger-status-update", {
+          orderId: updatedOrder.id,
+          oldStatus: draggedOrder.status,
+          newStatus: updatedOrder.status
+        }).catch(error => {
+          console.warn('Communication trigger failed:', error);
+        });
+      }
+      
       toast({
         title: "Order Updated",
         description: "Order status updated successfully!",
@@ -338,6 +350,9 @@ export default function KanbanView({
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Order Details - {selectedOrder?.orderNumber}</DialogTitle>
+            <DialogDescription>
+              Complete order information including customer details, specifications, and status.
+            </DialogDescription>
           </DialogHeader>
           {selectedOrder && (
             <div className="space-y-6">

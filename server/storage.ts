@@ -196,7 +196,7 @@ export class DatabaseStorage implements IStorage {
   async createOrder(orderData: InsertOrder): Promise<Order> {
     try {
       console.log("Storage createOrder called with:", JSON.stringify(orderData, null, 2));
-      
+
       // Validate required fields
       if (!orderData.customerId) {
         throw new Error("Customer ID is required");
@@ -282,7 +282,7 @@ export class DatabaseStorage implements IStorage {
       console.error("Error message:", error?.message);
       console.error("Error stack:", error?.stack);
       console.error("Error code:", error?.code);
-      
+
       // Re-throw with enhanced error information
       throw new Error(`Database insertion failed: ${error?.message || 'Unknown database error'}`);
     }
@@ -664,6 +664,46 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.id, userId))
       .returning();
     return user;
+  }
+
+  // Communication methods
+  async getCommunicationSettings() {
+    const result = await this.db.select().from(communicationSettings).limit(1);
+    return result[0] || null;
+  }
+
+  async updateCommunicationSettings(data: any) {
+    const existing = await this.getCommunicationSettings();
+
+    if (existing) {
+      const result = await this.db.update(communicationSettings)
+        .set({ ...data, updatedAt: new Date() })
+        .where(eq(communicationSettings.id, existing.id))
+        .returning();
+      return result[0];
+    } else {
+      const result = await this.db.insert(communicationSettings).values(data).returning();
+      return result[0];
+    }
+  }
+
+  async createCommunicationLog(data: any) {
+    const result = await this.db.insert(communicationLogs).values(data).returning();
+    return result[0];
+  }
+
+  async getCommunicationLogs() {
+    return await this.db.select().from(communicationLogs)
+      .orderBy(desc(communicationLogs.createdAt))
+      .limit(50);
+  }
+
+  async updateCommunicationLogByTwilioSid(twilioSid: string, data: any) {
+    const result = await this.db.update(communicationLogs)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(communicationLogs.twilioSid, twilioSid))
+      .returning();
+    return result[0];
   }
 }
 
