@@ -15,6 +15,8 @@ import Wholesalers from "@/pages/wholesalers";
 import Settings from "./pages/settings";
 import VendorCatalog from "./pages/vendor-catalog";
 import Communication from "@/pages/communication";
+import APIExplorer from "@/pages/api-explorer";
+import IntegrationSettings from "@/pages/integration-settings";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
