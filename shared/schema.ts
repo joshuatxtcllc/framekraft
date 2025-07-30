@@ -419,8 +419,8 @@ export const insertOrderSchema = createInsertSchema(orders).omit({
   customerId: z.number(),
   // Allow orderNumber to be optional - it will be generated if not provided
   orderNumber: z.string().optional(),
-  // Accept both date strings and Date objects, or null
-  dueDate: z.union([z.string().datetime(), z.date()]).optional().nullable(),
+  // Accept date strings in YYYY-MM-DD format or Date objects, or null
+  dueDate: z.union([z.string().regex(/^\d{4}-\d{2}-\d{2}$/), z.date()]).optional().nullable(),
   completedAt: z.union([z.string().datetime(), z.date()]).optional().nullable(),
   frames: z.array(z.object({
     style: z.string(),

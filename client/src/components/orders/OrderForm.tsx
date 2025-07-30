@@ -10,7 +10,16 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Check, ChevronsUpDown, Calculator } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+  FormDescription,
+} from "@/components/ui/form";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Calendar } from "@/components/ui/calendar";
 import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
@@ -42,6 +51,9 @@ type OrderSubmitData = Omit<OrderFormData, 'customerId' | 'dueDate'> & {
   customerId: number;
   dueDate?: string | null;
   taxExempt?: boolean;
+  totalAmount: string;
+  taxAmount?: string;
+  discountAmount?: string;
 };
 
 interface OrderFormProps {
@@ -307,13 +319,26 @@ export default function OrderForm({
   const selectedMat = matOptions.find(m => m.value === form.watch("matColor"));
 
   const handleFormSubmit = (data: OrderFormData) => {
-    // Transform the data before sending
-    const transformedData: OrderSubmitData = {
+    const baseAmount = parseFloat(data.totalAmount);
+    const quantity = parseInt(data.quantity) || 1;
+    const discount = parseFloat(data.discountPercentage || "0");
+
+    // Calculate amounts
+    const discountAmount = (baseAmount * discount) / 100;
+    const subtotal = baseAmount - discountAmount;
+    const taxAmount = data.taxExempt ? 0 : subtotal * 0.08;
+    const finalTotal = subtotal + taxAmount;
+
+    const submitData: OrderSubmitData = {
       ...data,
       customerId: parseInt(data.customerId),
-      dueDate: data.dueDate ? data.dueDate.toISOString().split('T')[0] : null, // Convert date to YYYY-MM-DD format
+      dueDate: data.dueDate ? data.dueDate.toISOString().split('T')[0] : null,
+      taxExempt: data.taxExempt,
+      totalAmount: finalTotal.toString(),
+      taxAmount: taxAmount.toString(),
+      discountAmount: discountAmount.toString(),
     };
-    onSubmit(transformedData);
+    onSubmit(submitData);
   };
 
   // Get matboard options with area-based pricing from pricing structure
@@ -802,7 +827,7 @@ export default function OrderForm({
                   if (matColor && matColor !== "none") {
                     const unitedInches = artworkWidth + artworkHeight; // 16+20=36
                     const pricePerSquareInch = 0.0109;
-                    matPrice = unitedInches * pricePerSquareInch * quantity;
+                    matPrice = unitedInches * pricePerSquareInch* quantity;
                     matDetails = `${artworkWidth}+${artworkHeight} = ${unitedInches} united inches × $${pricePerSquareInch} × ${quantity} qty`;
                   }
 

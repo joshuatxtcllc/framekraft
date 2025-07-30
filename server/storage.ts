@@ -214,6 +214,11 @@ export class DatabaseStorage implements IStorage {
       const orderNumber = orderData.orderNumber || `FC${Date.now()}`;
       console.log("Generated order number:", orderNumber);
 
+      // Calculate balance amount if not provided
+      const totalAmount = orderData.totalAmount;
+      const depositAmount = orderData.depositAmount || 0;
+      const calculatedBalance = totalAmount - depositAmount;
+
       // Prepare data for database insertion, converting numbers to strings for decimal fields
       const insertData = {
         customerId: orderData.customerId,
@@ -227,7 +232,7 @@ export class DatabaseStorage implements IStorage {
         totalAmount: orderData.totalAmount.toString(),
         depositAmount: orderData.depositAmount?.toString() || "0",
         discountPercentage: orderData.discountPercentage?.toString() || "0",
-        balanceAmount: orderData.balanceAmount?.toString() || null,
+        balanceAmount: orderData.balanceAmount?.toString() || calculatedBalance.toString(),
         taxAmount: orderData.taxAmount?.toString() || "0",
         discountAmount: orderData.discountAmount?.toString() || "0",
         taxExempt: orderData.taxExempt || false,
@@ -235,7 +240,7 @@ export class DatabaseStorage implements IStorage {
         materialsCost: orderData.materialsCost?.toString() || null,
         status: orderData.status || "pending",
         priority: orderData.priority || "normal",
-        dueDate: orderData.dueDate ? (typeof orderData.dueDate === 'string' ? new Date(orderData.dueDate) : orderData.dueDate) : null,
+        dueDate: orderData.dueDate ? (typeof orderData.dueDate === 'string' ? new Date(orderData.dueDate + 'T00:00:00.000Z') : orderData.dueDate) : null,
         completedAt: orderData.completedAt ? (typeof orderData.completedAt === 'string' ? new Date(orderData.completedAt) : orderData.completedAt) : null,
         notes: orderData.notes || null,
         aiRecommendations: orderData.aiRecommendations || null,

@@ -66,10 +66,29 @@ export default function OrderList({
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const { toast } = useToast();
 
-  // View order details
-  const handleViewOrder = (order: Order) => {
+  const handleViewOrder = (order: any) => {
     setSelectedOrder(order);
-    setIsViewDialogOpen(true);
+  };
+
+  const handlePayBalance = (order: any) => {
+    const balanceAmount = parseFloat(order.totalAmount) - parseFloat(order.depositAmount || "0");
+    if (confirm(`Mark balance of $${balanceAmount.toFixed(2)} as paid for order ${order.orderNumber}?`)) {
+      // Update order to mark balance as paid
+      fetch(`/api/orders/${order.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...order,
+          depositAmount: order.totalAmount,
+          status: order.status === "ready" ? "completed" : order.status,
+        }),
+      }).then(() => {
+        // Refresh orders list
+        window.location.reload();
+      });
+    }
   };
 
   // Generate and download invoice PDF
@@ -387,11 +406,10 @@ FrameCraft`;
                   <TableHead>Order #</TableHead>
                   <TableHead>Customer</TableHead>
                   <TableHead>Description</TableHead>
-                  <TableHead>Amount</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Priority</TableHead>
                   <TableHead>Due Date</TableHead>
-                  <TableHead>Created</TableHead>
+                  <TableHead>Amount</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -410,6 +428,21 @@ FrameCraft`;
                       </div>
                     </TableCell>
                     <TableCell>
+                      {getStatusBadge(order.status)}
+                    </TableCell>
+                    <TableCell>
+                      {getPriorityBadge(order.priority)}
+                    </TableCell>
+                    <TableCell>
+                      {order.dueDate ? (
+                        <span className={new Date(order.dueDate) < new Date() ? 'text-red-600 font-medium' : ''}>
+                          {new Date(order.dueDate).toLocaleDateString()}
+                        </span>
+                      ) : (
+                        <span className="text-gray-400">No due date</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
                       <div>
                         <div className="font-medium">
                           {formatCurrency(order.totalAmount)}
@@ -420,18 +453,6 @@ FrameCraft`;
                           </div>
                         )}
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      {getStatusBadge(order.status)}
-                    </TableCell>
-                    <TableCell>
-                      {getPriorityBadge(order.priority)}
-                    </TableCell>
-                    <TableCell>
-                      {order.dueDate ? formatDate(order.dueDate) : "-"}
-                    </TableCell>
-                    <TableCell>
-                      {formatDate(order.createdAt)}
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center space-x-1">

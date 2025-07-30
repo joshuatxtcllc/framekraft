@@ -102,13 +102,13 @@ export default function KanbanView({
         dueDate: data.dueDate || null,
         notes: data.notes || null,
       };
-      
+
       const response = await apiRequest("PUT", `/api/orders/${id}`, updateData);
       return response.json();
     },
     onSuccess: (updatedOrder) => {
       queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
-      
+
       // Trigger communication if status changed and customer has phone
       if (draggedOrder && draggedOrder.status !== updatedOrder.status && updatedOrder.customer?.phone) {
         apiRequest("POST", "/api/communication/trigger-status-update", {
@@ -119,7 +119,7 @@ export default function KanbanView({
           console.warn('Communication trigger failed:', error);
         });
       }
-      
+
       toast({
         title: "Order Updated",
         description: "Order status updated successfully!",
@@ -168,7 +168,7 @@ export default function KanbanView({
       const touch = e.changedTouches[0];
       const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY);
       const dropZone = elementBelow?.closest('[data-drop-zone]');
-      
+
       if (dropZone) {
         const newStatus = dropZone.getAttribute('data-status');
         if (newStatus && draggedOrder.status !== newStatus) {
@@ -199,6 +199,37 @@ export default function KanbanView({
 
   const getOrdersByStatus = (status: string) => {
     return orders.filter(order => order.status === status);
+  };
+
+  const isOverdue = (dueDate?: string) => {
+    if (!dueDate) return false;
+    return new Date(dueDate) < new Date();
+  };
+
+  const handlePayBalance = (order: any) => {
+    const balanceAmount = parseFloat(order.balanceAmount);
+    if (confirm(`Mark balance of $${balanceAmount.toFixed(2)} as paid for order ${order.orderNumber}?`)) {
+      // Update order to mark balance as paid
+      fetch(`/api/orders/${order.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...order,
+          balanceAmount: "0",
+          status: order.status === "ready" ? "completed" : order.status,
+        }),
+      }).then(() => {
+        // Refresh orders using React Query
+        const queryClient = (window as any).queryClient;
+        if (queryClient) {
+          queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
+        } else {
+          window.location.reload();
+        }
+      });
+    }
   };
 
   if (isLoading) {
