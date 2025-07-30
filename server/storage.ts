@@ -230,6 +230,7 @@ export class DatabaseStorage implements IStorage {
         balanceAmount: orderData.balanceAmount?.toString() || null,
         taxAmount: orderData.taxAmount?.toString() || "0",
         discountAmount: orderData.discountAmount?.toString() || "0",
+        taxExempt: orderData.taxExempt || false,
         laborCost: orderData.laborCost?.toString() || null,
         materialsCost: orderData.materialsCost?.toString() || null,
         status: orderData.status || "pending",
@@ -310,6 +311,7 @@ export class DatabaseStorage implements IStorage {
     if (orderData.balanceAmount !== undefined) updateData.balanceAmount = orderData.balanceAmount.toString();
     if (orderData.taxAmount !== undefined) updateData.taxAmount = orderData.taxAmount.toString();
     if (orderData.discountAmount !== undefined) updateData.discountAmount = orderData.discountAmount.toString();
+    if (orderData.taxExempt !== undefined) updateData.taxExempt = orderData.taxExempt;
     if (orderData.laborCost !== undefined) updateData.laborCost = orderData.laborCost.toString();
     if (orderData.materialsCost !== undefined) updateData.materialsCost = orderData.materialsCost.toString();
     if (orderData.status !== undefined) updateData.status = orderData.status;

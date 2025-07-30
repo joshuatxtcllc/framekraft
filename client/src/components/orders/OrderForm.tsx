@@ -29,6 +29,7 @@ const orderSchema = z.object({
   totalAmount: z.string().min(1, "Total amount is required"),
   depositAmount: z.string().optional(),
   discountPercentage: z.string().optional(),
+  taxExempt: z.boolean().default(false),
   status: z.string().default("pending"),
   priority: z.string().default("normal"),
   dueDate: z.date().optional(),
@@ -40,6 +41,7 @@ type OrderFormData = z.infer<typeof orderSchema>;
 type OrderSubmitData = Omit<OrderFormData, 'customerId' | 'dueDate'> & {
   customerId: number;
   dueDate?: string | null;
+  taxExempt?: boolean;
 };
 
 interface OrderFormProps {
@@ -90,6 +92,7 @@ export default function OrderForm({
       totalAmount: initialData?.totalAmount ? initialData.totalAmount.toString() : "",
       depositAmount: initialData?.depositAmount ? initialData.depositAmount.toString() : "",
       discountPercentage: initialData?.discountPercentage ? initialData.discountPercentage.toString() : "",
+      taxExempt: initialData?.taxExempt || false,
       status: initialData?.status || "pending",
       priority: initialData?.priority || "normal",
       dueDate: initialData?.dueDate ? new Date(initialData.dueDate) : undefined,
@@ -122,28 +125,26 @@ export default function OrderForm({
     return 1.25; // 25% markup for 80+ united inches
   };
 
-  // Advanced united inch-based pricing calculation
+  // Advanced united inch-based pricing calculation with tax
   const calculatePrice = () => {
     const frameStyle = form.watch("frameStyle");
     const glazing = form.watch("glazing");
     const dimensions = form.watch("dimensions");
     const matColor = form.watch("matColor");
     const quantity = parseInt(form.watch("quantity") || "1");
+    const taxExempt = form.watch("taxExempt");
 
-    if (!dimensions) return 0;
+    if (!dimensions) return { subtotal: 0, tax: 0, total: 0 };
 
     // Parse dimensions (handles formats like "16x20", "16 x 20", "16\"x20\"", "16X20")
     const dimensionMatch = dimensions.match(/(\d+(?:\.\d+)?)(?:["']?)(?:\s*[xX×]\s*)(\d+(?:\.\d+)?)(?:["']?)/i);
-    if (!dimensionMatch) return 0;
+    if (!dimensionMatch) return { subtotal: 0, tax: 0, total: 0 };
 
     const artworkWidth = parseFloat(dimensionMatch[1]);
     const artworkHeight = parseFloat(dimensionMatch[2]);
     const matWidth = 2; // Standard 2" mat border
 
-    // Calculate united inches (core measurement for custom framing)
-    const unitedInches = artworkWidth + artworkHeight + (matWidth * 4);
-
-    // Calculate frame price with advanced pricing
+    // Calculate frame price with advanced pricing - FIXED: multiply by quantity for frame moulding
     let framePrice = 0;
     if (frameStyle && frameStyle !== "none" && priceStructure && Array.isArray(priceStructure)) {
       const frameItem = priceStructure.find((item: any) => 
@@ -158,8 +159,8 @@ export default function OrderForm({
         const framePerimeterFeet = framePerimeterInches / 12;
         const pricePerFoot = parseFloat(frameItem.basePrice);
 
-        // Wholesale cost = feet × price per foot, then round up to nearest dollar
-        const wholesaleCost = Math.ceil(framePerimeterFeet * pricePerFoot);
+        // Wholesale cost = feet × price per foot × quantity, then round up to nearest dollar
+        const wholesaleCost = Math.ceil(framePerimeterFeet * pricePerFoot * quantity);
 
         // Apply sliding scale retail markup based on price per foot
         const markupFactor = getFrameMarkupFactor(pricePerFoot);
@@ -172,7 +173,7 @@ export default function OrderForm({
     if (matColor && matColor !== "none") {
       const unitedInches = artworkWidth + artworkHeight; // 16+20=36 for your example
       const pricePerSquareInch = 0.0109; // $0.0109 per square inch
-      matPrice = unitedInches * pricePerSquareInch;
+      matPrice = unitedInches * pricePerSquareInch * quantity;
     }
 
     // Calculate glass price using proper united inch-based markup without location discounts
@@ -189,33 +190,39 @@ export default function OrderForm({
         const glassAreaFeet = (glassWidth * glassHeight) / 144;
         const unitedInches = glassWidth + glassHeight;
         const markupFactor = getGlassMarkupFactor(unitedInches);
-        glazingPrice = glassAreaFeet * parseFloat(glazingItem.basePrice) * markupFactor;
+        glazingPrice = glassAreaFeet * parseFloat(glazingItem.basePrice) * markupFactor * quantity;
       }
     }
 
-    // Calculate total with all components including overhead
-    let totalPrice = framePrice + matPrice + glazingPrice + laborCost + overheadCost;
-
-    // Multiply by quantity
-    totalPrice = totalPrice * quantity;
+    // Calculate subtotal with all components including overhead (labor and overhead per quantity)
+    let subtotal = framePrice + matPrice + glazingPrice + (laborCost * quantity) + (overheadCost * quantity);
 
     // Apply discount if specified
     const discountPercentage = parseFloat(form.watch("discountPercentage") || "0");
     if (discountPercentage > 0) {
-      totalPrice = totalPrice * (1 - discountPercentage / 100);
+      subtotal = subtotal * (1 - discountPercentage / 100);
     }
 
-    return Math.round(totalPrice * 100) / 100; // Round to 2 decimal places
+    // Calculate tax (8% unless tax exempt)
+    const taxRate = 0.08;
+    const tax = taxExempt ? 0 : subtotal * taxRate;
+    const total = subtotal + tax;
+
+    return { 
+      subtotal: Math.round(subtotal * 100) / 100,
+      tax: Math.round(tax * 100) / 100,
+      total: Math.round(total * 100) / 100
+    };
   };
 
   // Watch for changes and recalculate price (include matColor for united inch calculations)
   useEffect(() => {
-    const newPrice = calculatePrice();
-    setCalculatedPrice(newPrice);
-    if (newPrice > 0 && useCalculatedPrice) {
-      form.setValue("totalAmount", newPrice.toFixed(2));
+    const pricing = calculatePrice();
+    setCalculatedPrice(pricing.total);
+    if (pricing.total > 0 && useCalculatedPrice) {
+      form.setValue("totalAmount", pricing.total.toFixed(2));
     }
-  }, [form.watch("frameStyle"), form.watch("glazing"), form.watch("dimensions"), form.watch("matColor"), form.watch("quantity"), form.watch("discountPercentage"), priceStructure, laborCost, useCalculatedPrice]);
+  }, [form.watch("frameStyle"), form.watch("glazing"), form.watch("dimensions"), form.watch("matColor"), form.watch("quantity"), form.watch("discountPercentage"), form.watch("taxExempt"), priceStructure, laborCost, useCalculatedPrice]);
 
   // Get frame options with wholesale prices from pricing structure
   const frameOptions = [
@@ -753,6 +760,8 @@ export default function OrderForm({
                   const matColor = form.watch("matColor");
                   const dimensions = form.watch("dimensions");
                   const quantity = parseInt(form.watch("quantity") || "1");
+                  const taxExempt = form.watch("taxExempt");
+                  const pricing = calculatePrice();
 
                   if (!dimensions) {
                     return <p>Enter dimensions to see calculation</p>;
@@ -767,7 +776,7 @@ export default function OrderForm({
                   const artworkHeight = parseFloat(dimensionMatch[2]);
                   const matWidth = 2; // Standard 2" mat border
 
-                  // Calculate frame price with mat border (if selected)
+                  // Calculate frame price with mat border (if selected) - FIXED for quantity
                   let framePrice = 0;
                   let frameDetails = "";
                   if (frameStyle && frameStyle !== "none" && priceStructure && Array.isArray(priceStructure)) {
@@ -780,10 +789,10 @@ export default function OrderForm({
                       const framePerimeterInches = (frameWidth * 2) + (frameHeight * 2);
                       const framePerimeterFeet = framePerimeterInches / 12;
                       const pricePerFoot = parseFloat(frameItem.basePrice);
-                      const wholesaleCost = Math.ceil(framePerimeterFeet * pricePerFoot);
+                      const wholesaleCost = Math.ceil(framePerimeterFeet * pricePerFoot * quantity);
                       const markupFactor = getFrameMarkupFactor(pricePerFoot);
                       framePrice = wholesaleCost * markupFactor;
-                      frameDetails = `${frameWidth}×${frameHeight} = ${framePerimeterInches}" = ${framePerimeterFeet.toFixed(2)} ft × $${pricePerFoot}/ft = $${wholesaleCost} × ${markupFactor}x`;
+                      frameDetails = `${frameWidth}×${frameHeight} = ${framePerimeterInches}" = ${framePerimeterFeet.toFixed(2)} ft × $${pricePerFoot}/ft × ${quantity} qty = $${wholesaleCost} × ${markupFactor}x`;
                     }
                   }
 
@@ -793,8 +802,8 @@ export default function OrderForm({
                   if (matColor && matColor !== "none") {
                     const unitedInches = artworkWidth + artworkHeight; // 16+20=36
                     const pricePerSquareInch = 0.0109;
-                    matPrice = unitedInches * pricePerSquareInch;
-                    matDetails = `${artworkWidth}+${artworkHeight} = ${unitedInches} united inches × $${pricePerSquareInch}`;
+                    matPrice = unitedInches * pricePerSquareInch * quantity;
+                    matDetails = `${artworkWidth}+${artworkHeight} = ${unitedInches} united inches × $${pricePerSquareInch} × ${quantity} qty`;
                   }
 
                   // Calculate glazing price - glass size matches frame size
@@ -810,8 +819,8 @@ export default function OrderForm({
                       const glassAreaFeet = (glassWidth * glassHeight) / 144;
                       const unitedInches = glassWidth + glassHeight;
                       const markupFactor = getGlassMarkupFactor(unitedInches);
-                      glazingPrice = glassAreaFeet * parseFloat(glazingItem.basePrice) * markupFactor;
-                      glazingDetails = `${glassWidth}×${glassHeight} = ${glassAreaFeet.toFixed(2)} sq ft × $${glazingItem.basePrice}/sq ft × ${markupFactor}x`;
+                      glazingPrice = glassAreaFeet * parseFloat(glazingItem.basePrice) * markupFactor * quantity;
+                      glazingDetails = `${glassWidth}×${glassHeight} = ${glassAreaFeet.toFixed(2)} sq ft × $${glazingItem.basePrice}/sq ft × ${markupFactor}x × ${quantity} qty`;
                     }
                   }
 
@@ -852,43 +861,44 @@ export default function OrderForm({
                         </div>
                       )}
                       <div className="flex justify-between">
-                        <span>Labor:</span>
-                        <span>${laborCost.toFixed(2)}</span>
+                        <span>Labor (${laborCost} × {quantity}):</span>
+                        <span>${(laborCost * quantity).toFixed(2)}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span>Overhead:</span>
-                        <span>${overheadCost.toFixed(2)}</span>
+                        <span>Overhead (${overheadCost} × {quantity}):</span>
+                        <span>${(overheadCost * quantity).toFixed(2)}</span>
                       </div>
                       {(() => {
                         const discountPercentage = parseFloat(form.watch("discountPercentage") || "0");
-                        const subtotal = framePrice + matPrice + glazingPrice + laborCost + overheadCost;
 
                         if (discountPercentage > 0) {
                           return (
                             <>
                               <div className="flex justify-between">
-                                <span>Subtotal:</span>
-                                <span>${subtotal.toFixed(2)}</span>
+                                <span>Subtotal (before discount):</span>
+                                <span>${(pricing.subtotal / (1 - discountPercentage / 100)).toFixed(2)}</span>
                               </div>
                               <div className="flex justify-between text-red-600">
                                 <span>Discount ({discountPercentage}%):</span>
-                                <span>-${(subtotal * discountPercentage / 100).toFixed(2)}</span>
-                              </div>
-                              <div className="border-t pt-1 mt-1 font-semibold flex justify-between">
-                                <span>Total:</span>
-                                <span>${calculatedPrice.toFixed(2)}</span>
+                                <span>-${((pricing.subtotal / (1 - discountPercentage / 100)) - pricing.subtotal).toFixed(2)}</span>
                               </div>
                             </>
                           );
-                        } else {
-                          return (
-                            <div className="border-t pt-1 mt-1 font-semibold flex justify-between">
-                              <span>Total:</span>
-                              <span>${calculatedPrice.toFixed(2)}</span>
-                            </div>
-                          );
                         }
+                        return null;
                       })()}
+                      <div className="flex justify-between">
+                        <span>Subtotal:</span>
+                        <span>${pricing.subtotal.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Tax (8%{taxExempt ? " - EXEMPT" : ""}):</span>
+                        <span>${pricing.tax.toFixed(2)}</span>
+                      </div>
+                      <div className="border-t pt-1 mt-1 font-semibold flex justify-between">
+                        <span>Total:</span>
+                        <span>${pricing.total.toFixed(2)}</span>
+                      </div>
                       <div className="text-xs text-green-600 mt-1">
                         <span>Industry-standard united inch pricing methodology</span>
                       </div>
@@ -916,7 +926,7 @@ export default function OrderForm({
           )}
         </Card>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
           {/* Discount Percentage */}
           <FormField
             control={form.control}
@@ -934,6 +944,30 @@ export default function OrderForm({
                     {...field}
                   />
                 </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          {/* Tax Exempt */}
+          <FormField
+            control={form.control}
+            name="taxExempt"
+            render={({ field }) => (
+              <FormItem className="flex flex-col justify-end">
+                <FormLabel>Tax Status</FormLabel>
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="taxExempt"
+                    checked={field.value}
+                    onChange={field.onChange}
+                    className="w-4 h-4"
+                  />
+                  <label htmlFor="taxExempt" className="text-sm">
+                    Tax Exempt
+                  </label>
+                </div>
                 <FormMessage />
               </FormItem>
             )}

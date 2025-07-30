@@ -84,6 +84,7 @@ export const orders = pgTable("orders", {
   aiRecommendations: jsonb("ai_recommendations"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+  taxExempt: boolean("tax_exempt").default(false),
 });
 
 // Order line items with precise vendor product tracking
@@ -430,6 +431,7 @@ export const insertOrderSchema = createInsertSchema(orders).omit({
     width: z.number().positive().default(2), // Mat width in inches
     quantity: z.number().int().positive().default(1),
   })).optional(),
+  taxExempt: z.boolean().optional(),
 });
 
 export const insertProjectStepSchema = createInsertSchema(projectSteps).omit({
