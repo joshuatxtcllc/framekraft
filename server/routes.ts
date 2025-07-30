@@ -285,8 +285,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Communication routes
-  app.use('/api/communication', require('./routes/communication').default);
+  // Communication routes - commented out until communication routes module is created
+  // app.use('/api/communication', require('./routes/communication').default);
 
   // Document generation and email routes
   app.post('/api/orders/email-document', isAuthenticated, async (req, res) => {

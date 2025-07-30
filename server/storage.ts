@@ -12,6 +12,8 @@ import {
   invoices,
   invoiceItems,
   payments,
+  communicationSettings,
+  communicationLogs,
   type User,
   type UpsertUser,
   type InsertCustomer,
@@ -523,12 +525,19 @@ export class DatabaseStorage implements IStorage {
         productCode: wholesalerProducts.productCode,
         productName: wholesalerProducts.productName,
         category: wholesalerProducts.category,
+        subcategory: wholesalerProducts.subcategory,
         description: wholesalerProducts.description,
+        specifications: wholesalerProducts.specifications,
         unitType: wholesalerProducts.unitType,
         wholesalePrice: wholesalerProducts.wholesalePrice,
         suggestedRetail: wholesalerProducts.suggestedRetail,
         minQuantity: wholesalerProducts.minQuantity,
+        packSize: wholesalerProducts.packSize,
         leadTime: wholesalerProducts.leadTime,
+        stockStatus: wholesalerProducts.stockStatus,
+        vendorCatalogPage: wholesalerProducts.vendorCatalogPage,
+        imageUrl: wholesalerProducts.imageUrl,
+        dataSheetUrl: wholesalerProducts.dataSheetUrl,
         isActive: wholesalerProducts.isActive,
         lastUpdated: wholesalerProducts.lastUpdated,
         createdAt: wholesalerProducts.createdAt,
@@ -668,7 +677,7 @@ export class DatabaseStorage implements IStorage {
 
   // Communication methods
   async getCommunicationSettings() {
-    const result = await this.db.select().from(communicationSettings).limit(1);
+    const result = await db.select().from(communicationSettings).limit(1);
     return result[0] || null;
   }
 
@@ -676,30 +685,30 @@ export class DatabaseStorage implements IStorage {
     const existing = await this.getCommunicationSettings();
 
     if (existing) {
-      const result = await this.db.update(communicationSettings)
+      const result = await db.update(communicationSettings)
         .set({ ...data, updatedAt: new Date() })
         .where(eq(communicationSettings.id, existing.id))
         .returning();
       return result[0];
     } else {
-      const result = await this.db.insert(communicationSettings).values(data).returning();
+      const result = await db.insert(communicationSettings).values(data).returning();
       return result[0];
     }
   }
 
   async createCommunicationLog(data: any) {
-    const result = await this.db.insert(communicationLogs).values(data).returning();
+    const result = await db.insert(communicationLogs).values(data).returning();
     return result[0];
   }
 
   async getCommunicationLogs() {
-    return await this.db.select().from(communicationLogs)
+    return await db.select().from(communicationLogs)
       .orderBy(desc(communicationLogs.createdAt))
       .limit(50);
   }
 
   async updateCommunicationLogByTwilioSid(twilioSid: string, data: any) {
-    const result = await this.db.update(communicationLogs)
+    const result = await db.update(communicationLogs)
       .set({ ...data, updatedAt: new Date() })
       .where(eq(communicationLogs.twilioSid, twilioSid))
       .returning();

@@ -127,6 +127,19 @@ export const projectSteps = pgTable("project_steps", {
 });
 
 // AI recommendations and insights
+export const aiInsights = pgTable("ai_insights", {
+  id: serial("id").primaryKey(),
+  orderId: integer("order_id").references(() => orders.id),
+  customerId: integer("customer_id").references(() => customers.id),
+  insightType: varchar("insight_type").notNull(), // pricing_opportunity, upsell_suggestion, efficiency_improvement
+  title: varchar("title").notNull(),
+  description: text("description").notNull(),
+  severity: varchar("severity").default("medium"), // low, medium, high, critical
+  actionTaken: boolean("action_taken").default(false),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const communicationSettings = pgTable("communication_settings", {
   id: serial("id").primaryKey(),
   twilioEnabled: boolean("twilio_enabled").default(false),
