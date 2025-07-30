@@ -41,7 +41,6 @@ export default function Orders() {
         totalAmount: parseFloat(data.totalAmount),
         depositAmount: data.depositAmount ? parseFloat(data.depositAmount) : 0,
         discountPercentage: data.discountPercentage ? parseFloat(data.discountPercentage) : 0,
-        taxExempt: data.taxExempt || false,
         status: data.status || 'pending',
         priority: data.priority || 'normal',
         dueDate: data.dueDate || null,
@@ -70,15 +69,15 @@ export default function Orders() {
         response: error?.response,
         status: error?.status
       });
-      
+
       let errorMessage = "Failed to create order. Please try again.";
-      
+
       // Parse API error response if available
       if (error?.response) {
         try {
           const errorData = error.response;
           console.log("API error response:", errorData);
-          
+
           if (errorData?.details?.type === 'validation') {
             errorMessage = `Validation failed: ${errorData.details.issues?.map((i: any) => i.message).join(', ') || 'Invalid data provided'}`;
           } else if (errorData?.details?.type === 'foreign_key') {
@@ -94,7 +93,7 @@ export default function Orders() {
       } else if (error?.message) {
         errorMessage = error.message;
       }
-      
+
       toast({
         title: "Error Creating Order",
         description: errorMessage,
@@ -117,7 +116,6 @@ export default function Orders() {
         totalAmount: parseFloat(data.totalAmount),
         depositAmount: data.depositAmount ? parseFloat(data.depositAmount) : 0,
         discountPercentage: data.discountPercentage ? parseFloat(data.discountPercentage) : 0,
-        taxExempt: data.taxExempt || false,
         status: data.status,
         priority: data.priority,
         dueDate: data.dueDate || null,
@@ -318,36 +316,6 @@ FrameCraft`;
         });
     };
 
-    // Handle balance payment
-    const handlePayBalance = async (order: any) => {
-        try {
-            const remainingBalance = parseFloat(order.totalAmount) - parseFloat(order.depositAmount || '0');
-            
-            // Update order to mark balance as paid
-            const updatedOrderData = {
-                ...order,
-                depositAmount: order.totalAmount, // Set deposit to full amount
-                status: order.status === 'ready' ? 'completed' : order.status, // Mark as completed if ready
-                notes: order.notes ? `${order.notes}\n\nBalance paid: $${remainingBalance.toFixed(2)} on ${new Date().toLocaleDateString()}` 
-                    : `Balance paid: $${remainingBalance.toFixed(2)} on ${new Date().toLocaleDateString()}`
-            };
-
-            updateOrderMutation.mutate({ id: order.id, ...updatedOrderData });
-            
-            toast({
-                title: "Balance Payment Recorded",
-                description: `Remaining balance of $${remainingBalance.toFixed(2)} has been marked as paid for order ${order.orderNumber}.`,
-            });
-        } catch (error) {
-            console.error('Balance payment error:', error);
-            toast({
-                title: "Error",
-                description: "Failed to record balance payment. Please try again.",
-                variant: "destructive",
-            });
-        }
-    };
-
   return (
     <div className="min-h-screen flex bg-background">
       <Sidebar />
@@ -432,7 +400,6 @@ FrameCraft`;
                   onPrintInvoice={handlePrintInvoice}
                   onEmailInvoice={handleEmailInvoice}
                   onProcessPayment={handleProcessPayment}
-                  onPayBalance={handlePayBalance}
                 />
               ) : (
                 <KanbanView
@@ -444,7 +411,6 @@ FrameCraft`;
                   onPrintInvoice={handlePrintInvoice}
                   onEmailInvoice={handleEmailInvoice}
                   onProcessPayment={handleProcessPayment}
-                  onPayBalance={handlePayBalance}
                 />
               )}
             </div>
