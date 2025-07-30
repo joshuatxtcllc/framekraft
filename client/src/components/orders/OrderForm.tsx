@@ -100,7 +100,7 @@ export default function OrderForm({
       quantity: initialData?.quantity ? initialData.quantity.toString() : "1",
       frameStyle: initialData?.frameStyle || "",
       matColor: initialData?.matColor || "",
-      glazing: initialData?.glazing || "",
+      glazing: initialData?.glazing || "Museum Glass",
       totalAmount: initialData?.totalAmount ? initialData.totalAmount.toString() : "",
       depositAmount: initialData?.depositAmount ? initialData.depositAmount.toString() : "",
       discountPercentage: initialData?.discountPercentage ? initialData.discountPercentage.toString() : "",
@@ -732,7 +732,7 @@ export default function OrderForm({
                       <SelectValue placeholder="Select glazing" />
                     </SelectTrigger>
                   </FormControl>
-                  <SelectContent>
+                  <SelectContent className="max-h-60 overflow-y-auto">
                     {glazingOptionsWithPrices.map((option) => (
                       <SelectItem key={option.value} value={option.value}>
                         {option.label}
@@ -825,7 +825,7 @@ export default function OrderForm({
                   let matPrice = 0;
                   let matDetails = "";
                   if (matColor && matColor !== "none") {
-                    const unitedInches = artworkWidth + artworkHeight; // 16+20=36
+                    const unitedInches = artworkWidth + artworkHeight; // 16+20=36 for your example
                     const pricePerSquareInch = 0.0109;
                     matPrice = unitedInches * pricePerSquareInch* quantity;
                     matDetails = `${artworkWidth}+${artworkHeight} = ${unitedInches} united inches × $${pricePerSquareInch} × ${quantity} qty`;
