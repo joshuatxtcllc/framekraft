@@ -13,6 +13,7 @@ import { registerInvoiceRoutes } from "./routes/invoices";
 import { registerFileUploadRoutes } from "./routes/fileUpload";
 import settingsRoutes from './routes/settings.js';
 import vendorCatalogRoutes from './routes/vendorCatalog.js';
+import inventoryRoutes from "./routes/inventory.js";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
@@ -404,6 +405,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerFileUploadRoutes(app);
   app.use('/api/settings', settingsRoutes);
   app.use('/api/vendor', vendorCatalogRoutes);
+  app.use('/api/inventory', inventoryRoutes);
 
   const httpServer = createServer(app);
   return httpServer;

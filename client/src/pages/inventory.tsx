@@ -1,45 +1,83 @@
 
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Sidebar from "@/components/layout/Sidebar";
 import Header from "@/components/layout/Header";
+import InventoryForm from "@/components/inventory/InventoryForm";
+import StockAdjustmentDialog from "@/components/inventory/StockAdjustmentDialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Package, AlertTriangle, Search, Plus, TrendingDown, Boxes } from "lucide-react";
+import { Package, AlertTriangle, Search, TrendingDown, Boxes, Trash2, Edit } from "lucide-react";
+import { toast } from "sonner";
+import type { Inventory } from "../../../shared/schema";
 
-export default function Inventory() {
+export default function InventoryPage() {
   const [searchTerm, setSearchTerm] = useState("");
 
-  // Mock inventory data - in real app this would come from API
-  const mockInventory = [
-    { id: 1, name: "Black Wood Frame - 1\"", category: "frames", sku: "BWF001", stock: 25, lowStockThreshold: 10, cost: 8.50, retailPrice: 15.99, supplier: "FrameCo" },
-    { id: 2, name: "White Mat Board - 32x40", category: "mats", sku: "WMB32", stock: 3, lowStockThreshold: 5, cost: 12.00, retailPrice: 25.00, supplier: "MatSupply" },
-    { id: 3, name: "Museum Glass - 16x20", category: "glass", sku: "MG1620", stock: 8, lowStockThreshold: 3, cost: 35.00, retailPrice: 75.00, supplier: "GlassPro" },
-    { id: 4, name: "Gold Ornate Frame - 2\"", category: "frames", sku: "GOF002", stock: 12, lowStockThreshold: 8, cost: 22.00, retailPrice: 45.99, supplier: "LuxFrames" },
-    { id: 5, name: "Cream Mat Board - 32x40", category: "mats", sku: "CMB32", stock: 15, lowStockThreshold: 10, cost: 12.00, retailPrice: 25.00, supplier: "MatSupply" },
-    { id: 6, name: "Regular Glass - 11x14", category: "glass", sku: "RG1114", stock: 20, lowStockThreshold: 15, cost: 8.00, retailPrice: 18.00, supplier: "GlassPro" },
-  ];
+  const queryClient = useQueryClient();
 
-  const filteredInventory = mockInventory.filter(item =>
-    item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    item.sku.toLowerCase().includes(searchTerm.toLowerCase())
+  // Fetch inventory data
+  const { data: inventory = [], isLoading } = useQuery<Inventory[]>({
+    queryKey: ["/api/inventory"],
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const response = await fetch(`/api/inventory/${id}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) throw new Error("Failed to delete item");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/inventory"] });
+      toast.success("Inventory item deleted successfully");
+    },
+    onError: () => {
+      toast.error("Failed to delete inventory item");
+    },
+  });
+
+  const filteredInventory = inventory.filter(item =>
+    item.itemName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (item.supplier && item.supplier.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    item.category.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const lowStockItems = mockInventory.filter(item => item.stock <= item.lowStockThreshold);
-  const totalValue = mockInventory.reduce((sum, item) => sum + (item.stock * item.cost), 0);
-  const totalItems = mockInventory.reduce((sum, item) => sum + item.stock, 0);
+  const lowStockItems = inventory.filter(item => (item.quantity || 0) <= (item.minQuantity || 0));
+  const totalValue = inventory.reduce((sum, item) => sum + ((item.quantity || 0) * parseFloat(item.unitCost || "0")), 0);
+  const totalItems = inventory.reduce((sum, item) => sum + (item.quantity || 0), 0);
 
   const getCategoryIcon = (category: string) => {
     switch (category) {
       case 'frames': return Package;
       case 'mats': return Boxes;
-      case 'glass': return Package;
+      case 'glazing': return Package;
       default: return Package;
     }
   };
+
+  const handleDelete = (id: number, itemName: string) => {
+    if (confirm(`Are you sure you want to delete "${itemName}"?`)) {
+      deleteMutation.mutate(id);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex bg-background">
+        <Sidebar />
+        <div className="lg:pl-64 flex flex-col flex-1">
+          <Header />
+          <main className="flex-1 flex items-center justify-center">
+            <div>Loading inventory...</div>
+          </main>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex bg-background">
@@ -65,10 +103,7 @@ export default function Inventory() {
                     <TrendingDown className="w-4 h-4 mr-2" />
                     Export Report
                   </Button>
-                  <Button>
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add Item
-                  </Button>
+                  <InventoryForm />
                 </div>
               </div>
 
@@ -113,7 +148,7 @@ export default function Inventory() {
                     <Package className="h-4 w-4 text-muted-foreground" />
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold">{mockInventory.length}</div>
+                    <div className="text-2xl font-bold">{inventory.length}</div>
                     <p className="text-xs text-muted-foreground">Unique products</p>
                   </CardContent>
                 </Card>
@@ -124,7 +159,6 @@ export default function Inventory() {
                   <TabsTrigger value="all-items">All Items</TabsTrigger>
                   <TabsTrigger value="low-stock">Low Stock</TabsTrigger>
                   <TabsTrigger value="categories">By Category</TabsTrigger>
-                  <TabsTrigger value="suppliers">Suppliers</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="all-items" className="space-y-4">
@@ -135,7 +169,7 @@ export default function Inventory() {
                       <div className="flex items-center space-x-2">
                         <Search className="w-4 h-4 text-muted-foreground" />
                         <Input
-                          placeholder="Search by name or SKU..."
+                          placeholder="Search by name, supplier, or category..."
                           value={searchTerm}
                           onChange={(e) => setSearchTerm(e.target.value)}
                           className="max-w-sm"
@@ -143,39 +177,63 @@ export default function Inventory() {
                       </div>
                     </CardHeader>
                     <CardContent>
-                      <div className="space-y-4">
-                        {filteredInventory.map((item) => {
-                          const Icon = getCategoryIcon(item.category);
-                          const isLowStock = item.stock <= item.lowStockThreshold;
-                          
-                          return (
-                            <div key={item.id} className="flex items-center justify-between p-4 border rounded-lg">
-                              <div className="flex items-center space-x-4">
-                                <Icon className="w-8 h-8 text-muted-foreground" />
-                                <div>
-                                  <div className="font-medium">{item.name}</div>
-                                  <div className="text-sm text-muted-foreground">SKU: {item.sku}</div>
-                                  <div className="text-sm text-muted-foreground">Supplier: {item.supplier}</div>
+                      {filteredInventory.length === 0 ? (
+                        <div className="text-center py-8 text-muted-foreground">
+                          {inventory.length === 0 ? "No inventory items yet. Add your first item to get started." : "No items match your search."}
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          {filteredInventory.map((item) => {
+                            const Icon = getCategoryIcon(item.category);
+                            const isLowStock = (item.quantity || 0) <= (item.minQuantity || 0);
+                            
+                            return (
+                              <div key={item.id} className="flex items-center justify-between p-4 border rounded-lg">
+                                <div className="flex items-center space-x-4">
+                                  <Icon className="w-8 h-8 text-muted-foreground" />
+                                  <div>
+                                    <div className="font-medium">{item.itemName}</div>
+                                    <div className="text-sm text-muted-foreground capitalize">{item.category}</div>
+                                    {item.supplier && (
+                                      <div className="text-sm text-muted-foreground">Supplier: {item.supplier}</div>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="flex items-center space-x-4">
+                                  <div className="text-right space-y-1">
+                                    <div className="font-semibold">
+                                      Stock: {item.quantity || 0}
+                                      {isLowStock && (
+                                        <Badge variant="destructive" className="ml-2">Low Stock</Badge>
+                                      )}
+                                    </div>
+                                    <div className="text-sm text-muted-foreground">
+                                      Min: {item.minQuantity || 0} | Cost: ${parseFloat(item.unitCost || "0").toFixed(2)}
+                                    </div>
+                                    <div className="text-sm text-muted-foreground">
+                                      Value: ${((item.quantity || 0) * parseFloat(item.unitCost || "0")).toFixed(2)}
+                                    </div>
+                                  </div>
+                                  <div className="flex flex-col space-y-2">
+                                    <StockAdjustmentDialog item={item} />
+                                    <div className="flex space-x-2">
+                                      <InventoryForm item={item} />
+                                      <Button
+                                        variant="destructive"
+                                        size="sm"
+                                        onClick={() => handleDelete(item.id, item.itemName)}
+                                        disabled={deleteMutation.isPending}
+                                      >
+                                        <Trash2 className="w-4 h-4" />
+                                      </Button>
+                                    </div>
+                                  </div>
                                 </div>
                               </div>
-                              <div className="text-right space-y-1">
-                                <div className="font-semibold">
-                                  Stock: {item.stock}
-                                  {isLowStock && (
-                                    <Badge variant="destructive" className="ml-2">Low Stock</Badge>
-                                  )}
-                                </div>
-                                <div className="text-sm text-muted-foreground">
-                                  Cost: ${item.cost} | Retail: ${item.retailPrice}
-                                </div>
-                                <div className="text-sm text-muted-foreground">
-                                  Value: ${(item.stock * item.cost).toFixed(2)}
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
+                            );
+                          })}
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 </TabsContent>
@@ -204,21 +262,23 @@ export default function Inventory() {
                                 <div className="flex items-center space-x-4">
                                   <Icon className="w-8 h-8 text-orange-600" />
                                   <div>
-                                    <div className="font-medium">{item.name}</div>
-                                    <div className="text-sm text-muted-foreground">SKU: {item.sku}</div>
-                                    <div className="text-sm text-muted-foreground">Supplier: {item.supplier}</div>
+                                    <div className="font-medium">{item.itemName}</div>
+                                    <div className="text-sm text-muted-foreground capitalize">{item.category}</div>
+                                    {item.supplier && (
+                                      <div className="text-sm text-muted-foreground">Supplier: {item.supplier}</div>
+                                    )}
                                   </div>
                                 </div>
-                                <div className="text-right space-y-1">
-                                  <Badge variant="destructive">
-                                    {item.stock} / {item.lowStockThreshold} threshold
-                                  </Badge>
-                                  <div className="text-sm text-muted-foreground">
-                                    Suggested reorder: {item.lowStockThreshold * 2} units
+                                <div className="flex items-center space-x-4">
+                                  <div className="text-right space-y-1">
+                                    <Badge variant="destructive">
+                                      {item.quantity || 0} / {item.minQuantity || 0} threshold
+                                    </Badge>
+                                    <div className="text-sm text-muted-foreground">
+                                      Suggested reorder: {(item.minQuantity || 0) * 2} units
+                                    </div>
                                   </div>
-                                  <Button size="sm" className="mt-2">
-                                    Reorder
-                                  </Button>
+                                  <StockAdjustmentDialog item={item} />
                                 </div>
                               </div>
                             );
@@ -231,11 +291,13 @@ export default function Inventory() {
 
                 <TabsContent value="categories" className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {['frames', 'mats', 'glass'].map((category) => {
-                      const categoryItems = mockInventory.filter(item => item.category === category);
-                      const categoryValue = categoryItems.reduce((sum, item) => sum + (item.stock * item.cost), 0);
-                      const categoryStock = categoryItems.reduce((sum, item) => sum + item.stock, 0);
+                    {['frames', 'mats', 'glazing', 'hardware', 'supplies', 'other'].map((category) => {
+                      const categoryItems = inventory.filter(item => item.category === category);
+                      const categoryValue = categoryItems.reduce((sum, item) => sum + ((item.quantity || 0) * parseFloat(item.unitCost || "0")), 0);
+                      const categoryStock = categoryItems.reduce((sum, item) => sum + (item.quantity || 0), 0);
                       const Icon = getCategoryIcon(category);
+                      
+                      if (categoryItems.length === 0) return null;
                       
                       return (
                         <Card key={category}>
@@ -265,38 +327,6 @@ export default function Inventory() {
                       );
                     })}
                   </div>
-                </TabsContent>
-
-                <TabsContent value="suppliers" className="space-y-4">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Supplier Summary</CardTitle>
-                      <CardDescription>Inventory breakdown by supplier</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-4">
-                        {['FrameCo', 'MatSupply', 'GlassPro', 'LuxFrames'].map((supplier) => {
-                          const supplierItems = mockInventory.filter(item => item.supplier === supplier);
-                          const supplierValue = supplierItems.reduce((sum, item) => sum + (item.stock * item.cost), 0);
-                          
-                          return (
-                            <div key={supplier} className="flex items-center justify-between p-4 border rounded-lg">
-                              <div>
-                                <div className="font-medium">{supplier}</div>
-                                <div className="text-sm text-muted-foreground">
-                                  {supplierItems.length} products
-                                </div>
-                              </div>
-                              <div className="text-right">
-                                <div className="font-semibold">${supplierValue.toFixed(2)}</div>
-                                <div className="text-sm text-muted-foreground">Inventory value</div>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </CardContent>
-                  </Card>
                 </TabsContent>
               </Tabs>
             </div>
