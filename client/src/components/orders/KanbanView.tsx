@@ -85,9 +85,11 @@ export default function KanbanView({
 
   const updateOrderMutation = useMutation({
     mutationFn: async ({ id, ...data }: any) => {
+      console.log('Updating order with data:', { id, ...data });
+      
       // Clean and format the data properly
       const updateData = {
-        customerId: parseInt(data.customerId),
+        customerId: data.customer?.id || parseInt(data.customerId),
         orderNumber: data.orderNumber,
         description: data.description,
         artworkDescription: data.artworkDescription || null,
@@ -103,7 +105,14 @@ export default function KanbanView({
         notes: data.notes || null,
       };
 
+      console.log('Sending update data:', updateData);
+      
       const response = await apiRequest("PUT", `/api/orders/${id}`, updateData);
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('API response error:', errorText);
+        throw new Error(`Update failed: ${response.status} ${errorText}`);
+      }
       return response.json();
     },
     onSuccess: (updatedOrder) => {
@@ -260,6 +269,7 @@ export default function KanbanView({
 
   const moveOrderToStage = (order: Order, direction: 'previous' | 'next') => {
     console.log('Moving order:', order.orderNumber, 'from', order.status, 'direction:', direction);
+    console.log('Full order object:', order);
     
     const currentIndex = getCurrentStageIndex(order.status);
     console.log('Current stage index:', currentIndex);
@@ -278,10 +288,40 @@ export default function KanbanView({
     const newStatus = stages[newIndex].id;
     console.log('Moving to new status:', newStatus);
     
-    updateOrderMutation.mutate({
+    // Create a proper update object with all required fields
+    const updateData = {
       id: order.id,
-      ...order,
+      customerId: order.customer?.id,
+      orderNumber: order.orderNumber,
+      description: order.description,
+      artworkDescription: order.artworkDescription,
+      dimensions: order.dimensions,
+      frameStyle: order.frameStyle,
+      matColor: order.matColor,
+      glazing: order.glazing,
+      totalAmount: order.totalAmount,
+      depositAmount: order.depositAmount,
       status: newStatus,
+      priority: order.priority,
+      dueDate: order.dueDate,
+      notes: order.notes,
+      customer: order.customer
+    };
+    
+    console.log('Updating with data:', updateData);
+    
+    updateOrderMutation.mutate(updateData, {
+      onSuccess: (result) => {
+        console.log('Order updated successfully:', result);
+      },
+      onError: (error) => {
+        console.error('Failed to update order:', error);
+        toast({
+          title: "Error",
+          description: `Failed to move order: ${error.message}`,
+          variant: "destructive",
+        });
+      }
     });
   };
 
@@ -429,7 +469,8 @@ export default function KanbanView({
                                 onClick={(e) => {
                                   e.preventDefault();
                                   e.stopPropagation();
-                                  console.log('Left arrow clicked for order:', order.orderNumber);
+                                  console.log('Left arrow clicked for order:', order.orderNumber, order);
+                                  console.log('Current stage:', order.status, 'Index:', getCurrentStageIndex(order.status));
                                   moveOrderToStage(order, 'previous');
                                 }}
                                 className="h-6 w-6 p-0 hover:bg-blue-50"
@@ -448,7 +489,8 @@ export default function KanbanView({
                                 onClick={(e) => {
                                   e.preventDefault();
                                   e.stopPropagation();
-                                  console.log('Right arrow clicked for order:', order.orderNumber);
+                                  console.log('Right arrow clicked for order:', order.orderNumber, order);
+                                  console.log('Current stage:', order.status, 'Index:', getCurrentStageIndex(order.status));
                                   moveOrderToStage(order, 'next');
                                 }}
                                 className="h-6 w-6 p-0 hover:bg-green-50"
