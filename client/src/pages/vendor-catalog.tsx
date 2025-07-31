@@ -278,11 +278,13 @@ export default function VendorCatalog() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Suppliers</SelectItem>
-                    {wholesalers.map((supplier) => (
-                      <SelectItem key={supplier.id} value={supplier.companyName}>
-                        {supplier.companyName}
-                      </SelectItem>
-                    ))}
+                    {wholesalers
+                      .filter((supplier) => supplier.companyName && supplier.companyName.trim() !== '')
+                      .map((supplier) => (
+                        <SelectItem key={supplier.id} value={supplier.companyName}>
+                          {supplier.companyName}
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
               </div>
