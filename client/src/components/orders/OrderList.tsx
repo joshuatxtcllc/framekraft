@@ -448,8 +448,13 @@ FrameCraft`;
                           {formatCurrency(order.totalAmount)}
                         </div>
                         {order.depositAmount && parseFloat(order.depositAmount) > 0 && (
-                          <div className="text-xs text-muted-foreground">
-                            Deposit: {formatCurrency(order.depositAmount)}
+                          <div className="text-xs space-y-1">
+                            <div className="text-muted-foreground">
+                              Deposit: {formatCurrency(order.depositAmount)}
+                            </div>
+                            <div className="text-red-600 font-medium">
+                              Balance: {formatCurrency((parseFloat(order.totalAmount) - parseFloat(order.depositAmount)).toString())}
+                            </div>
                           </div>
                         )}
                       </div>

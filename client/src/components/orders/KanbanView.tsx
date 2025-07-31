@@ -463,7 +463,7 @@ export default function KanbanView({
                     <span className="font-medium">Deposit:</span> ${selectedOrder.depositAmount ? parseFloat(selectedOrder.depositAmount).toFixed(2) : '0.00'}
                   </div>
                   <div>
-                    <span className="font-medium">Balance Due:</span> ${(parseFloat(selectedOrder.totalAmount) - (selectedOrder.depositAmount ? parseFloat(selectedOrder.depositAmount) : 0)).toFixed(2)}
+                    <span className="font-medium">Balance Due:</span> <span className="text-red-600 font-semibold">${(parseFloat(selectedOrder.totalAmount) - (selectedOrder.depositAmount ? parseFloat(selectedOrder.depositAmount) : 0)).toFixed(2)}</span>
                   </div>
                 </div>
               </div>
