@@ -160,41 +160,84 @@ export default function KanbanView({
   // Enhanced touch events for mobile support
   const [touchStartPosition, setTouchStartPosition] = useState<{ x: number; y: number } | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [touchTimer, setTouchTimer] = useState<NodeJS.Timeout | null>(null);
 
   const handleTouchStart = (e: React.TouchEvent, order: Order) => {
-    e.preventDefault();
+    e.stopPropagation();
+    
     const touch = e.touches[0];
     setTouchStartPosition({ x: touch.clientX, y: touch.clientY });
     setDraggedOrder(order);
     setIsDragging(false);
     
-    // Add visual feedback
+    // Clear any existing timer
+    if (touchTimer) {
+      clearTimeout(touchTimer);
+    }
+    
+    // Add immediate visual feedback
     const target = e.currentTarget as HTMLElement;
-    target.style.opacity = '0.7';
-    target.style.transform = 'scale(1.05)';
+    target.style.opacity = '0.8';
+    target.style.transform = 'scale(1.02)';
+    target.style.transition = 'all 0.1s ease';
+    
+    // Set a timer to start "drag mode" after 300ms of holding
+    const timer = setTimeout(() => {
+      setIsDragging(true);
+      target.style.opacity = '0.6';
+      target.style.transform = 'scale(1.05)';
+      target.style.zIndex = '1000';
+      target.style.boxShadow = '0 8px 25px rgba(0,0,0,0.3)';
+    }, 300);
+    
+    setTouchTimer(timer);
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    e.preventDefault();
     if (!touchStartPosition || !draggedOrder) return;
-
+    
     const touch = e.touches[0];
     const deltaX = Math.abs(touch.clientX - touchStartPosition.x);
     const deltaY = Math.abs(touch.clientY - touchStartPosition.y);
 
-    // Start dragging if moved more than 10px
-    if (deltaX > 10 || deltaY > 10) {
+    // If we've moved significantly, clear the timer and start dragging immediately
+    if ((deltaX > 10 || deltaY > 10) && !isDragging) {
+      if (touchTimer) {
+        clearTimeout(touchTimer);
+        setTouchTimer(null);
+      }
       setIsDragging(true);
+      
+      // Update visual feedback
+      const target = e.currentTarget as HTMLElement;
+      target.style.opacity = '0.6';
+      target.style.transform = 'scale(1.05)';
+      target.style.zIndex = '1000';
+      target.style.boxShadow = '0 8px 25px rgba(0,0,0,0.3)';
+    }
+    
+    // Prevent scrolling when dragging
+    if (isDragging) {
+      e.preventDefault();
     }
   };
 
   const handleTouchEnd = (e: React.TouchEvent) => {
-    e.preventDefault();
+    e.stopPropagation();
+    
+    // Clear any pending timer
+    if (touchTimer) {
+      clearTimeout(touchTimer);
+      setTouchTimer(null);
+    }
     
     // Reset visual feedback
     const target = e.currentTarget as HTMLElement;
     target.style.opacity = '';
     target.style.transform = '';
+    target.style.transition = '';
+    target.style.zIndex = '';
+    target.style.boxShadow = '';
 
     if (draggedOrder && isDragging) {
       const touch = e.changedTouches[0];
@@ -287,7 +330,7 @@ export default function KanbanView({
       {/* Mobile Instructions */}
       <div className="md:hidden bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
         <p className="text-sm text-blue-800">
-          <strong>Mobile Tip:</strong> Touch an order card and drag it horizontally to a different column to update its status. The card will highlight when dragging starts.
+          <strong>Mobile Tip:</strong> Press and hold an order card, then drag it to a different column to update its status. The card will change appearance when ready to drag.
         </p>
       </div>
 
@@ -317,17 +360,20 @@ export default function KanbanView({
                 {stageOrders.map((order) => (
                   <Card 
                     key={order.id} 
-                    className="cursor-move hover:shadow-md transition-all duration-200 touch-none select-none"
+                    className={`cursor-move hover:shadow-md transition-shadow duration-200 select-none ${
+                      isDragging && draggedOrder?.id === order.id ? 'pointer-events-none' : ''
+                    }`}
                     draggable
                     onDragStart={(e) => handleDragStart(e, order)}
                     onTouchStart={(e) => handleTouchStart(e, order)}
                     onTouchMove={handleTouchMove}
                     onTouchEnd={handleTouchEnd}
                     style={{
-                      touchAction: 'none',
+                      touchAction: 'manipulation',
                       userSelect: 'none',
                       WebkitUserSelect: 'none',
-                      WebkitTouchCallout: 'none'
+                      WebkitTouchCallout: 'none',
+                      position: 'relative'
                     }}
                   >
                     <CardContent className="p-3">
