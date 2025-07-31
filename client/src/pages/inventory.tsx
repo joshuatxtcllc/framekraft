@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Sidebar from "@/components/layout/Sidebar";
@@ -82,10 +81,10 @@ export default function InventoryPage() {
   return (
     <div className="min-h-screen flex bg-background">
       <Sidebar />
-      
+
       <div className="lg:pl-64 flex flex-col flex-1">
         <Header />
-        
+
         <main className="flex-1">
           <div className="py-6">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
@@ -186,7 +185,7 @@ export default function InventoryPage() {
                           {filteredInventory.map((item) => {
                             const Icon = getCategoryIcon(item.category);
                             const isLowStock = (item.quantity || 0) <= (item.minQuantity || 0);
-                            
+
                             return (
                               <div key={item.id} className="flex items-center justify-between p-4 border rounded-lg">
                                 <div className="flex items-center space-x-4">
@@ -256,7 +255,7 @@ export default function InventoryPage() {
                         <div className="space-y-4">
                           {lowStockItems.map((item) => {
                             const Icon = getCategoryIcon(item.category);
-                            
+
                             return (
                               <div key={item.id} className="flex items-center justify-between p-4 border rounded-lg border-orange-200">
                                 <div className="flex items-center space-x-4">
@@ -296,9 +295,9 @@ export default function InventoryPage() {
                       const categoryValue = categoryItems.reduce((sum, item) => sum + ((item.quantity || 0) * parseFloat(item.unitCost || "0")), 0);
                       const categoryStock = categoryItems.reduce((sum, item) => sum + (item.quantity || 0), 0);
                       const Icon = getCategoryIcon(category);
-                      
+
                       if (categoryItems.length === 0) return null;
-                      
+
                       return (
                         <Card key={category}>
                           <CardHeader>
