@@ -172,19 +172,25 @@ export default function KanbanView({
 
   const handleTouchStart = (e: React.TouchEvent, order: Order) => {
     try {
-      e.preventDefault();
       const touch = e.touches[0];
       if (!touch) return;
 
+      // Check if the touch started on a button or interactive element
+      const target = e.target as Element;
+      if (target.closest('button') || target.closest('[role="button"]')) {
+        return; // Don't interfere with button interactions
+      }
+
+      e.preventDefault();
       setTouchStartPosition({ x: touch.clientX, y: touch.clientY });
       setDraggedOrder(order);
       setIsDragging(false);
 
       // Add visual feedback
-      const target = e.currentTarget as HTMLElement;
-      if (target) {
-        target.style.opacity = '0.7';
-        target.style.transform = 'scale(1.05)';
+      const cardElement = e.currentTarget as HTMLElement;
+      if (cardElement) {
+        cardElement.style.opacity = '0.7';
+        cardElement.style.transform = 'scale(1.05)';
       }
     } catch (error) {
       console.error('Touch start error:', error);
@@ -199,8 +205,8 @@ export default function KanbanView({
       const deltaX = Math.abs(touch.clientX - touchStartPosition.x);
       const deltaY = Math.abs(touch.clientY - touchStartPosition.y);
 
-      // Start dragging if moved more than 10px
-      if (deltaX > 10 || deltaY > 10) {
+      // Start dragging if moved more than 15px (increased threshold)
+      if (deltaX > 15 || deltaY > 15) {
         e.preventDefault();
         setIsDragging(true);
       }
@@ -473,9 +479,10 @@ export default function KanbanView({
                                   console.log('Current stage:', order.status, 'Index:', getCurrentStageIndex(order.status));
                                   moveOrderToStage(order, 'previous');
                                 }}
-                                className="h-6 w-6 p-0 hover:bg-blue-50"
+                                className="h-6 w-6 p-0 hover:bg-blue-50 touch-manipulation"
                                 title="Move to previous stage"
                                 data-testid={`button-move-left-${order.id}`}
+                                style={{ touchAction: 'manipulation' }}
                               >
                                 <ChevronLeft className="h-3 w-3" />
                               </Button>
@@ -493,9 +500,10 @@ export default function KanbanView({
                                   console.log('Current stage:', order.status, 'Index:', getCurrentStageIndex(order.status));
                                   moveOrderToStage(order, 'next');
                                 }}
-                                className="h-6 w-6 p-0 hover:bg-green-50"
+                                className="h-6 w-6 p-0 hover:bg-green-50 touch-manipulation"
                                 title="Move to next stage"
                                 data-testid={`button-move-right-${order.id}`}
+                                style={{ touchAction: 'manipulation' }}
                               >
                                 <ChevronRight className="h-3 w-3" />
                               </Button>
@@ -507,18 +515,28 @@ export default function KanbanView({
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => handleViewOrder(order)}
-                              className="h-6 w-6 p-0"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleViewOrder(order);
+                              }}
+                              className="h-6 w-6 p-0 touch-manipulation"
                               data-testid={`button-view-${order.id}`}
+                              style={{ touchAction: 'manipulation' }}
                             >
                               <Eye className="h-3 w-3" />
                             </Button>
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => onEdit(order)}
-                              className="h-6 w-6 p-0"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                onEdit(order);
+                              }}
+                              className="h-6 w-6 p-0 touch-manipulation"
                               data-testid={`button-edit-${order.id}`}
+                              style={{ touchAction: 'manipulation' }}
                             >
                               <Edit className="h-3 w-3" />
                             </Button>
@@ -526,9 +544,14 @@ export default function KanbanView({
                               <Button
                                 size="sm"
                                 variant="outline"
-                                onClick={() => onGenerateInvoice(order)}
-                                className="h-6 w-6 p-0"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  onGenerateInvoice(order);
+                                }}
+                                className="h-6 w-6 p-0 touch-manipulation"
                                 data-testid={`button-generate-invoice-${order.id}`}
+                                style={{ touchAction: 'manipulation' }}
                               >
                                 <FileText className="h-3 w-3" />
                               </Button>
@@ -537,9 +560,14 @@ export default function KanbanView({
                               <Button
                                 size="sm"
                                 variant="outline"
-                                onClick={() => onPrintInvoice(order)}
-                                className="h-6 w-6 p-0"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  onPrintInvoice(order);
+                                }}
+                                className="h-6 w-6 p-0 touch-manipulation"
                                 data-testid={`button-print-${order.id}`}
+                                style={{ touchAction: 'manipulation' }}
                               >
                                 <Printer className="h-3 w-3" />
                               </Button>
