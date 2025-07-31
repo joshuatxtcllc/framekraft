@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Edit, Eye, FileText, Printer, Mail, CreditCard, ChevronLeft, ChevronRight } from "lucide-react";
+import { Edit, Eye, FileText, Printer, Mail, CreditCard, ArrowRight } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -80,6 +80,9 @@ export default function KanbanView({
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [draggedOrder, setDraggedOrder] = useState<Order | null>(null);
+  const [statusChangeOrder, setStatusChangeOrder] = useState<Order | null>(null);
+  const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false);
+  const [lastTap, setLastTap] = useState<number | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -89,7 +92,7 @@ export default function KanbanView({
       
       // Clean and format the data properly
       const updateData = {
-        customerId: data.customer?.id || parseInt(data.customerId),
+        customerId: data.customerId || data.customer?.id,
         orderNumber: data.orderNumber,
         description: data.description,
         artworkDescription: data.artworkDescription || null,
@@ -158,7 +161,6 @@ export default function KanbanView({
     e.preventDefault();
     if (draggedOrder && draggedOrder.status !== newStatus) {
       updateOrderMutation.mutate({
-        id: draggedOrder.id,
         ...draggedOrder,
         status: newStatus,
       });
@@ -235,7 +237,6 @@ export default function KanbanView({
           const newStatus = dropZone.getAttribute('data-status') as Order['status'];
           if (newStatus && newStatus !== draggedOrder.status) {
             updateOrderMutation.mutate({
-              id: draggedOrder.id,
               ...draggedOrder,
               status: newStatus,
             }, {
@@ -260,6 +261,30 @@ export default function KanbanView({
     setIsViewDialogOpen(true);
   };
 
+  // Double-tap handler for mobile status change
+  const handleDoubleTap = (order: Order) => {
+    const now = Date.now();
+    const DOUBLE_TAP_DELAY = 300;
+    
+    if (lastTap && (now - lastTap) < DOUBLE_TAP_DELAY) {
+      // Double tap detected - open status picker
+      setStatusChangeOrder(order);
+      setIsStatusDialogOpen(true);
+    }
+    setLastTap(now);
+  };
+
+  const handleStatusChange = (newStatus: string) => {
+    if (statusChangeOrder && statusChangeOrder.status !== newStatus) {
+      updateOrderMutation.mutate({
+        ...statusChangeOrder,
+        status: newStatus,
+      });
+    }
+    setIsStatusDialogOpen(false);
+    setStatusChangeOrder(null);
+  };
+
   const stages = [
     { id: 'pending', title: 'Order Processed', color: 'bg-blue-500' },
     { id: 'measuring', title: 'Measuring', color: 'bg-yellow-500' },
@@ -269,67 +294,7 @@ export default function KanbanView({
     { id: 'completed', title: 'Completed', color: 'bg-gray-500' },
   ];
 
-  const getCurrentStageIndex = (status: string) => {
-    return stages.findIndex(stage => stage.id === status);
-  };
 
-  const moveOrderToStage = (order: Order, direction: 'previous' | 'next') => {
-    console.log('Moving order:', order.orderNumber, 'from', order.status, 'direction:', direction);
-    console.log('Full order object:', order);
-    
-    const currentIndex = getCurrentStageIndex(order.status);
-    console.log('Current stage index:', currentIndex);
-    
-    let newIndex;
-    
-    if (direction === 'previous' && currentIndex > 0) {
-      newIndex = currentIndex - 1;
-    } else if (direction === 'next' && currentIndex < stages.length - 1) {
-      newIndex = currentIndex + 1;
-    } else {
-      console.log('Cannot move in that direction');
-      return; // No movement possible
-    }
-
-    const newStatus = stages[newIndex].id;
-    console.log('Moving to new status:', newStatus);
-    
-    // Create a proper update object with all required fields
-    const updateData = {
-      id: order.id,
-      customerId: order.customer?.id,
-      orderNumber: order.orderNumber,
-      description: order.description,
-      artworkDescription: order.artworkDescription,
-      dimensions: order.dimensions,
-      frameStyle: order.frameStyle,
-      matColor: order.matColor,
-      glazing: order.glazing,
-      totalAmount: order.totalAmount,
-      depositAmount: order.depositAmount,
-      status: newStatus,
-      priority: order.priority,
-      dueDate: order.dueDate,
-      notes: order.notes,
-      customer: order.customer
-    };
-    
-    console.log('Updating with data:', updateData);
-    
-    updateOrderMutation.mutate(updateData, {
-      onSuccess: (result) => {
-        console.log('Order updated successfully:', result);
-      },
-      onError: (error) => {
-        console.error('Failed to update order:', error);
-        toast({
-          title: "Error",
-          description: `Failed to move order: ${error.message}`,
-          variant: "destructive",
-        });
-      }
-    });
-  };
 
   const getOrdersByStatus = (status: string) => {
     return orders.filter(order => order.status === status);
@@ -464,115 +429,79 @@ export default function KanbanView({
                           )}
                         </div>
 
-                        {/* Status Navigation Arrows */}
-                        <div className="flex justify-between items-center pt-2 border-t">
-                          <div className="flex gap-1">
-                            {/* Move Left Arrow */}
-                            {getCurrentStageIndex(order.status) > 0 && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  console.log('Left arrow clicked for order:', order.orderNumber, order);
-                                  console.log('Current stage:', order.status, 'Index:', getCurrentStageIndex(order.status));
-                                  moveOrderToStage(order, 'previous');
-                                }}
-                                className="h-6 w-6 p-0 hover:bg-blue-50 touch-manipulation"
-                                title="Move to previous stage"
-                                data-testid={`button-move-left-${order.id}`}
-                                style={{ touchAction: 'manipulation' }}
-                              >
-                                <ChevronLeft className="h-3 w-3" />
-                              </Button>
-                            )}
-                            
-                            {/* Move Right Arrow */}
-                            {getCurrentStageIndex(order.status) < stages.length - 1 && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  console.log('Right arrow clicked for order:', order.orderNumber, order);
-                                  console.log('Current stage:', order.status, 'Index:', getCurrentStageIndex(order.status));
-                                  moveOrderToStage(order, 'next');
-                                }}
-                                className="h-6 w-6 p-0 hover:bg-green-50 touch-manipulation"
-                                title="Move to next stage"
-                                data-testid={`button-move-right-${order.id}`}
-                                style={{ touchAction: 'manipulation' }}
-                              >
-                                <ChevronRight className="h-3 w-3" />
-                              </Button>
-                            )}
-                          </div>
-
-                          {/* Action Buttons */}
-                          <div className="flex gap-1">
+                        {/* Action Buttons */}
+                        <div className="flex gap-1 pt-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleViewOrder(order);
+                            }}
+                            className="h-6 w-6 p-0"
+                            data-testid={`button-view-${order.id}`}
+                          >
+                            <Eye className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              onEdit(order);
+                            }}
+                            className="h-6 w-6 p-0"
+                            data-testid={`button-edit-${order.id}`}
+                          >
+                            <Edit className="h-3 w-3" />
+                          </Button>
+                          {/* Mobile Status Picker Button */}
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setStatusChangeOrder(order);
+                              setIsStatusDialogOpen(true);
+                            }}
+                            className="h-6 w-6 p-0 md:hidden"
+                            title="Change Status"
+                            data-testid={`button-status-${order.id}`}
+                          >
+                            <ArrowRight className="h-3 w-3" />
+                          </Button>
+                          {onGenerateInvoice && (
                             <Button
                               size="sm"
                               variant="outline"
                               onClick={(e) => {
                                 e.preventDefault();
                                 e.stopPropagation();
-                                handleViewOrder(order);
+                                onGenerateInvoice(order);
                               }}
-                              className="h-6 w-6 p-0 touch-manipulation"
-                              data-testid={`button-view-${order.id}`}
-                              style={{ touchAction: 'manipulation' }}
+                              className="h-6 w-6 p-0"
+                              data-testid={`button-generate-invoice-${order.id}`}
                             >
-                              <Eye className="h-3 w-3" />
+                              <FileText className="h-3 w-3" />
                             </Button>
+                          )}
+                          {onPrintInvoice && (
                             <Button
                               size="sm"
                               variant="outline"
                               onClick={(e) => {
                                 e.preventDefault();
                                 e.stopPropagation();
-                                onEdit(order);
+                                onPrintInvoice(order);
                               }}
-                              className="h-6 w-6 p-0 touch-manipulation"
-                              data-testid={`button-edit-${order.id}`}
-                              style={{ touchAction: 'manipulation' }}
+                              className="h-6 w-6 p-0"
+                              data-testid={`button-print-${order.id}`}
                             >
-                              <Edit className="h-3 w-3" />
+                              <Printer className="h-3 w-3" />
                             </Button>
-                            {onGenerateInvoice && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  onGenerateInvoice(order);
-                                }}
-                                className="h-6 w-6 p-0 touch-manipulation"
-                                data-testid={`button-generate-invoice-${order.id}`}
-                                style={{ touchAction: 'manipulation' }}
-                              >
-                                <FileText className="h-3 w-3" />
-                              </Button>
-                            )}
-                            {onPrintInvoice && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  onPrintInvoice(order);
-                                }}
-                                className="h-6 w-6 p-0 touch-manipulation"
-                                data-testid={`button-print-${order.id}`}
-                                style={{ touchAction: 'manipulation' }}
-                              >
-                                <Printer className="h-3 w-3" />
-                              </Button>
-                            )}
-                          </div>
+                          )}
                         </div>
                       </div>
                     </CardContent>
