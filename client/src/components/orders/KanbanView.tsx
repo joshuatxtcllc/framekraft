@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Edit, Eye, FileText, Printer, Mail, CreditCard } from "lucide-react";
+import { Edit, Eye, FileText, Printer, Mail, CreditCard, ChevronLeft, ChevronRight } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -254,6 +254,30 @@ export default function KanbanView({
     { id: 'completed', title: 'Completed', color: 'bg-gray-500' },
   ];
 
+  const getCurrentStageIndex = (status: string) => {
+    return stages.findIndex(stage => stage.id === status);
+  };
+
+  const moveOrderToStage = (order: Order, direction: 'previous' | 'next') => {
+    const currentIndex = getCurrentStageIndex(order.status);
+    let newIndex;
+    
+    if (direction === 'previous' && currentIndex > 0) {
+      newIndex = currentIndex - 1;
+    } else if (direction === 'next' && currentIndex < stages.length - 1) {
+      newIndex = currentIndex + 1;
+    } else {
+      return; // No movement possible
+    }
+
+    const newStatus = stages[newIndex].id;
+    updateOrderMutation.mutate({
+      id: order.id,
+      ...order,
+      status: newStatus,
+    });
+  };
+
   const getOrdersByStatus = (status: string) => {
     return orders.filter(order => order.status === status);
   };
@@ -309,7 +333,7 @@ export default function KanbanView({
       {/* Mobile Instructions */}
       <div className="md:hidden bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
         <p className="text-sm text-blue-800">
-          <strong>Mobile Tip:</strong> Press and hold an order card, then drag it to a different column to update its status. The card will change appearance when ready to drag.
+          <strong>Mobile Tip:</strong> Use the arrow buttons (← →) at the bottom of each card to move orders between stages, or press and hold to drag cards between columns.
         </p>
       </div>
 
@@ -387,48 +411,81 @@ export default function KanbanView({
                           )}
                         </div>
 
-                        {/* Action Buttons */}
-                        <div className="flex gap-1 pt-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleViewOrder(order)}
-                            className="h-6 w-6 p-0"
-                            data-testid={`button-view-${order.id}`}
-                          >
-                            <Eye className="h-3 w-3" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => onEdit(order)}
-                            className="h-6 w-6 p-0"
-                            data-testid={`button-edit-${order.id}`}
-                          >
-                            <Edit className="h-3 w-3" />
-                          </Button>
-                          {onGenerateInvoice && (
+                        {/* Status Navigation Arrows */}
+                        <div className="flex justify-between items-center pt-2 border-t">
+                          <div className="flex gap-1">
+                            {/* Move Left Arrow */}
+                            {getCurrentStageIndex(order.status) > 0 && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => moveOrderToStage(order, 'previous')}
+                                className="h-6 w-6 p-0 hover:bg-blue-50"
+                                title="Move to previous stage"
+                                data-testid={`button-move-left-${order.id}`}
+                              >
+                                <ChevronLeft className="h-3 w-3" />
+                              </Button>
+                            )}
+                            
+                            {/* Move Right Arrow */}
+                            {getCurrentStageIndex(order.status) < stages.length - 1 && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => moveOrderToStage(order, 'next')}
+                                className="h-6 w-6 p-0 hover:bg-green-50"
+                                title="Move to next stage"
+                                data-testid={`button-move-right-${order.id}`}
+                              >
+                                <ChevronRight className="h-3 w-3" />
+                              </Button>
+                            )}
+                          </div>
+
+                          {/* Action Buttons */}
+                          <div className="flex gap-1">
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => onGenerateInvoice(order)}
+                              onClick={() => handleViewOrder(order)}
                               className="h-6 w-6 p-0"
-                              data-testid={`button-generate-invoice-${order.id}`}
+                              data-testid={`button-view-${order.id}`}
                             >
-                              <FileText className="h-3 w-3" />
+                              <Eye className="h-3 w-3" />
                             </Button>
-                          )}
-                          {onPrintInvoice && (
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => onPrintInvoice(order)}
+                              onClick={() => onEdit(order)}
                               className="h-6 w-6 p-0"
-                              data-testid={`button-print-${order.id}`}
+                              data-testid={`button-edit-${order.id}`}
                             >
-                              <Printer className="h-3 w-3" />
+                              <Edit className="h-3 w-3" />
                             </Button>
-                          )}
+                            {onGenerateInvoice && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => onGenerateInvoice(order)}
+                                className="h-6 w-6 p-0"
+                                data-testid={`button-generate-invoice-${order.id}`}
+                              >
+                                <FileText className="h-3 w-3" />
+                              </Button>
+                            )}
+                            {onPrintInvoice && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => onPrintInvoice(order)}
+                                className="h-6 w-6 p-0"
+                                data-testid={`button-print-${order.id}`}
+                              >
+                                <Printer className="h-3 w-3" />
+                              </Button>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </CardContent>
