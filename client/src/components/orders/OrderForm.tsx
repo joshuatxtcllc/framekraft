@@ -180,12 +180,21 @@ export default function OrderForm({
       }
     }
 
-    // Calculate mat price using united inches: 16+20=36 united inches at $0.0109 per square inch
+    // Calculate mat price using united inches method as specified in pricing documentation
     let matPrice = 0;
-    if (matColor && matColor !== "none") {
-      const unitedInches = artworkWidth + artworkHeight; // 16+20=36 for your example
-      const pricePerSquareInch = 0.0109; // $0.0109 per square inch
-      matPrice = unitedInches * pricePerSquareInch * quantity;
+    let matDetails = "";
+    if (matColor && matColor !== "none" && priceStructure && Array.isArray(priceStructure)) {
+      const matItem = priceStructure.find((item: any) => 
+        item && item.category === "mat" && item.itemName === matColor
+      );
+      if (matItem) {
+        // Use united inches method: width + height (not square inches)
+        const unitedInches = artworkWidth + artworkHeight + (matWidth * 4); // Add mat border to united inches
+        const markupFactor = getMatMarkupFactor(unitedInches);
+        const baseMatCost = 17; // Base cost per piece as documented
+        matPrice = baseMatCost * markupFactor * quantity;
+        matDetails = `United inches: ${artworkWidth} + ${artworkHeight} + ${matWidth * 4} = ${unitedInches}" × $${baseMatCost} base × ${markupFactor}x markup × ${quantity} qty = $${matPrice.toFixed(2)}`;
+      }
     }
 
     // Calculate glass price using proper united inch-based markup without location discounts
@@ -821,14 +830,21 @@ export default function OrderForm({
                     }
                   }
 
-                  // Calculate mat price using united inches: 16+20=36 at $0.0109 per square inch
+                  // Calculate mat price using united inches method as specified in pricing documentation
                   let matPrice = 0;
                   let matDetails = "";
-                  if (matColor && matColor !== "none") {
-                    const unitedInches = artworkWidth + artworkHeight; // 16+20=36 for your example
-                    const pricePerSquareInch = 0.0109;
-                    matPrice = unitedInches * pricePerSquareInch* quantity;
-                    matDetails = `${artworkWidth}+${artworkHeight} = ${unitedInches} united inches × $${pricePerSquareInch} × ${quantity} qty`;
+                  if (matColor && matColor !== "none" && priceStructure && Array.isArray(priceStructure)) {
+                    const matItem = priceStructure.find((item: any) => 
+                      item && item.category === "mat" && item.itemName === matColor
+                    );
+                    if (matItem) {
+                      // Use united inches method: width + height (not square inches)
+                      const unitedInches = artworkWidth + artworkHeight + (matWidth * 4); // Add mat border to united inches
+                      const markupFactor = getMatMarkupFactor(unitedInches);
+                      const baseMatCost = 17; // Base cost per piece as documented
+                      matPrice = baseMatCost * markupFactor * quantity;
+                      matDetails = `United inches: ${artworkWidth} + ${artworkHeight} + ${matWidth * 4} = ${unitedInches}" × $${baseMatCost} base × ${markupFactor}x markup × ${quantity} qty = $${matPrice.toFixed(2)}`;
+                    }
                   }
 
                   // Calculate glazing price - glass size matches frame size
