@@ -259,7 +259,11 @@ export default function KanbanView({
   };
 
   const moveOrderToStage = (order: Order, direction: 'previous' | 'next') => {
+    console.log('Moving order:', order.orderNumber, 'from', order.status, 'direction:', direction);
+    
     const currentIndex = getCurrentStageIndex(order.status);
+    console.log('Current stage index:', currentIndex);
+    
     let newIndex;
     
     if (direction === 'previous' && currentIndex > 0) {
@@ -267,10 +271,13 @@ export default function KanbanView({
     } else if (direction === 'next' && currentIndex < stages.length - 1) {
       newIndex = currentIndex + 1;
     } else {
+      console.log('Cannot move in that direction');
       return; // No movement possible
     }
 
     const newStatus = stages[newIndex].id;
+    console.log('Moving to new status:', newStatus);
+    
     updateOrderMutation.mutate({
       id: order.id,
       ...order,
@@ -419,7 +426,12 @@ export default function KanbanView({
                               <Button
                                 size="sm"
                                 variant="outline"
-                                onClick={() => moveOrderToStage(order, 'previous')}
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  console.log('Left arrow clicked for order:', order.orderNumber);
+                                  moveOrderToStage(order, 'previous');
+                                }}
                                 className="h-6 w-6 p-0 hover:bg-blue-50"
                                 title="Move to previous stage"
                                 data-testid={`button-move-left-${order.id}`}
@@ -433,7 +445,12 @@ export default function KanbanView({
                               <Button
                                 size="sm"
                                 variant="outline"
-                                onClick={() => moveOrderToStage(order, 'next')}
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  console.log('Right arrow clicked for order:', order.orderNumber);
+                                  moveOrderToStage(order, 'next');
+                                }}
                                 className="h-6 w-6 p-0 hover:bg-green-50"
                                 title="Move to next stage"
                                 data-testid={`button-move-right-${order.id}`}
