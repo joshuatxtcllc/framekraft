@@ -60,11 +60,11 @@ export default function VendorCatalog() {
   // Search products
   const { data: searchResults = [], isLoading: isSearching } = useQuery<VendorProduct[]>({
     queryKey: ['/api/vendor/products/search', { 
-      category: selectedCategory, 
+      category: selectedCategory === 'all' ? '' : selectedCategory, 
       query: searchQuery,
-      supplier: selectedSupplier
+      supplier: selectedSupplier === 'all' ? '' : selectedSupplier
     }],
-    enabled: !!(searchQuery || selectedCategory || selectedSupplier),
+    enabled: !!(searchQuery || (selectedCategory && selectedCategory !== 'all') || (selectedSupplier && selectedSupplier !== 'all')),
   });
 
   // Get frames
@@ -266,7 +266,7 @@ export default function VendorCatalog() {
                     <SelectValue placeholder="Category" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Categories</SelectItem>
+                    <SelectItem value="all">All Categories</SelectItem>
                     <SelectItem value="frame">Frames</SelectItem>
                     <SelectItem value="mat">Mats</SelectItem>
                     <SelectItem value="glazing">Glazing</SelectItem>
@@ -277,7 +277,7 @@ export default function VendorCatalog() {
                     <SelectValue placeholder="Supplier" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Suppliers</SelectItem>
+                    <SelectItem value="all">All Suppliers</SelectItem>
                     {wholesalers.map((supplier) => (
                       <SelectItem key={supplier.id} value={supplier.companyName}>
                         {supplier.companyName}
@@ -304,7 +304,7 @@ export default function VendorCatalog() {
             ))}
           </div>
 
-          {searchResults.length === 0 && (searchQuery || selectedCategory || selectedSupplier) && !isSearching && (
+          {searchResults.length === 0 && (searchQuery || (selectedCategory && selectedCategory !== 'all') || (selectedSupplier && selectedSupplier !== 'all')) && !isSearching && (
             <div className="text-center py-8 text-gray-500">
               No products found matching your search criteria
             </div>
