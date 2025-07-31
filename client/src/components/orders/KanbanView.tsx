@@ -157,14 +157,46 @@ export default function KanbanView({
     setDraggedOrder(null);
   };
 
-  // Touch events for mobile support
+  // Enhanced touch events for mobile support
+  const [touchStartPosition, setTouchStartPosition] = useState<{ x: number; y: number } | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+
   const handleTouchStart = (e: React.TouchEvent, order: Order) => {
+    e.preventDefault();
+    const touch = e.touches[0];
+    setTouchStartPosition({ x: touch.clientX, y: touch.clientY });
     setDraggedOrder(order);
+    setIsDragging(false);
+    
+    // Add visual feedback
+    const target = e.currentTarget as HTMLElement;
+    target.style.opacity = '0.7';
+    target.style.transform = 'scale(1.05)';
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    e.preventDefault();
+    if (!touchStartPosition || !draggedOrder) return;
+
+    const touch = e.touches[0];
+    const deltaX = Math.abs(touch.clientX - touchStartPosition.x);
+    const deltaY = Math.abs(touch.clientY - touchStartPosition.y);
+
+    // Start dragging if moved more than 10px
+    if (deltaX > 10 || deltaY > 10) {
+      setIsDragging(true);
+    }
   };
 
   const handleTouchEnd = (e: React.TouchEvent) => {
-    if (draggedOrder) {
-      // Get the element under the touch point
+    e.preventDefault();
+    
+    // Reset visual feedback
+    const target = e.currentTarget as HTMLElement;
+    target.style.opacity = '';
+    target.style.transform = '';
+
+    if (draggedOrder && isDragging) {
       const touch = e.changedTouches[0];
       const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY);
       const dropZone = elementBelow?.closest('[data-drop-zone]');
@@ -180,7 +212,10 @@ export default function KanbanView({
         }
       }
     }
+    
     setDraggedOrder(null);
+    setTouchStartPosition(null);
+    setIsDragging(false);
   };
 
   const handleViewOrder = (order: Order) => {
@@ -252,7 +287,7 @@ export default function KanbanView({
       {/* Mobile Instructions */}
       <div className="md:hidden bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
         <p className="text-sm text-blue-800">
-          <strong>Mobile Tip:</strong> Touch and hold an order card, then drag it to a different column to update its status.
+          <strong>Mobile Tip:</strong> Touch an order card and drag it horizontally to a different column to update its status. The card will highlight when dragging starts.
         </p>
       </div>
 
@@ -271,7 +306,9 @@ export default function KanbanView({
 
               {/* Orders Column */}
               <div 
-                className="flex-1 p-2 bg-muted/30 rounded-b-lg min-h-[400px] space-y-2"
+                className={`flex-1 p-2 bg-muted/30 rounded-b-lg min-h-[400px] space-y-2 transition-colors ${
+                  isDragging && draggedOrder?.status !== stage.id ? 'bg-blue-100 border-2 border-dashed border-blue-300' : ''
+                }`}
                 onDragOver={handleDragOver}
                 onDrop={(e) => handleDrop(e, stage.id)}
                 data-drop-zone="true"
@@ -280,11 +317,18 @@ export default function KanbanView({
                 {stageOrders.map((order) => (
                   <Card 
                     key={order.id} 
-                    className="cursor-move hover:shadow-md transition-shadow touch-none"
+                    className="cursor-move hover:shadow-md transition-all duration-200 touch-none select-none"
                     draggable
                     onDragStart={(e) => handleDragStart(e, order)}
                     onTouchStart={(e) => handleTouchStart(e, order)}
+                    onTouchMove={handleTouchMove}
                     onTouchEnd={handleTouchEnd}
+                    style={{
+                      touchAction: 'none',
+                      userSelect: 'none',
+                      WebkitUserSelect: 'none',
+                      WebkitTouchCallout: 'none'
+                    }}
                   >
                     <CardContent className="p-3">
                       <div className="space-y-2">
