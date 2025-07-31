@@ -3,9 +3,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Edit, Eye, FileText, Printer, Mail, CreditCard, ArrowRight, Smartphone } from "lucide-react";
+import { Edit, Eye, FileText, Printer, Mail, CreditCard } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
@@ -81,9 +80,6 @@ export default function KanbanView({
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [draggedOrder, setDraggedOrder] = useState<Order | null>(null);
-  const [statusChangeOrder, setStatusChangeOrder] = useState<Order | null>(null);
-  const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false);
-  const [lastTap, setLastTap] = useState<number>(0);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -153,8 +149,8 @@ export default function KanbanView({
     e.preventDefault();
     if (draggedOrder && draggedOrder.status !== newStatus) {
       updateOrderMutation.mutate({
-        ...draggedOrder,
         id: draggedOrder.id,
+        ...draggedOrder,
         status: newStatus,
       });
     }
@@ -164,143 +160,89 @@ export default function KanbanView({
   // Enhanced touch events for mobile support
   const [touchStartPosition, setTouchStartPosition] = useState<{ x: number; y: number } | null>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [touchTimer, setTouchTimer] = useState<NodeJS.Timeout | null>(null);
 
   const handleTouchStart = (e: React.TouchEvent, order: Order) => {
-    e.stopPropagation();
-    
-    const touch = e.touches[0];
-    setTouchStartPosition({ x: touch.clientX, y: touch.clientY });
-    setDraggedOrder(order);
-    setIsDragging(false);
-    
-    // Clear any existing timer
-    if (touchTimer) {
-      clearTimeout(touchTimer);
+    try {
+      e.preventDefault();
+      const touch = e.touches[0];
+      if (!touch) return;
+
+      setTouchStartPosition({ x: touch.clientX, y: touch.clientY });
+      setDraggedOrder(order);
+      setIsDragging(false);
+
+      // Add visual feedback
+      const target = e.currentTarget as HTMLElement;
+      if (target) {
+        target.style.opacity = '0.7';
+        target.style.transform = 'scale(1.05)';
+      }
+    } catch (error) {
+      console.error('Touch start error:', error);
     }
-    
-    // Add immediate visual feedback
-    const target = e.currentTarget as HTMLElement;
-    target.style.opacity = '0.8';
-    target.style.transform = 'scale(1.02)';
-    target.style.transition = 'all 0.1s ease';
-    
-    // Set a timer to start "drag mode" after 300ms of holding
-    const timer = setTimeout(() => {
-      setIsDragging(true);
-      target.style.opacity = '0.6';
-      target.style.transform = 'scale(1.05)';
-      target.style.zIndex = '1000';
-      target.style.boxShadow = '0 8px 25px rgba(0,0,0,0.3)';
-    }, 300);
-    
-    setTouchTimer(timer);
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    if (!touchStartPosition || !draggedOrder) return;
-    
-    const touch = e.touches[0];
-    const deltaX = Math.abs(touch.clientX - touchStartPosition.x);
-    const deltaY = Math.abs(touch.clientY - touchStartPosition.y);
+    try {
+      if (!touchStartPosition || !draggedOrder || !e.touches[0]) return;
 
-    // If we've moved significantly, clear the timer and start dragging immediately
-    if ((deltaX > 10 || deltaY > 10) && !isDragging) {
-      if (touchTimer) {
-        clearTimeout(touchTimer);
-        setTouchTimer(null);
+      const touch = e.touches[0];
+      const deltaX = Math.abs(touch.clientX - touchStartPosition.x);
+      const deltaY = Math.abs(touch.clientY - touchStartPosition.y);
+
+      // Start dragging if moved more than 10px
+      if (deltaX > 10 || deltaY > 10) {
+        e.preventDefault();
+        setIsDragging(true);
       }
-      setIsDragging(true);
-      
-      // Update visual feedback
-      const target = e.currentTarget as HTMLElement;
-      target.style.opacity = '0.6';
-      target.style.transform = 'scale(1.05)';
-      target.style.zIndex = '1000';
-      target.style.boxShadow = '0 8px 25px rgba(0,0,0,0.3)';
-      
-      // Prevent body scrolling during drag
-      document.body.style.overflow = 'hidden';
-      document.body.style.touchAction = 'none';
-    }
-    
-    // Prevent scrolling when dragging
-    if (isDragging) {
-      e.preventDefault();
-      e.stopPropagation();
+    } catch (error) {
+      console.error('Touch move error:', error);
     }
   };
 
   const handleTouchEnd = (e: React.TouchEvent) => {
-    e.stopPropagation();
-    
-    // Clear any pending timer
-    if (touchTimer) {
-      clearTimeout(touchTimer);
-      setTouchTimer(null);
-    }
-    
-    // Restore body scrolling
-    document.body.style.overflow = '';
-    document.body.style.touchAction = '';
-    
-    // Reset visual feedback
-    const target = e.currentTarget as HTMLElement;
-    target.style.opacity = '';
-    target.style.transform = '';
-    target.style.transition = '';
-    target.style.zIndex = '';
-    target.style.boxShadow = '';
+    try {
+      e.preventDefault();
 
-    if (draggedOrder && isDragging) {
-      const touch = e.changedTouches[0];
-      const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY);
-      const dropZone = elementBelow?.closest('[data-drop-zone]');
+      // Reset visual feedback
+      const target = e.currentTarget as HTMLElement;
+      if (target) {
+        target.style.opacity = '';
+        target.style.transform = '';
+      }
 
-      if (dropZone) {
-        const newStatus = dropZone.getAttribute('data-status');
-        if (newStatus && draggedOrder.status !== newStatus) {
-          updateOrderMutation.mutate({
-            ...draggedOrder,
-            id: draggedOrder.id,
-            status: newStatus,
-          });
+      if (draggedOrder && isDragging && e.changedTouches[0]) {
+        const touch = e.changedTouches[0];
+        const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY);
+        const dropZone = elementBelow?.closest('[data-drop-zone]');
+
+        if (dropZone) {
+          const newStatus = dropZone.getAttribute('data-status') as Order['status'];
+          if (newStatus && newStatus !== draggedOrder.status) {
+            updateOrderMutation.mutate({
+              id: draggedOrder.id,
+              ...draggedOrder,
+              status: newStatus,
+            }, {
+              onError: (error) => {
+                console.error('Order update failed:', error);
+              }
+            });
+          }
         }
       }
+    } catch (error) {
+      console.error('Touch end error:', error);
+    } finally {
+      setDraggedOrder(null);
+      setTouchStartPosition(null);
+      setIsDragging(false);
     }
-    
-    setDraggedOrder(null);
-    setTouchStartPosition(null);
-    setIsDragging(false);
   };
 
   const handleViewOrder = (order: Order) => {
     setSelectedOrder(order);
     setIsViewDialogOpen(true);
-  };
-
-  // Double-tap handler for mobile status change
-  const handleDoubleTap = (order: Order) => {
-    const now = Date.now();
-    const DOUBLE_TAP_DELAY = 300;
-    
-    if (lastTap && (now - lastTap) < DOUBLE_TAP_DELAY) {
-      // Double tap detected - open status picker
-      setStatusChangeOrder(order);
-      setIsStatusDialogOpen(true);
-    }
-    setLastTap(now);
-  };
-
-  const handleStatusChange = (newStatus: string) => {
-    if (statusChangeOrder && statusChangeOrder.status !== newStatus) {
-      updateOrderMutation.mutate({
-        ...statusChangeOrder,
-        status: newStatus,
-      });
-    }
-    setIsStatusDialogOpen(false);
-    setStatusChangeOrder(null);
   };
 
   const stages = [
@@ -405,7 +347,6 @@ export default function KanbanView({
                     onTouchStart={(e) => handleTouchStart(e, order)}
                     onTouchMove={handleTouchMove}
                     onTouchEnd={handleTouchEnd}
-                    onClick={() => handleDoubleTap(order)}
                     style={{
                       touchAction: 'manipulation',
                       userSelect: 'none',
@@ -465,21 +406,6 @@ export default function KanbanView({
                             data-testid={`button-edit-${order.id}`}
                           >
                             <Edit className="h-3 w-3" />
-                          </Button>
-                          {/* Mobile Status Picker Button */}
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setStatusChangeOrder(order);
-                              setIsStatusDialogOpen(true);
-                            }}
-                            className="h-6 w-6 p-0 md:hidden"
-                            title="Change Status"
-                            data-testid={`button-status-${order.id}`}
-                          >
-                            <ArrowRight className="h-3 w-3" />
                           </Button>
                           {onGenerateInvoice && (
                             <Button
@@ -646,36 +572,6 @@ export default function KanbanView({
               </div>
             </div>
           )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Mobile Status Picker Dialog */}
-      <Dialog open={isStatusDialogOpen} onOpenChange={setIsStatusDialogOpen}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Change Order Status</DialogTitle>
-            <DialogDescription>
-              Select a new status for order {statusChangeOrder?.orderNumber}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3">
-            {stages.map((stage) => (
-              <Button
-                key={stage.id}
-                variant={statusChangeOrder?.status === stage.id ? "default" : "outline"}
-                className={`w-full justify-start ${stage.color} ${statusChangeOrder?.status === stage.id ? 'text-white' : ''}`}
-                onClick={() => handleStatusChange(stage.id)}
-                disabled={statusChangeOrder?.status === stage.id}
-                data-testid={`status-option-${stage.id}`}
-              >
-                <div className={`w-3 h-3 rounded-full mr-3 ${stage.color}`}></div>
-                {stage.title}
-                {statusChangeOrder?.status === stage.id && (
-                  <span className="ml-auto text-xs">(Current)</span>
-                )}
-              </Button>
-            ))}
-          </div>
         </DialogContent>
       </Dialog>
     </>
