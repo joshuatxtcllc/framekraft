@@ -105,7 +105,7 @@ export async function seedPricingData() {
     { category: 'mat', subcategory: 'conservation', itemName: 'Crescent Conservation 9602 Cream', unitType: 'square_inch', basePrice: 0.078 },
   ];
 
-  // Generate frame pricing with cost-based markup (NO Houston adjustment in database)
+  // Generate frame pricing with cost-based markup
   const frameData = framePrices.map(frame => {
     const markupFactor = getFrameMarkupFactor(frame.basePrice);
     const retailPrice = frame.basePrice * markupFactor; // Full retail price before adjustments
@@ -127,7 +127,7 @@ export async function seedPricingData() {
     };
   });
 
-  // Glass pricing with united inch markup (NO Houston adjustment in database)
+  // Glass pricing with united inch markup
   const glazingData = glazingPrices.map(glazing => {
     const avgMarkupFactor = getGlassMarkupFactor(50); // Average project size
     const retailPrice = glazing.basePrice * avgMarkupFactor; // Full retail price before adjustments

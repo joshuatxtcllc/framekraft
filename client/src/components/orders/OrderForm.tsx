@@ -197,7 +197,7 @@ export default function OrderForm({
       }
     }
 
-    // Calculate glass price using proper united inch-based markup without location discounts
+    // Calculate glass price using united inch-based markup
     let glazingPrice = 0;
     if (glazing && glazing !== "none" && priceStructure && Array.isArray(priceStructure)) {
       const glazingItem = priceStructure.find((item: any) => 
