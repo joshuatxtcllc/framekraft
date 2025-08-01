@@ -17,6 +17,7 @@ import VendorCatalog from "./pages/vendor-catalog";
 import Communication from "@/pages/communication";
 import APIExplorer from "@/pages/api-explorer";
 import IntegrationSettings from "@/pages/integration-settings";
+import StripeTestPage from "./pages/stripe-test";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -38,6 +39,7 @@ function Router() {
           <Route path="/integration-settings" component={IntegrationSettings} />
           <Route path="/vendor-catalog" component={VendorCatalog} />
           <Route path="/settings" component={Settings} />
+          <Route path="/stripe-test" component={StripeTestPage} />
         </>
       )}
       <Route component={NotFound} />
