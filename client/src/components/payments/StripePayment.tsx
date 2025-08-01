@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { loadStripe } from '@stripe/stripe-js';
 import {
@@ -186,6 +185,14 @@ interface StripePaymentProps {
 }
 
 export default function StripePayment({ invoiceId, amount, customerName, onSuccess, onCancel }: StripePaymentProps) {
+  if (!stripePromise) {
+    return (
+      <div className="p-4 border border-red-200 rounded bg-red-50">
+        <p className="text-red-800">Stripe is not configured. Please add your VITE_STRIPE_PUBLISHABLE_KEY to environment variables.</p>
+      </div>
+    );
+  }
+
   return (
     <Elements stripe={stripePromise}>
       <PaymentForm
