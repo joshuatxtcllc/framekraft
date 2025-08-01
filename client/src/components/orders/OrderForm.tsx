@@ -43,6 +43,7 @@ const orderSchema = z.object({
   priority: z.string().default("normal"),
   dueDate: z.date().optional(),
   notes: z.string().optional(),
+  artLocation: z.string().optional(), // Added artLocation
 });
 
 type OrderFormData = z.infer<typeof orderSchema>;
@@ -54,6 +55,7 @@ type OrderSubmitData = Omit<OrderFormData, 'customerId' | 'dueDate'> & {
   totalAmount: string;
   taxAmount?: string;
   discountAmount?: string;
+  specialServices?: string[]; // Added specialServices
 };
 
 interface OrderFormProps {
@@ -82,12 +84,33 @@ export default function OrderForm({
   const [laborCost, setLaborCost] = useState(38); // Labor cost before retail markup
   const overheadCost = 54.00; // Overhead cost per frame job
   const [useCalculatedPrice, setUseCalculatedPrice] = useState(true);
+  const [specialServices, setSpecialServices] = useState<string[]>([]);
+  const [artLocation, setArtLocation] = useState("");
 
   // Fetch pricing data
   const { data: priceStructure = [], isLoading: priceLoading, error: priceError } = useQuery({
     queryKey: ["/api/pricing/structure"],
   });
 
+    // Define special services with prices
+    const specialServicesOptions = [
+      { id: "shadowbox", label: "Shadowbox", price: 25 },
+      { id: "floatMount", label: "Float Mount", price: 30 },
+      { id: "canvasStretching", label: "Canvas Stretching", price: 40 },
+      { id: "jersey", label: "Jersey", price: 50 },
+      { id: "oneHourLabor", label: "1 Hour Labor", price: 75 },
+      { id: "halfHourLabor", label: "Half Hour Labor", price: 40 },
+      { id: "delivery", label: "Delivery", price: 20 },
+      { id: "installation", label: "Installation", price: 35 },
+      { id: "stitching", label: "Stitching", price: 15 },
+      { id: "customPainting", label: "Custom Painting (per hour)", price: 60 },
+      { id: "multipleOpeningMatt", label: "Multiple Opening Matt", price: 45 },
+      { id: "oversize", label: "Oversize", price: 55 },
+      { id: "glassFloat", label: "Glass Float", price: 22 },
+      { id: "vGroove", label: "V Groove", price: 18 },
+      { id: "elevatedMatt", label: "Elevated Matt", price: 28 },
+      { id: "paintedBevel", label: "Painted Bevel", price: 33 },
+    ];
 
 
   const form = useForm<OrderFormData>({
@@ -109,6 +132,7 @@ export default function OrderForm({
       priority: initialData?.priority || "normal",
       dueDate: initialData?.dueDate ? new Date(initialData.dueDate) : undefined,
       notes: initialData?.notes || "",
+      artLocation: initialData?.artLocation || "", // Initialize artLocation
     },
   });
 
@@ -215,8 +239,17 @@ export default function OrderForm({
       }
     }
 
+        // Calculate special services price
+        let specialServicesPrice = 0;
+        specialServices.forEach(serviceId => {
+          const service = specialServicesOptions.find(s => s.id === serviceId);
+          if (service) {
+            specialServicesPrice += service.price;
+          }
+        });
+
     // Calculate subtotal with all components including overhead (labor and overhead per quantity)
-    let subtotal = framePrice + matPrice + glazingPrice + (laborCost * quantity) + (overheadCost * quantity);
+    let subtotal = framePrice + matPrice + glazingPrice + (laborCost * quantity) + (overheadCost * quantity) + specialServicesPrice;
 
     // Apply discount if specified
     const discountPercentage = parseFloat(form.watch("discountPercentage") || "0");
@@ -243,7 +276,7 @@ export default function OrderForm({
     if (pricing.total > 0 && useCalculatedPrice) {
       form.setValue("totalAmount", pricing.total.toFixed(2));
     }
-  }, [form.watch("frameStyle"), form.watch("glazing"), form.watch("dimensions"), form.watch("matColor"), form.watch("quantity"), form.watch("discountPercentage"), form.watch("taxExempt"), priceStructure, laborCost, useCalculatedPrice]);
+  }, [form.watch("frameStyle"), form.watch("glazing"), form.watch("dimensions"), form.watch("matColor"), form.watch("quantity"), form.watch("discountPercentage"), form.watch("taxExempt"), priceStructure, laborCost, useCalculatedPrice, specialServices]);
 
   // Get frame options with wholesale prices from pricing structure
   const frameOptions = [
@@ -346,6 +379,7 @@ export default function OrderForm({
       totalAmount: finalTotal.toString(),
       taxAmount: taxAmount.toString(),
       discountAmount: discountAmount.toString(),
+      specialServices: specialServices,
     };
     onSubmit(submitData);
   };
@@ -755,6 +789,57 @@ export default function OrderForm({
           />
         </div>
 
+        {/* Special Services */}
+        <Card className="border-amber-200 bg-amber-50">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-amber-800 text-sm">Special Services</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              {specialServicesOptions.map((service) => (
+                <div key={service.id} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={service.id}
+                    checked={specialServices.includes(service.id)}
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        setSpecialServices([...specialServices, service.id]);
+                      } else {
+                        setSpecialServices(specialServices.filter(s => s !== service.id));
+                      }
+                    }}
+                  />
+                  <label htmlFor={service.id} className="text-sm">
+                    {service.label} (+${service.price})
+                  </label>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Art Location */}
+        <FormField
+          control={form.control}
+          name="artLocation"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Art Location</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="Where is the artwork stored? (e.g., Shelf A3, Customer holding, etc.)"
+                  value={artLocation}
+                  onChange={(e) => {
+                    setArtLocation(e.target.value);
+                    field.onChange(e.target.value);
+                  }}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
         {/* Pricing Mode Toggle */}
         <Card className="border-blue-200 bg-blue-50">
           <CardHeader className="pb-3">
@@ -865,6 +950,15 @@ export default function OrderForm({
                     }
                   }
 
+                                  // Calculate special services price
+                                  let specialServicesPrice = 0;
+                                  specialServices.forEach(serviceId => {
+                                    const service = specialServicesOptions.find(s => s.id === serviceId);
+                                    if (service) {
+                                      specialServicesPrice += service.price;
+                                    }
+                                  });
+
                   return (
                     <>
                       <div className="flex justify-between text-xs mb-1 text-blue-600">
@@ -898,6 +992,20 @@ export default function OrderForm({
                           </div>
                           <div className="text-xs text-gray-500 pl-2">
                             {glazingDetails}
+                          </div>
+                        </div>
+                      )}
+                      {specialServices.length > 0 && (
+                        <div className="space-y-1">
+                          <div className="flex justify-between">
+                            <span>Special Services:</span>
+                            <span>${specialServicesPrice.toFixed(2)}</span>
+                          </div>
+                          <div className="text-xs text-gray-500 pl-2">
+                            {specialServices.map(serviceId => {
+                              const service = specialServicesOptions.find(s => s.id === serviceId);
+                              return service ? service.label : null;
+                            }).filter(label => label !== null).join(", ")}
                           </div>
                         </div>
                       )}
