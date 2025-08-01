@@ -412,7 +412,7 @@ Respond in JSON format with: opportunities, pricingStrategy, differentiation`;
   }
 
   private buildSystemPrompt(context: any): string {
-    const basePrompt = `You are an AI assistant for FrameCraft, a custom framing business management platform. You have access to business data including orders, customers, inventory, and analytics.
+    const basePrompt = `You are an AI assistant for Jay's Frames, a custom framing business management platform. You have access to business data including orders, customers, inventory, and analytics.
 
 Your role is to provide helpful, accurate, and actionable advice for:
 - Business strategy and optimization

@@ -29,10 +29,10 @@ export default function InvoiceTemplate({ order, customer, businessInfo }: Invoi
   };
 
   const businessDetails = businessInfo || {
-    name: "FrameCraft Studio",
-    address: "123 Main Street, Anytown, ST 12345",
-    phone: "(555) 123-4567",
-    email: "info@framecraft.com"
+    name: "Jay's Frames",
+    address: "218 W 27th St, Houston, TX 77008",
+    phone: "(832) 893-3794",
+    email: "Frames@jaysframes.com"
   };
 
   const subtotal = parseFloat(order.totalAmount);

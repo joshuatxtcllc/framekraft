@@ -96,7 +96,7 @@ export default function Header() {
                     <Frame className="w-6 h-6 text-wood-600" />
                   </div>
                   <div>
-                    <h1 className="text-xl font-bold text-white">FrameCraft</h1>
+                    <h1 className="text-xl font-bold text-white">Jay's Frames</h1>
                     <p className="text-wood-200 text-sm">Business Suite</p>
                   </div>
                 </div>
