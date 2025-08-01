@@ -42,24 +42,24 @@ export function registerInvoiceRoutes(app: Express) {
   app.post("/api/invoices", isAuthenticated, async (req, res) => {
     try {
       const { customerId, newCustomer, orderId, dueDate, taxAmount, discountAmount, items, notes } = req.body;
-      
+
       let finalCustomerId = customerId;
-      
+
       // Create new customer if provided
       if (newCustomer && !customerId) {
         const createdCustomer = await storage.createCustomer(newCustomer);
         finalCustomerId = createdCustomer.id;
       }
-      
+
       // Generate invoice number
       const invoiceNumber = `INV-${Date.now()}`;
-      
+
       // Calculate totals
       const subtotal = items.reduce((sum: number, item: any) => sum + parseFloat(item.total), 0);
       const tax = parseFloat(taxAmount || "0");
       const discount = parseFloat(discountAmount || "0");
       const total = subtotal + tax - discount;
-      
+
       const invoiceData = {
         invoiceNumber,
         customerId: parseInt(finalCustomerId),
@@ -72,7 +72,7 @@ export function registerInvoiceRoutes(app: Express) {
         dueDate: new Date(dueDate),
         notes,
       };
-      
+
       // Create invoice items array
       const invoiceItems = items.map((item: any) => ({
         description: item.description,
@@ -80,10 +80,10 @@ export function registerInvoiceRoutes(app: Express) {
         unitPrice: parseFloat(item.unitPrice),
         totalPrice: parseFloat(item.total),
       }));
-      
+
       // Create invoice with items using the proper storage method
       const finalInvoice = await storage.createInvoice(invoiceData, invoiceItems);
-      
+
       res.status(201).json(finalInvoice);
     } catch (error: any) {
       console.error("Error creating invoice:", error);
@@ -109,7 +109,7 @@ export function registerInvoiceRoutes(app: Express) {
     try {
       const invoiceId = parseInt(req.params.id);
       const invoice = await storage.getInvoice(invoiceId);
-      
+
       if (!invoice) {
         return res.status(404).json({ message: "Invoice not found" });
       }
@@ -135,7 +135,7 @@ export function registerInvoiceRoutes(app: Express) {
     try {
       const invoiceId = parseInt(req.params.id);
       const paymentData = insertPaymentSchema.parse(req.body);
-      
+
       await storage.markInvoicePaid(invoiceId, paymentData);
       res.json({ message: "Invoice marked as paid" });
     } catch (error) {
@@ -149,7 +149,7 @@ export function registerInvoiceRoutes(app: Express) {
     try {
       const id = parseInt(req.params.id);
       const invoice = await storage.getInvoice(id);
-      
+
       if (!invoice) {
         return res.status(404).json({ message: "Invoice not found" });
       }
@@ -170,9 +170,9 @@ export function registerInvoiceRoutes(app: Express) {
     try {
       const id = parseInt(req.params.id);
       const { emailAddress, customMessage } = req.body;
-      
+
       await emailService.sendInvoiceEmail(id, emailAddress, customMessage);
-      
+
       res.json({ 
         message: `Invoice sent successfully to ${emailAddress}`
       });
@@ -187,7 +187,7 @@ export function registerInvoiceRoutes(app: Express) {
     try {
       const invoiceId = parseInt(req.params.id);
       const { status, paymentIntentId } = req.body;
-      
+
       if (status === 'paid') {
         await storage.markInvoicePaid(invoiceId, {
           invoiceId,
@@ -197,7 +197,7 @@ export function registerInvoiceRoutes(app: Express) {
           status: 'completed',
         });
       }
-      
+
       res.json({ message: "Payment status updated successfully" });
     } catch (error) {
       console.error("Error updating payment status:", error);
@@ -221,7 +221,7 @@ export function registerInvoiceRoutes(app: Express) {
       if (event.type === 'payment_intent.succeeded') {
         const paymentIntent = event.data.object;
         const invoiceId = parseInt(paymentIntent.metadata.invoiceId);
-        
+
         await storage.markInvoicePaid(invoiceId, {
           invoiceId,
           amount: (paymentIntent.amount / 100).toString(),
