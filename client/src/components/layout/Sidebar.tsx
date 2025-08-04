@@ -50,6 +50,12 @@ export default function Sidebar() {
       icon: Settings,
       current: location === '/settings',
     },
+    {
+      name: 'Virtual Frame Designer',
+      href: '/virtual-frame-designer',
+      icon: Frame,
+      current: location === '/virtual-frame-designer',
+    },
   ];
 
   const businessTools = [
