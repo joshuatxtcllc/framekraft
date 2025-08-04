@@ -5,8 +5,20 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+} from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Check, ChevronsUpDown, Calculator } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -25,6 +37,9 @@ import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useLocation } from "wouter";
+import { useToast } from "@/components/ui/use-toast";
+import { Label } from "@/components/ui/label";
 
 const orderSchema = z.object({
   customerId: z.string().min(1, "Customer is required"),
@@ -86,6 +101,12 @@ export default function OrderForm({
   const [useCalculatedPrice, setUseCalculatedPrice] = useState(true);
   const [specialServices, setSpecialServices] = useState<string[]>([]);
   const [artLocation, setArtLocation] = useState("");
+  const [manualItemType, setManualItemType] = useState('');
+  const [manualItemName, setManualItemName] = useState('');
+  const [manualItemPrice, setManualItemPrice] = useState('');
+  const [manualItems, setManualItems] = useState<any[]>([]);
+  const { toast } = useToast();
+  const [, setLocation] = useLocation();
 
   // Fetch pricing data
   const { data: priceStructure = [], isLoading: priceLoading, error: priceError } = useQuery({
@@ -396,6 +417,102 @@ export default function OrderForm({
         retailPrice: item.retailPrice
       })) : [])
   ];
+
+  const getFrameMarkupFactor = (wholesalePrice: number) => {
+    if (wholesalePrice <= 1.99) return 4.5;
+    if (wholesalePrice <= 2.99) return 4.0;
+    if (wholesalePrice <= 3.99) return 3.5;
+    if (wholesalePrice <= 4.99) return 3.0;
+    return 2.5;
+  };
+
+  const getMatMarkupFactor = (unitedInches: number) => {
+    if (unitedInches <= 32) return 2.0; // 100% markup
+    if (unitedInches <= 60) return 1.8; // 80% markup
+    if (unitedInches <= 80) return 1.6; // 60% markup
+    return 1.4; // 40% markup
+  };
+
+  const getGlassMarkupFactor = (unitedInches: number) => {
+    if (unitedInches <= 40) return 2.0; // 100% markup
+    if (unitedInches <= 60) return 1.75; // 75% markup
+    if (unitedInches <= 80) return 1.5; // 50% markup
+    return 1.25; // 25% markup
+  };
+
+  const calculateManualItemRetailPrice = () => {
+    if (!manualItemPrice || !manualItemType) return '0.00';
+
+    const wholesalePrice = parseFloat(manualItemPrice);
+    const dimensions = form.watch("dimensions");
+
+    if (!dimensions) return '0.00';
+
+    const dimensionMatch = dimensions.match(/(\d+(?:\.\d+)?)(?:["']?)(?:\s*[xX×]\s*)(\d+(?:\.\d+)?)(?:["']?)/i);
+    if (!dimensionMatch) return '0.00';
+
+    const artworkWidth = parseFloat(dimensionMatch[1]);
+    const artworkHeight = parseFloat(dimensionMatch[2]);
+    const matWidth = 2;
+    const unitedInches = artworkWidth + artworkHeight + (matWidth * 4);
+
+    let retailPrice = 0;
+
+    switch (manualItemType) {
+      case 'frame':
+        const framePerimeterInches = 2 * (artworkWidth + artworkHeight + matWidth * 4);
+        const framePerimeterFeet = framePerimeterInches / 12;
+        const frameMarkupFactor = getFrameMarkupFactor(wholesalePrice);
+        const framePrice = framePerimeterFeet * wholesalePrice * frameMarkupFactor;
+        retailPrice = framePrice * 0.1667; // Houston Heights adjustment
+        break;
+      case 'mat':
+        const matMarkupFactor = getMatMarkupFactor(unitedInches);
+        retailPrice = wholesalePrice * matMarkupFactor;
+        break;
+      case 'glass':
+        const glassAreaInches = artworkWidth * artworkHeight;
+        const glassAreaFeet = glassAreaInches / 144;
+        const glassMarkupFactor = getGlassMarkupFactor(unitedInches);
+        const glassPrice = wholesalePrice * glassAreaFeet * glassMarkupFactor;
+        retailPrice = glassPrice * 0.45; // Houston Heights adjustment
+        break;
+      default:
+        retailPrice = wholesalePrice; // Services or other items
+    }
+
+    return retailPrice.toFixed(2);
+  };
+
+  const addManualItemToOrder = () => {
+    if (!manualItemType || !manualItemName || !manualItemPrice) {
+      toast({
+        variant: "destructive",
+        title: "Missing Information",
+        description: "Please fill in all manual item fields."
+      });
+      return;
+    }
+
+    const retailPrice = parseFloat(calculateManualItemRetailPrice());
+    const newItem = {
+      id: Date.now().toString(),
+      type: manualItemType,
+      name: manualItemName,
+      wholesalePrice: parseFloat(manualItemPrice),
+      retailPrice: retailPrice
+    };
+
+    setManualItems([...manualItems, newItem]);
+    setManualItemType('');
+    setManualItemName('');
+    setManualItemPrice('');
+
+    toast({
+      title: "Item Added",
+      description: `${manualItemName} has been added to the order.`
+    });
+  };
 
   return (
     <Form {...form}>
@@ -1250,6 +1367,52 @@ export default function OrderForm({
             </FormItem>
           )}
         />
+          {/* Manual Item Entry */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Manual Item Entry</h3>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 border rounded-lg">
+              <div>
+                <Label>Item Type</Label>
+                <Select value={manualItemType} onValueChange={setManualItemType}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="frame">Frame</SelectItem>
+                    <SelectItem value="mat">Mat</SelectItem>
+                    <SelectItem value="glass">Glass</SelectItem>
+                    <SelectItem value="service">Service</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Item Name</Label>
+                <Input
+                  value={manualItemName}
+                  onChange={(e) => setManualItemName(e.target.value)}
+                  placeholder="Enter item name"
+                />
+              </div>
+              <div>
+                <Label>Wholesale Price</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={manualItemPrice}
+                  onChange={(e) => setManualItemPrice(e.target.value)}
+                  placeholder="Wholesale price"
+                />
+              </div>
+              <div className="flex flex-col justify-end">
+                <div className="text-sm text-muted-foreground mb-1">
+                  Retail: ${calculateManualItemRetailPrice()}
+                </div>
+                <Button onClick={addManualItemToOrder} type="button">
+                  Add Item
+                </Button>
+              </div>
+            </div>
+          </div>
 
         {/* Form Actions */}
         <div className="flex justify-end space-x-4 pt-6">

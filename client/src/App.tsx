@@ -18,8 +18,6 @@ import Communication from "@/pages/communication";
 import APIExplorer from "@/pages/api-explorer";
 import IntegrationSettings from "@/pages/integration-settings";
 import StripeTestPage from "./pages/stripe-test";
-import FrameRecommender from "@/pages/frame-recommender";
-import VirtualFrameDesigner from "@/pages/virtual-frame-designer";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -30,7 +28,10 @@ function Router() {
         <Route path="/" component={Landing} />
       ) : (
         <>
-          <Route path="/" component={Dashboard} />
+          <Route path="/" nest>
+            {(params) => <Dashboard />}
+          </Route>
+          <Route path="/dashboard" component={Dashboard} />
           <Route path="/orders" component={Orders} />
           <Route path="/customers" component={Customers} />
           <Route path="/pricing" component={Pricing} />
@@ -42,8 +43,6 @@ function Router() {
           <Route path="/vendor-catalog" component={VendorCatalog} />
           <Route path="/settings" component={Settings} />
           <Route path="/stripe-test" component={StripeTestPage} />
-          <Route path="/frame-recommender" component={FrameRecommender} />
-          <Route path="/virtual-frame-designer" component={VirtualFrameDesigner} />
         </>
       )}
       <Route component={NotFound} />
