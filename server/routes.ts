@@ -14,6 +14,8 @@ import { registerFileUploadRoutes } from "./routes/fileUpload";
 import settingsRoutes from './routes/settings.js';
 import vendorCatalogRoutes from './routes/vendorCatalog.js';
 import inventoryRoutes from "./routes/inventory.js";
+import { rateLimit } from "./middleware/rateLimiting";
+import { requestLogger } from "./middleware/logging";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
@@ -285,6 +287,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(400).json({ message: "Failed to update project step" });
     }
   });
+
+  // New Orders endpoint with full middleware stack
+  app.get('/api/orders/', 
+    requestLogger,
+    rateLimit({ windowMs: 15 * 60 * 1000, max: 100 }),
+    isAuthenticated,
+    async (req, res) => {
+      try {
+        const { status, customerId, limit, offset } = req.query;
+        let orders;
+
+        // Parse query parameters
+        const queryLimit = limit ? parseInt(limit as string) : undefined;
+        const queryOffset = offset ? parseInt(offset as string) : undefined;
+
+        if (status && typeof status === 'string') {
+          orders = await storage.getOrdersByStatus(status);
+        } else if (customerId && typeof customerId === 'string') {
+          const customerIdInt = parseInt(customerId);
+          orders = await storage.getOrdersByCustomer(customerIdInt);
+        } else {
+          orders = await storage.getOrders();
+        }
+
+        // Apply pagination if requested
+        if (queryLimit || queryOffset) {
+          const startIndex = queryOffset || 0;
+          const endIndex = queryLimit ? startIndex + queryLimit : orders.length;
+          orders = orders.slice(startIndex, endIndex);
+        }
+
+        res.json({
+          orders,
+          total: orders.length,
+          limit: queryLimit,
+          offset: queryOffset || 0
+        });
+      } catch (error) {
+        console.error("Error fetching orders:", error);
+        res.status(500).json({ 
+          message: "Failed to fetch orders",
+          timestamp: new Date().toISOString()
+        });
+      }
+    }
+  );
 
   // Communication routes - commented out until communication routes module is created
   // app.use('/api/communication', require('./routes/communication').default);
