@@ -1,0 +1,120 @@
+
+import { Request, Response } from 'express';
+import { GicleePrintingService } from '../services/gicleePrintingService';
+
+/**
+ * Calculate Giclee printing price
+ */
+export async function calculateGicleePricing(req: Request, res: Response) {
+  try {
+    const { substrateType, width, height, quantity } = req.body;
+
+    // Validate required parameters
+    if (!substrateType || !width || !height || !quantity) {
+      return res.status(400).json({
+        error: 'Missing required parameters: substrateType, width, height, quantity'
+      });
+    }
+
+    // Validate dimensions
+    const w = parseFloat(width);
+    const h = parseFloat(height);
+    const q = parseInt(quantity);
+
+    if (w <= 0 || h <= 0 || q <= 0) {
+      return res.status(400).json({
+        error: 'Width, height, and quantity must be positive numbers'
+      });
+    }
+
+    if (w > 44 || h > 150) {
+      return res.status(400).json({
+        error: 'Maximum size is 44" × 150"'
+      });
+    }
+
+    const pricing = GicleePrintingService.calculatePricing({
+      substrateType,
+      width: w,
+      height: h,
+      quantity: q
+    });
+
+    res.json({
+      success: true,
+      pricing
+    });
+  } catch (error: any) {
+    console.error('Error calculating Giclee pricing:', error);
+    res.status(500).json({
+      error: 'Failed to calculate pricing',
+      message: error.message
+    });
+  }
+}
+
+/**
+ * Create a Giclee print order
+ */
+export async function createGicleePrintOrder(req: Request, res: Response) {
+  try {
+    const orderData = req.body;
+
+    const gicleePrintOrder = await GicleePrintingService.createGicleePrintOrder(orderData);
+
+    res.status(201).json({
+      success: true,
+      gicleePrintOrder
+    });
+  } catch (error: any) {
+    console.error('Error creating Giclee print order:', error);
+    res.status(500).json({
+      error: 'Failed to create Giclee print order',
+      message: error.message
+    });
+  }
+}
+
+/**
+ * Get Giclee print orders for a main order
+ */
+export async function getGicleePrintOrders(req: Request, res: Response) {
+  try {
+    const { orderId } = req.params;
+
+    const gicleePrintOrders = await GicleePrintingService.getGicleePrintOrdersForOrder(orderId);
+
+    res.json({
+      success: true,
+      gicleePrintOrders
+    });
+  } catch (error: any) {
+    console.error('Error fetching Giclee print orders:', error);
+    res.status(500).json({
+      error: 'Failed to fetch Giclee print orders',
+      message: error.message
+    });
+  }
+}
+
+/**
+ * Get available substrates
+ */
+export async function getAvailableSubstrates(req: Request, res: Response) {
+  try {
+    const substrates = GicleePrintingService.getAvailableSubstrates();
+    const bulkDiscounts = GicleePrintingService.getBulkDiscountTiers();
+
+    res.json({
+      success: true,
+      substrates,
+      bulkDiscounts
+    });
+  } catch (error: any) {
+    console.error('Error fetching substrates:', error);
+    res.status(500).json({
+      error: 'Failed to fetch substrates',
+      message: error.message
+    });
+  }
+}
