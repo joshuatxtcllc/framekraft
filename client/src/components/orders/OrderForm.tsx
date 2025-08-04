@@ -38,7 +38,7 @@ import { format } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useLocation } from "wouter";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { Label } from "@/components/ui/label";
 
 const orderSchema = z.object({
@@ -418,27 +418,7 @@ export default function OrderForm({
       })) : [])
   ];
 
-  const getFrameMarkupFactor = (wholesalePrice: number) => {
-    if (wholesalePrice <= 1.99) return 4.5;
-    if (wholesalePrice <= 2.99) return 4.0;
-    if (wholesalePrice <= 3.99) return 3.5;
-    if (wholesalePrice <= 4.99) return 3.0;
-    return 2.5;
-  };
 
-  const getMatMarkupFactor = (unitedInches: number) => {
-    if (unitedInches <= 32) return 2.0; // 100% markup
-    if (unitedInches <= 60) return 1.8; // 80% markup
-    if (unitedInches <= 80) return 1.6; // 60% markup
-    return 1.4; // 40% markup
-  };
-
-  const getGlassMarkupFactor = (unitedInches: number) => {
-    if (unitedInches <= 40) return 2.0; // 100% markup
-    if (unitedInches <= 60) return 1.75; // 75% markup
-    if (unitedInches <= 80) return 1.5; // 50% markup
-    return 1.25; // 25% markup
-  };
 
   const calculateManualItemRetailPrice = () => {
     if (!manualItemPrice || !manualItemType) return '0.00';
