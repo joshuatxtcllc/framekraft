@@ -51,29 +51,36 @@ export default function SimpleKanbanView({
   const { toast } = useToast();
 
   const updateOrderMutation = useMutation({
-    mutationFn: async (order: Order) => {
-      return apiRequest(`/api/orders/${order.id}`, {
-        method: 'PUT',
-        body: JSON.stringify({
-          customerId: order.customerId,
-          orderNumber: order.orderNumber,
-          description: order.description,
-          artworkDescription: order.artworkDescription || '',
-          frameStyle: order.frameStyle,
-          matColor: order.matColor,
-          glassType: order.glassType || '',
-          glazing: order.glazing || '',
-          dimensions: order.dimensions,
-          totalAmount: parseFloat(order.totalAmount.toString()),
-          depositAmount: order.depositAmount ? parseFloat(order.depositAmount.toString()) : 0,
-          discountPercentage: order.discountPercentage || 0,
-          status: order.status,
-          priority: order.priority,
-          dueDate: order.dueDate || null,
-          notes: order.notes || '',
-        }),
-        headers: { 'Content-Type': 'application/json' },
-      });
+    mutationFn: async ({ id, ...data }: any) => {
+      console.log('Updating order with data:', { id, ...data });
+      
+      // Clean and format the data properly (matching working KanbanView)
+      const updateData = {
+        customerId: data.customerId || data.customer?.id,
+        orderNumber: data.orderNumber,
+        description: data.description,
+        artworkDescription: data.artworkDescription || null,
+        dimensions: data.dimensions || null,
+        frameStyle: data.frameStyle || null,
+        matColor: data.matColor || null,
+        glazing: data.glazing || null,
+        totalAmount: parseFloat(data.totalAmount),
+        depositAmount: data.depositAmount ? parseFloat(data.depositAmount) : 0,
+        status: data.status,
+        priority: data.priority,
+        dueDate: data.dueDate || null,
+        notes: data.notes || null,
+      };
+
+      console.log('Sending update data:', updateData);
+      
+      const response = await apiRequest("PUT", `/api/orders/${id}`, updateData);
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('API response error:', errorText);
+        throw new Error(`Update failed: ${response.status} ${errorText}`);
+      }
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/orders'] });
@@ -85,10 +92,12 @@ export default function SimpleKanbanView({
       setSelectedOrder(null);
     },
     onError: (error) => {
-      console.error('Update failed:', error);
+      console.error('Update failed - Full error:', error);
+      console.error('Error message:', error?.message);
+      console.error('Error response:', error?.response);
       toast({
         title: "Error",
-        description: "Failed to update order status",
+        description: `Failed to update order status: ${error?.message || 'Unknown error'}`,
         variant: "destructive",
       });
     },
@@ -113,7 +122,12 @@ export default function SimpleKanbanView({
 
   const handleMoveOrder = () => {
     if (statusChangeOrder && newStatus) {
-      const updatedOrder = { ...statusChangeOrder, status: newStatus };
+      const updatedOrder = { 
+        ...statusChangeOrder, 
+        status: newStatus,
+        id: statusChangeOrder.id 
+      };
+      console.log('Moving order from', statusChangeOrder.status, 'to', newStatus);
       updateOrderMutation.mutate(updatedOrder);
     }
   };
