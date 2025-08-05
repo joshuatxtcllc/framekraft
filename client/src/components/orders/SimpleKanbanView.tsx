@@ -68,7 +68,7 @@ export default function SimpleKanbanView({
         depositAmount: data.depositAmount ? parseFloat(data.depositAmount) : 0,
         status: data.status,
         priority: data.priority,
-        dueDate: data.dueDate || null,
+        dueDate: data.dueDate ? data.dueDate.split('T')[0] : null,
         notes: data.notes || null,
       };
 
