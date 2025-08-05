@@ -18,6 +18,7 @@ import Communication from "@/pages/communication";
 import APIExplorer from "@/pages/api-explorer";
 import IntegrationSettings from "@/pages/integration-settings";
 import StripeTestPage from "./pages/stripe-test";
+import VirtualFrameDesigner from "./pages/virtual-frame-designer";
 
 
 function Router() {
@@ -40,6 +41,7 @@ function Router() {
           <Route path="/api-explorer" component={APIExplorer} />
           <Route path="/integration-settings" component={IntegrationSettings} />
           <Route path="/vendor-catalog" component={VendorCatalog} />
+          <Route path="/virtual-frame-designer" component={VirtualFrameDesigner} />
           <Route path="/settings" component={Settings} />
           <Route path="/stripe-test" component={StripeTestPage} />
         </>
