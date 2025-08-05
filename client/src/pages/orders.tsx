@@ -327,43 +327,44 @@ FrameCraft`;
           <div className="py-6">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
               {/* Page Header */}
-              <div className="md:flex md:items-center md:justify-between mb-8">
-                <div className="flex-1 min-w-0">
-                  <h2 className="text-2xl font-bold leading-7 text-foreground sm:text-3xl sm:truncate">
+              <div className="flex flex-col space-y-4 mb-8">
+                <div>
+                  <h2 className="text-2xl font-bold leading-7 text-foreground sm:text-3xl">
                     Orders
                   </h2>
                   <p className="mt-1 text-sm text-muted-foreground">
                     Manage all your custom framing orders and track their progress.
                   </p>
                 </div>
-                <div className="mt-4 flex items-center gap-4 md:mt-0 md:ml-4">
-                  {/* View Toggle */}
-                  <div className="flex items-center bg-muted rounded-lg p-1 border" data-testid="view-toggle">
+                
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  {/* View Toggle - Always visible */}
+                  <div className="flex items-center bg-muted rounded-lg p-1 border-2 border-primary/20" data-testid="view-toggle">
                     <Button
                       size="sm"
                       variant={viewMode === 'table' ? 'default' : 'ghost'}
                       onClick={() => setViewMode('table')}
-                      className="h-8 px-3"
+                      className="h-9 px-4 font-medium"
                       data-testid="button-table-view"
                     >
-                      <Table className="h-4 w-4 mr-1" />
-                      Table
+                      <Table className="h-4 w-4 mr-2" />
+                      Table View
                     </Button>
                     <Button
                       size="sm"
                       variant={viewMode === 'kanban' ? 'default' : 'ghost'}
                       onClick={() => setViewMode('kanban')}
-                      className="h-8 px-3"
+                      className="h-9 px-4 font-medium"
                       data-testid="button-kanban-view"
                     >
-                      <Kanban className="h-4 w-4 mr-1" />
-                      Kanban
+                      <Kanban className="h-4 w-4 mr-2" />
+                      Kanban Board
                     </Button>
                   </div>
 
                   <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
                     <DialogTrigger asChild>
-                      <Button className="btn-primary" data-testid="button-new-order">
+                      <Button className="btn-primary h-9 px-4" data-testid="button-new-order">
                         <Plus className="w-4 h-4 mr-2" />
                         New Order
                       </Button>
