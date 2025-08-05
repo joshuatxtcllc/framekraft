@@ -53,19 +53,24 @@ export default function SimpleKanbanView({
   const updateOrderMutation = useMutation({
     mutationFn: async (order: Order) => {
       return apiRequest(`/api/orders/${order.id}`, {
-        method: 'PATCH',
+        method: 'PUT',
         body: JSON.stringify({
-          status: order.status,
           customerId: order.customerId,
           orderNumber: order.orderNumber,
           description: order.description,
+          artworkDescription: order.artworkDescription || '',
           frameStyle: order.frameStyle,
           matColor: order.matColor,
-          glassType: order.glassType,
+          glassType: order.glassType || '',
+          glazing: order.glazing || '',
           dimensions: order.dimensions,
-          totalAmount: order.totalAmount,
+          totalAmount: parseFloat(order.totalAmount.toString()),
+          depositAmount: order.depositAmount ? parseFloat(order.depositAmount.toString()) : 0,
+          discountPercentage: order.discountPercentage || 0,
+          status: order.status,
           priority: order.priority,
-          dueDate: order.dueDate,
+          dueDate: order.dueDate || null,
+          notes: order.notes || '',
         }),
         headers: { 'Content-Type': 'application/json' },
       });
