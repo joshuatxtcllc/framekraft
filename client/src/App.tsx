@@ -18,6 +18,7 @@ import Communication from "@/pages/communication";
 import APIExplorer from "@/pages/api-explorer";
 import IntegrationSettings from "@/pages/integration-settings";
 import StripeTestPage from "./pages/stripe-test";
+import KanbanBoard from "./pages/kanban";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -43,6 +44,7 @@ function Router() {
           <Route path="/vendor-catalog" component={VendorCatalog} />
           <Route path="/settings" component={Settings} />
           <Route path="/stripe-test" component={StripeTestPage} />
+          <Route path="/kanban" component={KanbanBoard} />
         </>
       )}
       <Route component={NotFound} />
