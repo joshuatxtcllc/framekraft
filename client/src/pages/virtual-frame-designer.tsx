@@ -1,172 +1,151 @@
 
-import { useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
-import { Frame, Layers, Calculator, Printer, Check, ChevronDown } from "lucide-react";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
-import { cn } from "@/lib/utils";
+import React, { useState, useEffect, useRef } from "react";
+import { useQuery } from "@tanstack/react-query";
 import Sidebar from "@/components/layout/Sidebar";
 import Header from "@/components/layout/Header";
-import FrameVisualizer from "@/components/frame-designer/FrameVisualizer";
-import GicleePrintingService from "@/components/giclee/GicleePrintingService";
-import LarsonOrderOptimizer from "@/components/orders/LarsonOrderOptimizer";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Slider } from "@/components/ui/slider";
+import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
+import { Frame, Palette, Download, RotateCw, ZoomIn, ZoomOut } from "lucide-react";
+
+interface FrameOption {
+  id: string;
+  name: string;
+  color: string;
+  width: number;
+  style: string;
+  price: number;
+}
+
+interface MatOption {
+  id: string;
+  name: string;
+  color: string;
+  price: number;
+}
 
 export default function VirtualFrameDesigner() {
-  const [artworkWidth, setArtworkWidth] = useState(16);
-  const [artworkHeight, setArtworkHeight] = useState(20);
-  const [artworkImage, setArtworkImage] = useState<string | null>(null);
-  const [selectedFrames, setSelectedFrames] = useState<any[]>([]);
-  const [selectedMats, setSelectedMats] = useState<any[]>([]);
-  const [useMultipleFrames, setUseMultipleFrames] = useState(false);
-  const [useMultipleMats, setUseMultipleMats] = useState(false);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [selectedFrame, setSelectedFrame] = useState<FrameOption | null>(null);
+  const [selectedMat, setSelectedMat] = useState<MatOption | null>(null);
+  const [artworkWidth, setArtworkWidth] = useState(8);
+  const [artworkHeight, setArtworkHeight] = useState(10);
+  const [matWidth, setMatWidth] = useState([2]);
+  const [zoom, setZoom] = useState(1);
+  const [rotation, setRotation] = useState(0);
 
-  // Frame and mat selection state
-  const [frameOptions, setFrameOptions] = useState<any[]>([]);
-  const [matOptions, setMatOptions] = useState<any[]>([]);
-  const [frameOpen, setFrameOpen] = useState(false);
-  const [matOpen, setMatOpen] = useState(false);
-  const [frameSearch, setFrameSearch] = useState("");
-  const [matSearch, setMatSearch] = useState("");
-  const [selectedFrameId, setSelectedFrameId] = useState<string>("");
-  const [selectedMatId, setSelectedMatId] = useState<string>("");
+  // Mock data for frames and mats
+  const frameOptions: FrameOption[] = [
+    { id: "1", name: "Classic Wood", color: "#8B4513", width: 1, style: "traditional", price: 45 },
+    { id: "2", name: "Modern Black", color: "#000000", width: 0.5, style: "contemporary", price: 35 },
+    { id: "3", name: "Gold Ornate", color: "#FFD700", width: 1.5, style: "ornate", price: 85 },
+    { id: "4", name: "Silver Sleek", color: "#C0C0C0", width: 0.75, style: "modern", price: 55 },
+    { id: "5", name: "White Clean", color: "#FFFFFF", width: 1, style: "minimalist", price: 40 },
+  ];
 
-  // Load frame and mat options
+  const matOptions: MatOption[] = [
+    { id: "1", name: "Ivory White", color: "#FFFFF0", price: 15 },
+    { id: "2", name: "Museum Black", color: "#1C1C1C", price: 18 },
+    { id: "3", name: "Warm Gray", color: "#A0A0A0", price: 16 },
+    { id: "4", name: "Cream", color: "#F5F5DC", price: 15 },
+    { id: "5", name: "Navy Blue", color: "#000080", price: 20 },
+  ];
+
+  const drawVisualization = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Clear canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Set up scaling and positioning
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+    const scale = Math.min(canvas.width / (artworkWidth + (matWidth[0] * 2) + 4), canvas.height / (artworkHeight + (matWidth[0] * 2) + 4)) * zoom;
+
+    ctx.save();
+    ctx.translate(centerX, centerY);
+    ctx.rotate((rotation * Math.PI) / 180);
+    ctx.scale(scale, scale);
+
+    // Draw frame
+    if (selectedFrame) {
+      const frameWidth = selectedFrame.width;
+      const totalWidth = artworkWidth + (matWidth[0] * 2) + (frameWidth * 2);
+      const totalHeight = artworkHeight + (matWidth[0] * 2) + (frameWidth * 2);
+
+      ctx.fillStyle = selectedFrame.color;
+      ctx.fillRect(-totalWidth / 2, -totalHeight / 2, totalWidth, totalHeight);
+    }
+
+    // Draw mat
+    if (selectedMat) {
+      const matTotalWidth = artworkWidth + (matWidth[0] * 2);
+      const matTotalHeight = artworkHeight + (matWidth[0] * 2);
+
+      ctx.fillStyle = selectedMat.color;
+      ctx.fillRect(-matTotalWidth / 2, -matTotalHeight / 2, matTotalWidth, matTotalHeight);
+    }
+
+    // Draw artwork area
+    ctx.fillStyle = '#f0f0f0';
+    ctx.strokeStyle = '#ccc';
+    ctx.lineWidth = 0.1;
+    ctx.fillRect(-artworkWidth / 2, -artworkHeight / 2, artworkWidth, artworkHeight);
+    ctx.strokeRect(-artworkWidth / 2, -artworkHeight / 2, artworkWidth, artworkHeight);
+
+    // Add sample artwork text
+    ctx.fillStyle = '#666';
+    ctx.font = `${Math.min(artworkWidth, artworkHeight) / 6}px Arial`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('Your Artwork', 0, 0);
+
+    ctx.restore();
+  };
+
   useEffect(() => {
-    const loadOptions = async () => {
-      try {
-        // Load pricing data for frames and mats
-        const response = await fetch('/api/pricing');
-        if (response.ok) {
-          const pricingData = await response.json();
-          
-          // Extract frame options
-          const frames = pricingData
-            .filter((item: any) => item.category === 'frame')
-            .map((item: any) => ({
-              id: item.id,
-              name: item.itemName,
-              width: "2",
-              color: getFrameColor(item.itemName),
-              material: "Wood",
-              basePrice: item.basePrice
-            }));
-          
-          // Extract mat options
-          const mats = pricingData
-            .filter((item: any) => item.category === 'mat')
-            .map((item: any) => ({
-              id: item.id,
-              matboard: {
-                id: item.id,
-                name: item.itemName,
-                color: getMatColor(item.itemName)
-              },
-              position: 1,
-              width: 2,
-              offset: 0
-            }));
+    drawVisualization();
+  }, [selectedFrame, selectedMat, artworkWidth, artworkHeight, matWidth, zoom, rotation]);
 
-          setFrameOptions(frames);
-          setMatOptions(mats);
-        }
-      } catch (error) {
-        console.error('Error loading options:', error);
-      }
-    };
-
-    loadOptions();
+  useEffect(() => {
+    // Set default selections
+    if (frameOptions.length > 0 && !selectedFrame) {
+      setSelectedFrame(frameOptions[0]);
+    }
+    if (matOptions.length > 0 && !selectedMat) {
+      setSelectedMat(matOptions[0]);
+    }
   }, []);
 
-  // Helper function to determine frame color from name
-  const getFrameColor = (name: string) => {
-    const lowerName = name.toLowerCase();
-    if (lowerName.includes('black')) return '#2D2D2D';
-    if (lowerName.includes('white')) return '#F5F5F5';
-    if (lowerName.includes('gold')) return '#D4AF37';
-    if (lowerName.includes('silver')) return '#C0C0C0';
-    if (lowerName.includes('cherry')) return '#8B0000';
-    if (lowerName.includes('oak')) return '#DEB887';
-    if (lowerName.includes('walnut')) return '#8B4513';
-    return '#8B4513'; // Default wood color
+  const calculateTotal = () => {
+    const framePrice = selectedFrame?.price || 0;
+    const matPrice = selectedMat?.price || 0;
+    const sizeMultiplier = (artworkWidth * artworkHeight) / 80; // Base size 8x10
+    return (framePrice + matPrice) * sizeMultiplier;
   };
 
-  // Helper function to determine mat color from name
-  const getMatColor = (name: string) => {
-    const lowerName = name.toLowerCase();
-    if (lowerName.includes('white')) return '#FFFFFF';
-    if (lowerName.includes('black')) return '#2D2D2D';
-    if (lowerName.includes('cream')) return '#F5F5DC';
-    if (lowerName.includes('gray') || lowerName.includes('grey')) return '#808080';
-    if (lowerName.includes('blue')) return '#4169E1';
-    if (lowerName.includes('red')) return '#DC143C';
-    if (lowerName.includes('green')) return '#228B22';
-    if (lowerName.includes('beige')) return '#F5F5DC';
-    return '#FFFFFF'; // Default white
+  const captureDesign = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const dataURL = canvas.toDataURL('image/jpeg', 0.9);
+    console.log('Frame design captured:', dataURL);
+    
+    // Create download link
+    const link = document.createElement('a');
+    link.download = 'frame-design.jpg';
+    link.href = dataURL;
+    link.click();
   };
-
-  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setArtworkImage(e.target?.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleFrameImageCaptured = (imageData: string) => {
-    console.log('Frame design captured:', imageData);
-    // Here you could save the frame design to the order
-  };
-
-  const handleFrameSelect = (frameId: string) => {
-    const frame = frameOptions.find(f => f.id === frameId);
-    if (frame) {
-      setSelectedFrameId(frameId);
-      if (useMultipleFrames) {
-        const newFrame = { frame, position: selectedFrames.length + 1, distance: 0, pricingMethod: 'linear' };
-        setSelectedFrames([...selectedFrames, newFrame]);
-      } else {
-        setSelectedFrames([{ frame, position: 1, distance: 0, pricingMethod: 'linear' }]);
-      }
-    }
-  };
-
-  const handleMatSelect = (matId: string) => {
-    const mat = matOptions.find(m => m.id === matId);
-    if (mat) {
-      setSelectedMatId(matId);
-      if (useMultipleMats) {
-        const newMat = { ...mat, position: selectedMats.length + 1 };
-        setSelectedMats([...selectedMats, newMat]);
-      } else {
-        setSelectedMats([mat]);
-      }
-    }
-  };
-
-  const removeFrame = (index: number) => {
-    setSelectedFrames(prev => prev.filter((_, i) => i !== index));
-  };
-
-  const removeMat = (index: number) => {
-    setSelectedMats(prev => prev.filter((_, i) => i !== index));
-  };
-
-  // Filter options based on search
-  const filteredFrames = frameOptions.filter(frame =>
-    frame.name.toLowerCase().includes(frameSearch.toLowerCase())
-  );
-
-  const filteredMats = matOptions.filter(mat =>
-    mat.matboard.name.toLowerCase().includes(matSearch.toLowerCase())
-  );
 
   return (
     <div className="min-h-screen flex bg-background">
@@ -175,368 +154,221 @@ export default function VirtualFrameDesigner() {
       <div className="lg:pl-64 flex flex-col flex-1">
         <Header />
         
-        <main className="flex-1 p-4 lg:p-6">
-          <div className="max-w-7xl mx-auto">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h1 className="text-2xl lg:text-3xl font-bold">Virtual Frame Designer</h1>
-                <p className="text-muted-foreground">Design custom frames with real-time visualization and optimization tools</p>
+        <main className="flex-1">
+          <div className="py-6">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
+              <div className="md:flex md:items-center md:justify-between mb-8">
+                <div className="flex-1 min-w-0">
+                  <h2 className="text-2xl font-bold leading-7 text-foreground sm:text-3xl sm:truncate">
+                    Virtual Frame Designer
+                  </h2>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Design and visualize your custom frame before ordering
+                  </p>
+                </div>
+                <div className="mt-4 flex md:mt-0 md:ml-4 space-x-3">
+                  <Button variant="outline" onClick={captureDesign}>
+                    <Download className="w-4 h-4 mr-2" />
+                    Save Design
+                  </Button>
+                  <Button>
+                    Add to Cart - ${calculateTotal().toFixed(2)}
+                  </Button>
+                </div>
               </div>
-              <Frame className="w-8 h-8 text-primary" />
-            </div>
 
-            <Tabs defaultValue="designer" className="w-full">
-              <TabsList className="grid w-full grid-cols-4">
-                <TabsTrigger value="designer" className="flex items-center gap-2">
-                  <Frame className="w-4 h-4" />
-                  Designer
-                </TabsTrigger>
-                <TabsTrigger value="giclee" className="flex items-center gap-2">
-                  <Printer className="w-4 h-4" />
-                  Fine Art Printing
-                </TabsTrigger>
-                <TabsTrigger value="optimizer" className="flex items-center gap-2">
-                  <Calculator className="w-4 h-4" />
-                  Materials Optimizer
-                </TabsTrigger>
-                <TabsTrigger value="preview" className="flex items-center gap-2">
-                  <Layers className="w-4 h-4" />
-                  3D Preview
-                </TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="designer" className="space-y-6">
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                  {/* Upload Column */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Controls Panel */}
+                <div className="lg:col-span-1 space-y-6">
+                  {/* Artwork Dimensions */}
                   <Card>
                     <CardHeader>
-                      <CardTitle>Upload Artwork</CardTitle>
-                      <CardDescription>Upload an image to see your framed artwork</CardDescription>
+                      <CardTitle className="flex items-center">
+                        <Frame className="w-5 h-5 mr-2" />
+                        Artwork Size
+                      </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                      <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center">
-                        {artworkImage ? (
-                          <div className="space-y-4">
-                            <img 
-                              src={artworkImage} 
-                              alt="Uploaded artwork" 
-                              className="max-w-full max-h-48 mx-auto object-contain"
-                            />
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              onClick={() => document.getElementById('image-upload')?.click()}
-                            >
-                              Change Image
-                            </Button>
-                          </div>
-                        ) : (
-                          <div className="space-y-4">
-                            <Frame className="w-12 h-12 mx-auto text-muted-foreground" />
-                            <div>
-                              <p className="text-sm text-muted-foreground mb-2">
-                                Click to upload or drag and drop
-                              </p>
-                              <Button 
-                                variant="outline"
-                                onClick={() => document.getElementById('image-upload')?.click()}
-                              >
-                                Browse Files
-                              </Button>
-                            </div>
-                          </div>
-                        )}
-                        <input
-                          id="image-upload"
-                          type="file"
-                          accept="image/*"
-                          onChange={handleImageUpload}
-                          className="hidden"
-                        />
-                      </div>
-
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <Label htmlFor="artwork-width">Width (inches)</Label>
+                          <Label htmlFor="width">Width (inches)</Label>
                           <Input
-                            id="artwork-width"
+                            id="width"
                             type="number"
                             value={artworkWidth}
                             onChange={(e) => setArtworkWidth(Number(e.target.value))}
+                            min="1"
+                            max="48"
                           />
                         </div>
                         <div>
-                          <Label htmlFor="artwork-height">Height (inches)</Label>
+                          <Label htmlFor="height">Height (inches)</Label>
                           <Input
-                            id="artwork-height"
+                            id="height"
                             type="number"
                             value={artworkHeight}
                             onChange={(e) => setArtworkHeight(Number(e.target.value))}
+                            min="1"
+                            max="48"
                           />
                         </div>
                       </div>
                     </CardContent>
                   </Card>
 
-                  {/* Frame Options Column */}
+                  {/* Frame Selection */}
                   <Card>
                     <CardHeader>
-                      <CardTitle>Frame Options</CardTitle>
-                      <CardDescription>Select frame styles and mat colors</CardDescription>
+                      <CardTitle>Frame Style</CardTitle>
+                      <CardDescription>Choose your frame</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                      <div className="space-y-4">
-                        <div>
-                          <Label className="text-sm font-medium">Frame Styles</Label>
-                          <Popover open={frameOpen} onOpenChange={setFrameOpen}>
-                            <PopoverTrigger asChild>
-                              <Button
-                                variant="outline"
-                                role="combobox"
-                                aria-expanded={frameOpen}
-                                className="w-full justify-between mt-2"
-                              >
-                                {selectedFrameId 
-                                  ? frameOptions.find(f => f.id === selectedFrameId)?.name
-                                  : "Select frame style..."}
-                                <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-full p-0">
-                              <Command>
-                                <CommandInput
-                                  placeholder="Search frame styles..."
-                                  value={frameSearch}
-                                  onValueChange={setFrameSearch}
+                      <div className="grid grid-cols-1 gap-2">
+                        {frameOptions.map((frame) => (
+                          <div
+                            key={frame.id}
+                            className={`p-3 rounded-lg border-2 cursor-pointer transition-colors ${
+                              selectedFrame?.id === frame.id
+                                ? 'border-primary bg-primary/5'
+                                : 'border-border hover:border-primary/50'
+                            }`}
+                            onClick={() => setSelectedFrame(frame)}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center space-x-3">
+                                <div
+                                  className="w-6 h-6 rounded border"
+                                  style={{ backgroundColor: frame.color }}
                                 />
-                                <CommandEmpty>No frame style found.</CommandEmpty>
-                                <CommandGroup className="max-h-60 overflow-auto">
-                                  {filteredFrames.map((frame) => (
-                                    <CommandItem
-                                      key={frame.id}
-                                      value={frame.name}
-                                      onSelect={() => {
-                                        handleFrameSelect(frame.id);
-                                        setFrameOpen(false);
-                                        setFrameSearch("");
-                                      }}
-                                    >
-                                      <Check
-                                        className={cn(
-                                          "mr-2 h-4 w-4",
-                                          selectedFrameId === frame.id ? "opacity-100" : "opacity-0"
-                                        )}
-                                      />
-                                      <div className="flex items-center gap-2">
-                                        <div 
-                                          className="w-4 h-4 rounded-sm border"
-                                          style={{ backgroundColor: frame.color }}
-                                        />
-                                        <span>{frame.name}</span>
-                                      </div>
-                                    </CommandItem>
-                                  ))}
-                                </CommandGroup>
-                              </Command>
-                            </PopoverContent>
-                          </Popover>
-                          
-                          {/* Selected frames display */}
-                          {selectedFrames.length > 0 && (
-                            <div className="mt-2 space-y-1">
-                              {selectedFrames.map((item, index) => (
-                                <div key={index} className="flex items-center justify-between text-sm bg-muted p-2 rounded">
-                                  <span>{item.frame.name}</span>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => removeFrame(index)}
-                                    className="h-6 w-6 p-0"
-                                  >
-                                    ×
-                                  </Button>
+                                <div>
+                                  <div className="font-medium">{frame.name}</div>
+                                  <div className="text-sm text-muted-foreground">{frame.style}</div>
                                 </div>
-                              ))}
+                              </div>
+                              <Badge variant="secondary">${frame.price}</Badge>
                             </div>
-                          )}
-                        </div>
-
-                        <div>
-                          <Label className="text-sm font-medium">Mat Colors</Label>
-                          <Popover open={matOpen} onOpenChange={setMatOpen}>
-                            <PopoverTrigger asChild>
-                              <Button
-                                variant="outline"
-                                role="combobox"
-                                aria-expanded={matOpen}
-                                className="w-full justify-between mt-2"
-                              >
-                                {selectedMatId 
-                                  ? matOptions.find(m => m.id === selectedMatId)?.matboard.name
-                                  : "Select mat color..."}
-                                <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-full p-0">
-                              <Command>
-                                <CommandInput
-                                  placeholder="Search mat colors..."
-                                  value={matSearch}
-                                  onValueChange={setMatSearch}
-                                />
-                                <CommandEmpty>No mat color found.</CommandEmpty>
-                                <CommandGroup className="max-h-60 overflow-auto">
-                                  {filteredMats.map((mat) => (
-                                    <CommandItem
-                                      key={mat.id}
-                                      value={mat.matboard.name}
-                                      onSelect={() => {
-                                        handleMatSelect(mat.id);
-                                        setMatOpen(false);
-                                        setMatSearch("");
-                                      }}
-                                    >
-                                      <Check
-                                        className={cn(
-                                          "mr-2 h-4 w-4",
-                                          selectedMatId === mat.id ? "opacity-100" : "opacity-0"
-                                        )}
-                                      />
-                                      <div className="flex items-center gap-2">
-                                        <div 
-                                          className="w-4 h-4 rounded-sm border"
-                                          style={{ backgroundColor: mat.matboard.color }}
-                                        />
-                                        <span>{mat.matboard.name}</span>
-                                      </div>
-                                    </CommandItem>
-                                  ))}
-                                </CommandGroup>
-                              </Command>
-                            </PopoverContent>
-                          </Popover>
-                          
-                          {/* Selected mats display */}
-                          {selectedMats.length > 0 && (
-                            <div className="mt-2 space-y-1">
-                              {selectedMats.map((mat, index) => (
-                                <div key={index} className="flex items-center justify-between text-sm bg-muted p-2 rounded">
-                                  <span>{mat.matboard.name}</span>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => removeMat(index)}
-                                    className="h-6 w-6 p-0"
-                                  >
-                                    ×
-                                  </Button>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="flex items-center justify-between pt-4 border-t">
-                          <Label htmlFor="multiple-frames">Multiple Frames</Label>
-                          <input
-                            id="multiple-frames"
-                            type="checkbox"
-                            checked={useMultipleFrames}
-                            onChange={(e) => setUseMultipleFrames(e.target.checked)}
-                            className="rounded"
-                          />
-                        </div>
-
-                        <div className="flex items-center justify-between">
-                          <Label htmlFor="multiple-mats">Multiple Mats</Label>
-                          <input
-                            id="multiple-mats"
-                            type="checkbox"
-                            checked={useMultipleMats}
-                            onChange={(e) => setUseMultipleMats(e.target.checked)}
-                            className="rounded"
-                          />
-                        </div>
+                          </div>
+                        ))}
                       </div>
                     </CardContent>
                   </Card>
 
-                  {/* Preview Column */}
+                  {/* Mat Selection */}
                   <Card>
                     <CardHeader>
-                      <CardTitle>Preview</CardTitle>
-                      <CardDescription>See your framed artwork</CardDescription>
+                      <CardTitle className="flex items-center">
+                        <Palette className="w-5 h-5 mr-2" />
+                        Mat Options
+                      </CardTitle>
                     </CardHeader>
-                    <CardContent>
-                      <div className="aspect-[4/3] bg-muted rounded-lg flex items-center justify-center">
-                        <div className="text-center text-muted-foreground">
-                          <Frame className="w-12 h-12 mx-auto mb-4" />
-                          <p>Select options to see preview</p>
-                        </div>
+                    <CardContent className="space-y-4">
+                      <div>
+                        <Label>Mat Width: {matWidth[0]} inches</Label>
+                        <Slider
+                          value={matWidth}
+                          onValueChange={setMatWidth}
+                          max={4}
+                          min={0.5}
+                          step={0.25}
+                          className="mt-2"
+                        />
                       </div>
-
-                      <div className="mt-4 space-y-2">
-                        <div className="flex justify-between text-sm">
-                          <span>Estimated Total:</span>
-                          <span className="font-medium">$0.00</span>
-                        </div>
-                        <Button className="w-full" disabled>
-                          Add to Order
-                        </Button>
+                      
+                      <div className="grid grid-cols-1 gap-2">
+                        {matOptions.map((mat) => (
+                          <div
+                            key={mat.id}
+                            className={`p-3 rounded-lg border-2 cursor-pointer transition-colors ${
+                              selectedMat?.id === mat.id
+                                ? 'border-primary bg-primary/5'
+                                : 'border-border hover:border-primary/50'
+                            }`}
+                            onClick={() => setSelectedMat(mat)}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center space-x-3">
+                                <div
+                                  className="w-6 h-6 rounded border"
+                                  style={{ backgroundColor: mat.color }}
+                                />
+                                <div className="font-medium">{mat.name}</div>
+                              </div>
+                              <Badge variant="secondary">${mat.price}</Badge>
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     </CardContent>
                   </Card>
                 </div>
 
-                {/* Full Width Visualizer */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Frame Visualizer</CardTitle>
-                    <CardDescription>Interactive 3D preview of your framed artwork</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <FrameVisualizer
-                      frames={selectedFrames}
-                      mats={selectedMats}
-                      artworkWidth={artworkWidth}
-                      artworkHeight={artworkHeight}
-                      artworkImage={artworkImage}
-                      useMultipleFrames={useMultipleFrames}
-                      useMultipleMats={useMultipleMats}
-                      onFrameImageCaptured={handleFrameImageCaptured}
-                    />
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="giclee">
-                <GicleePrintingService />
-              </TabsContent>
-
-              <TabsContent value="optimizer">
-                <LarsonOrderOptimizer />
-              </TabsContent>
-
-              <TabsContent value="preview" className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>3D Material Preview</CardTitle>
-                    <CardDescription>
-                      Interactive 3D preview of frame materials and textures
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="aspect-video bg-muted rounded-lg flex items-center justify-center">
-                      <div className="text-center text-muted-foreground">
-                        <Layers className="w-16 h-16 mx-auto mb-4" />
-                        <p className="text-lg font-medium">3D Material Preview</p>
-                        <p className="text-sm">Interactive 3D preview would render here</p>
+                {/* Visualization Panel */}
+                <div className="lg:col-span-2">
+                  <Card>
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <CardTitle>Preview</CardTitle>
+                        <div className="flex items-center space-x-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setZoom(Math.max(0.5, zoom - 0.1))}
+                          >
+                            <ZoomOut className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setZoom(Math.min(2, zoom + 0.1))}
+                          >
+                            <ZoomIn className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setRotation((rotation + 90) % 360)}
+                          >
+                            <RotateCw className="w-4 h-4" />
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            </Tabs>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="bg-gray-100 rounded-lg p-4 flex items-center justify-center min-h-[500px]">
+                        <canvas
+                          ref={canvasRef}
+                          width={600}
+                          height={500}
+                          className="border border-gray-300 rounded shadow-sm bg-white"
+                        />
+                      </div>
+                      
+                      <Separator className="my-4" />
+                      
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span>Frame: {selectedFrame?.name || 'None'}</span>
+                          <span>${selectedFrame?.price || 0}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span>Mat: {selectedMat?.name || 'None'}</span>
+                          <span>${selectedMat?.price || 0}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span>Size: {artworkWidth}" × {artworkHeight}"</span>
+                          <span>Multiplier: {((artworkWidth * artworkHeight) / 80).toFixed(2)}x</span>
+                        </div>
+                        <Separator />
+                        <div className="flex justify-between font-medium">
+                          <span>Total:</span>
+                          <span>${calculateTotal().toFixed(2)}</span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+            </div>
           </div>
         </main>
       </div>
