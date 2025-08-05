@@ -338,35 +338,47 @@ FrameCraft`;
                 </div>
                 
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                  {/* View Toggle - Always visible with strong styling */}
-                  <div className="flex items-center bg-white border-2 border-blue-400 rounded-lg p-1 shadow-sm" data-testid="view-toggle">
+                  {/* View Toggle - FORCE VISIBLE with debugging styles */}
+                  <div 
+                    className="flex items-center bg-red-500 border-4 border-yellow-400 rounded-lg p-3 shadow-lg" 
+                    style={{
+                      display: 'flex !important',
+                      visibility: 'visible !important',
+                      opacity: '1 !important',
+                      position: 'relative',
+                      zIndex: 9999,
+                      minHeight: '60px',
+                      minWidth: '300px'
+                    }}
+                    data-testid="view-toggle"
+                  >
                     <Button
-                      size="sm"
+                      size="lg"
                       variant={viewMode === 'table' ? 'default' : 'outline'}
-                      onClick={() => setViewMode('table')}
-                      className={`h-10 px-6 font-semibold transition-all ${
-                        viewMode === 'table' 
-                          ? 'bg-blue-600 text-white hover:bg-blue-700' 
-                          : 'bg-white text-blue-600 hover:bg-blue-50'
-                      }`}
+                      onClick={() => {
+                        console.log('Table button clicked!');
+                        setViewMode('table');
+                      }}
+                      className="h-12 px-8 font-bold bg-green-600 text-white border-2 border-black hover:bg-green-700"
                       data-testid="button-table-view"
+                      style={{ display: 'block !important', visibility: 'visible !important' }}
                     >
-                      <Table className="h-4 w-4 mr-2" />
-                      Table View
+                      <Table className="h-5 w-5 mr-3" />
+                      TABLE
                     </Button>
                     <Button
-                      size="sm"
+                      size="lg"
                       variant={viewMode === 'kanban' ? 'default' : 'outline'}
-                      onClick={() => setViewMode('kanban')}
-                      className={`h-10 px-6 font-semibold transition-all ${
-                        viewMode === 'kanban' 
-                          ? 'bg-blue-600 text-white hover:bg-blue-700' 
-                          : 'bg-white text-blue-600 hover:bg-blue-50'
-                      }`}
+                      onClick={() => {
+                        console.log('Kanban button clicked!');
+                        setViewMode('kanban');
+                      }}
+                      className="h-12 px-8 font-bold bg-purple-600 text-white border-2 border-black hover:bg-purple-700 ml-2"
                       data-testid="button-kanban-view"
+                      style={{ display: 'block !important', visibility: 'visible !important' }}
                     >
-                      <Kanban className="h-4 w-4 mr-2" />
-                      Kanban Board
+                      <Kanban className="h-5 w-5 mr-3" />
+                      KANBAN
                     </Button>
                   </div>
 
