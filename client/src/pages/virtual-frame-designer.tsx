@@ -117,14 +117,14 @@ export default function VirtualFrameDesigner() {
   }, [selectedFrame, selectedMat, artworkWidth, artworkHeight, matWidth, zoom, rotation]);
 
   useEffect(() => {
-    // Set default selections
+    // Set default selections only once when component mounts
     if (frameOptions.length > 0 && !selectedFrame) {
       setSelectedFrame(frameOptions[0]);
     }
     if (matOptions.length > 0 && !selectedMat) {
       setSelectedMat(matOptions[0]);
     }
-  }, []);
+  }, []); // Empty dependency array ensures this only runs once
 
   const calculateTotal = () => {
     const framePrice = selectedFrame?.price || 0;
