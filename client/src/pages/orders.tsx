@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Sidebar from "@/components/layout/Sidebar";
 import Header from "@/components/layout/Header";
 import OrderList from "@/components/orders/OrderList";
-import KanbanView from "@/components/orders/KanbanView";
+import SimpleKanbanView from "@/components/orders/SimpleKanbanView";
 import OrderForm from "@/components/orders/OrderForm";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -424,15 +424,11 @@ FrameCraft`;
                   onProcessPayment={handleProcessPayment}
                 />
               ) : (
-                <KanbanView
+                <SimpleKanbanView
                   orders={Array.isArray(orders) ? orders : []} 
-                  isLoading={isLoading}
                   onEdit={handleEdit}
                   onGenerateInvoice={handleGenerateInvoice}
-                  onGenerateWorkOrder={handleGenerateWorkOrder}
                   onPrintInvoice={handlePrintInvoice}
-                  onEmailInvoice={handleEmailInvoice}
-                  onProcessPayment={handleProcessPayment}
                 />
               )}
             </div>
