@@ -29,9 +29,7 @@ function Router() {
         <Route path="/" component={Landing} />
       ) : (
         <>
-          <Route path="/" nest>
-            {(params) => <Dashboard />}
-          </Route>
+          <Route path="/" component={Dashboard} />
           <Route path="/dashboard" component={Dashboard} />
           <Route path="/orders" component={Orders} />
           <Route path="/customers" component={Customers} />
