@@ -8,7 +8,16 @@ FrameCraft is a comprehensive full-stack web application designed to streamline 
 
 Preferred communication style: Simple, everyday language.
 
-## Recent Changes (July 25, 2025)
+## Recent Changes (August 5, 2025)
+
+### Kanban Board Overhaul (August 5, 2025)
+✓ **Replaced Complex Drag-and-Drop**: Removed non-functional drag-and-drop system that was causing user frustration
+✓ **Simple Button-Based Movement**: Created new SimpleKanbanView component with reliable blue arrow (→) buttons on each order card
+✓ **Status Selection Dialog**: Click arrow button opens dropdown to select any stage (Pending → Measuring → Designing → Cutting → Assembly → Completed)
+✓ **Order Details Popup**: Eye icon shows complete order information in clean dialog
+✓ **Mobile-Optimized Interface**: Horizontal scrolling works perfectly, buttons are touch-friendly
+✓ **Reliable API Integration**: Proper error handling and success notifications for status updates
+✓ **Preserved All Functionality**: Maintains view/edit/invoice generation while fixing core movement issues
 
 ### Production Readiness Updates (July 25, 2025)
 ✓ **Enhanced Security**: Added comprehensive security middleware including rate limiting (100 req/15min API, 10 req/15min auth), security headers (XSS protection, content-type sniffing prevention), and request sanitization to prevent malicious input
