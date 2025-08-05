@@ -20,6 +20,27 @@
     overflow-y: auto !important;
     -webkit-overflow-scrolling: touch !important;
   }
+
+  /* Mobile Kanban Board Enhancements */
+  .kanban-container {
+    -webkit-overflow-scrolling: touch !important;
+    overscroll-behavior-x: contain !important;
+    scroll-snap-type: x proximity !important;
+  }
+
+  /* Enable smooth scrolling for mobile kanban columns */
+  .kanban-container > div > div {
+    scroll-snap-align: start !important;
+    flex-shrink: 0 !important;
+  }
+
+  /* Enhanced touch targets for mobile */
+  .touch-manipulation {
+    touch-action: manipulation !important;
+    -webkit-touch-callout: none !important;
+    -webkit-user-select: none !important;
+    user-select: none !important;
+  }
 }
 
 :root {

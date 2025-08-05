@@ -83,6 +83,7 @@ export default function KanbanView({
   const [statusChangeOrder, setStatusChangeOrder] = useState<Order | null>(null);
   const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false);
   const [lastTap, setLastTap] = useState<number | null>(null);
+  const [autoScrollInterval, setAutoScrollInterval] = useState<NodeJS.Timeout | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -211,6 +212,40 @@ export default function KanbanView({
       if (deltaX > 15 || deltaY > 15) {
         e.preventDefault();
         setIsDragging(true);
+        
+        // Auto-scroll functionality
+        const scrollContainer = document.querySelector('.kanban-container');
+        if (scrollContainer && isDragging) {
+          const containerRect = scrollContainer.getBoundingClientRect();
+          const scrollThreshold = 100; // pixels from edge to start scrolling
+          const scrollSpeed = 5; // pixels per interval
+          
+          // Clear existing auto-scroll
+          if (autoScrollInterval) {
+            clearInterval(autoScrollInterval);
+          }
+          
+          // Check if near left or right edge
+          if (touch.clientX < containerRect.left + scrollThreshold) {
+            // Scroll left
+            const interval = setInterval(() => {
+              scrollContainer.scrollLeft -= scrollSpeed;
+            }, 16); // ~60fps
+            setAutoScrollInterval(interval);
+          } else if (touch.clientX > containerRect.right - scrollThreshold) {
+            // Scroll right  
+            const interval = setInterval(() => {
+              scrollContainer.scrollLeft += scrollSpeed;
+            }, 16);
+            setAutoScrollInterval(interval);
+          } else {
+            // Stop auto-scrolling
+            if (autoScrollInterval) {
+              clearInterval(autoScrollInterval);
+              setAutoScrollInterval(null);
+            }
+          }
+        }
       }
     } catch (error) {
       console.error('Touch move error:', error);
@@ -220,6 +255,12 @@ export default function KanbanView({
   const handleTouchEnd = (e: React.TouchEvent) => {
     try {
       e.preventDefault();
+
+      // Clear auto-scroll interval
+      if (autoScrollInterval) {
+        clearInterval(autoScrollInterval);
+        setAutoScrollInterval(null);
+      }
 
       // Reset visual feedback
       const target = e.currentTarget as HTMLElement;
@@ -351,11 +392,12 @@ export default function KanbanView({
       {/* Mobile Instructions */}
       <div className="md:hidden bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
         <p className="text-sm text-blue-800">
-          <strong>Mobile Tip:</strong> Use the arrow buttons (← →) at the bottom of each card to move orders between stages, or press and hold to drag cards between columns.
+          <strong>Mobile Tip:</strong> Tap the action icons at the bottom of each card, or press and hold to drag cards between columns. Scroll horizontally to see all stages.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+      <div className="kanban-container overflow-x-auto">
+        <div className="grid grid-cols-6 gap-4 min-w-[1200px] md:min-w-0 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         {stages.map((stage) => {
           const stageOrders = getOrdersByStatus(stage.id);
           return (
@@ -429,8 +471,8 @@ export default function KanbanView({
                           )}
                         </div>
 
-                        {/* Action Buttons */}
-                        <div className="flex gap-1 pt-2">
+                        {/* Action Buttons - Enhanced for Mobile */}
+                        <div className="flex gap-2 pt-2">
                           <Button
                             size="sm"
                             variant="outline"
@@ -439,10 +481,11 @@ export default function KanbanView({
                               e.stopPropagation();
                               handleViewOrder(order);
                             }}
-                            className="h-6 w-6 p-0"
+                            className="h-8 w-8 p-0 touch-manipulation"
                             data-testid={`button-view-${order.id}`}
+                            title="View Details"
                           >
-                            <Eye className="h-3 w-3" />
+                            <Eye className="h-4 w-4" />
                           </Button>
                           <Button
                             size="sm"
@@ -452,25 +495,27 @@ export default function KanbanView({
                               e.stopPropagation();
                               onEdit(order);
                             }}
-                            className="h-6 w-6 p-0"
+                            className="h-8 w-8 p-0 touch-manipulation"
                             data-testid={`button-edit-${order.id}`}
+                            title="Edit Order"
                           >
-                            <Edit className="h-3 w-3" />
+                            <Edit className="h-4 w-4" />
                           </Button>
                           {/* Mobile Status Picker Button */}
                           <Button
                             size="sm"
                             variant="outline"
                             onClick={(e) => {
+                              e.preventDefault();
                               e.stopPropagation();
                               setStatusChangeOrder(order);
                               setIsStatusDialogOpen(true);
                             }}
-                            className="h-6 w-6 p-0 md:hidden"
-                            title="Change Status"
+                            className="h-8 w-8 p-0 md:hidden touch-manipulation bg-blue-50 hover:bg-blue-100"
+                            title="Move to Next Stage"
                             data-testid={`button-status-${order.id}`}
                           >
-                            <ArrowRight className="h-3 w-3" />
+                            <ArrowRight className="h-4 w-4" />
                           </Button>
                           {onGenerateInvoice && (
                             <Button
@@ -517,6 +562,7 @@ export default function KanbanView({
             </div>
           );
         })}
+        </div>
       </div>
 
       {/* Order Details Dialog */}
@@ -645,6 +691,37 @@ export default function KanbanView({
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Status Change Dialog for Mobile */}
+      <Dialog open={isStatusDialogOpen} onOpenChange={setIsStatusDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Move Order to Stage</DialogTitle>
+            <DialogDescription>
+              Select the stage to move order {statusChangeOrder?.orderNumber} to:
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-1 gap-2 mt-4">
+            {stages.map((stage) => (
+              <Button
+                key={stage.id}
+                variant={statusChangeOrder?.status === stage.id ? "default" : "outline"}
+                onClick={() => handleStatusChange(stage.id)}
+                className="justify-start h-12 text-left"
+                disabled={statusChangeOrder?.status === stage.id}
+              >
+                <div className={`w-3 h-3 rounded-full ${stage.color} mr-3`}></div>
+                <div>
+                  <div className="font-medium">{stage.title}</div>
+                  <div className="text-xs text-muted-foreground">
+                    {getOrdersByStatus(stage.id).length} orders
+                  </div>
+                </div>
+              </Button>
+            ))}
+          </div>
         </DialogContent>
       </Dialog>
     </>
