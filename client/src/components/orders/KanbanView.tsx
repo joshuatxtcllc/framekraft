@@ -199,7 +199,6 @@ export default function KanbanView({
         return; // Don't interfere with button interactions
       }
 
-      e.preventDefault();
       setTouchStartPosition({ x: touch.clientX, y: touch.clientY });
       setDraggedOrder(order);
       setIsDragging(false);
@@ -209,7 +208,10 @@ export default function KanbanView({
       if (cardElement) {
         cardElement.style.opacity = '0.7';
         cardElement.style.transform = 'scale(1.05)';
+        cardElement.style.zIndex = '1000';
       }
+      
+      console.log('Touch start - Order:', order.orderNumber, 'Status:', order.status);
     } catch (error) {
       console.error('Touch start error:', error);
     }
@@ -288,35 +290,46 @@ export default function KanbanView({
 
       if (draggedOrder && isDragging && e.changedTouches[0]) {
         const touch = e.changedTouches[0];
-        const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY);
-        const dropZone = elementBelow?.closest('[data-drop-zone="true"]');
+        
+        // Get all drop zones and find the one closest to touch point
+        const dropZones = document.querySelectorAll('[data-drop-zone="true"]');
+        let closestZone = null;
+        let minDistance = Infinity;
+        
+        dropZones.forEach((zone) => {
+          const rect = zone.getBoundingClientRect();
+          const centerX = rect.left + rect.width / 2;
+          const centerY = rect.top + rect.height / 2;
+          const distance = Math.sqrt(
+            Math.pow(touch.clientX - centerX, 2) + Math.pow(touch.clientY - centerY, 2)
+          );
+          
+          // Check if touch is within the zone bounds
+          if (touch.clientX >= rect.left && touch.clientX <= rect.right &&
+              touch.clientY >= rect.top && touch.clientY <= rect.bottom) {
+            if (distance < minDistance) {
+              minDistance = distance;
+              closestZone = zone;
+            }
+          }
+        });
 
-        if (dropZone) {
-          const newStatus = dropZone.getAttribute('data-status') as Order['status'];
+        if (closestZone) {
+          const newStatus = closestZone.getAttribute('data-status') as Order['status'];
           console.log('Drop detected - Old status:', draggedOrder.status, 'New status:', newStatus);
           
           if (newStatus && newStatus !== draggedOrder.status) {
-            // Ensure we have the complete order data before updating
             const updateData = {
               ...draggedOrder,
               status: newStatus,
-              id: draggedOrder.id // Ensure ID is included
+              id: draggedOrder.id
             };
             
             console.log('Updating order with mutation:', updateData);
-            updateOrderMutation.mutate(updateData, {
-              onError: (error) => {
-                console.error('Order update failed:', error);
-                toast({
-                  title: "Error",
-                  description: "Failed to move order. Please try again.",
-                  variant: "destructive",
-                });
-              }
-            });
+            updateOrderMutation.mutate(updateData);
           }
         } else {
-          console.log('No valid drop zone found at touch position');
+          console.log('No valid drop zone found at touch position:', touch.clientX, touch.clientY);
         }
       }
     } catch (error) {
@@ -423,7 +436,7 @@ export default function KanbanView({
       {/* Mobile Instructions */}
       <div className="md:hidden bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
         <p className="text-sm text-blue-800">
-          <strong>Mobile Tip:</strong> Tap the action icons at the bottom of each card, or press and hold to drag cards between columns. Scroll horizontally to see all stages.
+          <strong>Mobile Tip:</strong> Use the blue arrow button (→) on each order card to quickly move it between stages. You can also scroll horizontally to see all stages.
         </p>
       </div>
 
@@ -542,11 +555,11 @@ export default function KanbanView({
                               setStatusChangeOrder(order);
                               setIsStatusDialogOpen(true);
                             }}
-                            className="h-8 w-8 p-0 md:hidden touch-manipulation bg-blue-50 hover:bg-blue-100"
+                            className="h-8 w-8 p-0 touch-manipulation bg-blue-50 hover:bg-blue-100 border-blue-300"
                             title="Move to Next Stage"
                             data-testid={`button-status-${order.id}`}
                           >
-                            <ArrowRight className="h-4 w-4" />
+                            <ArrowRight className="h-4 w-4 text-blue-600" />
                           </Button>
                           {onGenerateInvoice && (
                             <Button
