@@ -161,9 +161,24 @@ export default function KanbanView({
   const handleDrop = (e: React.DragEvent, newStatus: string) => {
     e.preventDefault();
     if (draggedOrder && draggedOrder.status !== newStatus) {
-      updateOrderMutation.mutate({
+      console.log('Desktop drop - Old status:', draggedOrder.status, 'New status:', newStatus);
+      
+      const updateData = {
         ...draggedOrder,
         status: newStatus,
+        id: draggedOrder.id // Ensure ID is included
+      };
+      
+      console.log('Desktop updating order with mutation:', updateData);
+      updateOrderMutation.mutate(updateData, {
+        onError: (error) => {
+          console.error('Desktop order update failed:', error);
+          toast({
+            title: "Error",
+            description: "Failed to move order. Please try again.",
+            variant: "destructive",
+          });
+        }
       });
     }
     setDraggedOrder(null);
@@ -213,39 +228,41 @@ export default function KanbanView({
         e.preventDefault();
         setIsDragging(true);
         
-        // Auto-scroll functionality
-        const scrollContainer = document.querySelector('.kanban-container');
-        if (scrollContainer && isDragging) {
-          const containerRect = scrollContainer.getBoundingClientRect();
-          const scrollThreshold = 100; // pixels from edge to start scrolling
-          const scrollSpeed = 5; // pixels per interval
-          
-          // Clear existing auto-scroll
-          if (autoScrollInterval) {
-            clearInterval(autoScrollInterval);
-          }
-          
-          // Check if near left or right edge
-          if (touch.clientX < containerRect.left + scrollThreshold) {
-            // Scroll left
-            const interval = setInterval(() => {
-              scrollContainer.scrollLeft -= scrollSpeed;
-            }, 16); // ~60fps
-            setAutoScrollInterval(interval);
-          } else if (touch.clientX > containerRect.right - scrollThreshold) {
-            // Scroll right  
-            const interval = setInterval(() => {
-              scrollContainer.scrollLeft += scrollSpeed;
-            }, 16);
-            setAutoScrollInterval(interval);
-          } else {
-            // Stop auto-scrolling
+        // Auto-scroll functionality - Start auto-scroll since we just set isDragging to true
+        setTimeout(() => {
+          const scrollContainer = document.querySelector('.kanban-container');
+          if (scrollContainer) {
+            const containerRect = scrollContainer.getBoundingClientRect();
+            const scrollThreshold = 80; // pixels from edge to start scrolling
+            const scrollSpeed = 8; // pixels per interval
+            
+            // Clear existing auto-scroll
             if (autoScrollInterval) {
               clearInterval(autoScrollInterval);
               setAutoScrollInterval(null);
             }
+            
+            // Check if near left or right edge
+            if (touch.clientX < containerRect.left + scrollThreshold) {
+              // Scroll left
+              const interval = setInterval(() => {
+                if (scrollContainer.scrollLeft > 0) {
+                  scrollContainer.scrollLeft = Math.max(0, scrollContainer.scrollLeft - scrollSpeed);
+                }
+              }, 16); // ~60fps
+              setAutoScrollInterval(interval);
+            } else if (touch.clientX > containerRect.right - scrollThreshold) {
+              // Scroll right  
+              const interval = setInterval(() => {
+                const maxScroll = scrollContainer.scrollWidth - scrollContainer.clientWidth;
+                if (scrollContainer.scrollLeft < maxScroll) {
+                  scrollContainer.scrollLeft = Math.min(maxScroll, scrollContainer.scrollLeft + scrollSpeed);
+                }
+              }, 16);
+              setAutoScrollInterval(interval);
+            }
           }
-        }
+        }, 50); // Small delay to ensure state has updated
       }
     } catch (error) {
       console.error('Touch move error:', error);
@@ -272,20 +289,34 @@ export default function KanbanView({
       if (draggedOrder && isDragging && e.changedTouches[0]) {
         const touch = e.changedTouches[0];
         const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY);
-        const dropZone = elementBelow?.closest('[data-drop-zone]');
+        const dropZone = elementBelow?.closest('[data-drop-zone="true"]');
 
         if (dropZone) {
           const newStatus = dropZone.getAttribute('data-status') as Order['status'];
+          console.log('Drop detected - Old status:', draggedOrder.status, 'New status:', newStatus);
+          
           if (newStatus && newStatus !== draggedOrder.status) {
-            updateOrderMutation.mutate({
+            // Ensure we have the complete order data before updating
+            const updateData = {
               ...draggedOrder,
               status: newStatus,
-            }, {
+              id: draggedOrder.id // Ensure ID is included
+            };
+            
+            console.log('Updating order with mutation:', updateData);
+            updateOrderMutation.mutate(updateData, {
               onError: (error) => {
                 console.error('Order update failed:', error);
+                toast({
+                  title: "Error",
+                  description: "Failed to move order. Please try again.",
+                  variant: "destructive",
+                });
               }
             });
           }
+        } else {
+          console.log('No valid drop zone found at touch position');
         }
       }
     } catch (error) {
