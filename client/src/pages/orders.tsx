@@ -338,12 +338,12 @@ FrameCraft`;
                 </div>
                 <div className="mt-4 flex items-center space-x-3 md:mt-0 md:ml-4">
                   {/* View Toggle */}
-                  <div className="flex items-center bg-muted rounded-lg p-1" data-testid="view-toggle">
+                  <div className="flex items-center bg-muted rounded-lg p-1 border" data-testid="view-toggle">
                     <Button
                       size="sm"
                       variant={viewMode === 'table' ? 'default' : 'ghost'}
                       onClick={() => setViewMode('table')}
-                      className="h-8 px-3"
+                      className="h-8 px-3 min-w-[80px]"
                       data-testid="button-table-view"
                     >
                       <Table className="h-4 w-4 mr-1" />
@@ -353,7 +353,7 @@ FrameCraft`;
                       size="sm"
                       variant={viewMode === 'kanban' ? 'default' : 'ghost'}
                       onClick={() => setViewMode('kanban')}
-                      className="h-8 px-3"
+                      className="h-8 px-3 min-w-[80px]"
                       data-testid="button-kanban-view"
                     >
                       <Kanban className="h-4 w-4 mr-1" />
