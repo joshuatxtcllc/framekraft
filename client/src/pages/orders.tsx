@@ -326,6 +326,52 @@ FrameCraft`;
         <main className="flex-1">
           <div className="py-6">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
+              
+              {/* MOVED TOGGLE TO TOP - ISOLATED POSITION */}
+              <div 
+                className="w-full bg-red-500 border-4 border-yellow-400 rounded-lg p-4 mb-6"
+                style={{
+                  display: 'block !important',
+                  visibility: 'visible !important',
+                  opacity: '1 !important',
+                  position: 'relative',
+                  zIndex: 9999
+                }}
+              >
+                <div className="flex items-center justify-center gap-4">
+                  <h3 className="text-white font-bold text-lg">VIEW MODE TOGGLE:</h3>
+                  <Button
+                    size="lg"
+                    variant={viewMode === 'table' ? 'default' : 'outline'}
+                    onClick={() => {
+                      console.log('Table button clicked!');
+                      setViewMode('table');
+                    }}
+                    className="h-12 px-8 font-bold bg-green-600 text-white border-2 border-black hover:bg-green-700"
+                    data-testid="button-table-view"
+                  >
+                    <Table className="h-5 w-5 mr-3" />
+                    TABLE VIEW
+                  </Button>
+                  <Button
+                    size="lg"
+                    variant={viewMode === 'kanban' ? 'default' : 'outline'}
+                    onClick={() => {
+                      console.log('Kanban button clicked!');
+                      setViewMode('kanban');
+                    }}
+                    className="h-12 px-8 font-bold bg-purple-600 text-white border-2 border-black hover:bg-purple-700"
+                    data-testid="button-kanban-view"
+                  >
+                    <Kanban className="h-5 w-5 mr-3" />
+                    KANBAN VIEW
+                  </Button>
+                  <div className="text-white font-bold">
+                    Current: {viewMode.toUpperCase()}
+                  </div>
+                </div>
+              </div>
+
               {/* Page Header */}
               <div className="flex flex-col space-y-4 mb-8">
                 <div>
@@ -337,51 +383,7 @@ FrameCraft`;
                   </p>
                 </div>
                 
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                  {/* View Toggle - FORCE VISIBLE with debugging styles */}
-                  <div 
-                    className="flex items-center bg-red-500 border-4 border-yellow-400 rounded-lg p-3 shadow-lg" 
-                    style={{
-                      display: 'flex !important',
-                      visibility: 'visible !important',
-                      opacity: '1 !important',
-                      position: 'relative',
-                      zIndex: 9999,
-                      minHeight: '60px',
-                      minWidth: '300px'
-                    }}
-                    data-testid="view-toggle"
-                  >
-                    <Button
-                      size="lg"
-                      variant={viewMode === 'table' ? 'default' : 'outline'}
-                      onClick={() => {
-                        console.log('Table button clicked!');
-                        setViewMode('table');
-                      }}
-                      className="h-12 px-8 font-bold bg-green-600 text-white border-2 border-black hover:bg-green-700"
-                      data-testid="button-table-view"
-                      style={{ display: 'block !important', visibility: 'visible !important' }}
-                    >
-                      <Table className="h-5 w-5 mr-3" />
-                      TABLE
-                    </Button>
-                    <Button
-                      size="lg"
-                      variant={viewMode === 'kanban' ? 'default' : 'outline'}
-                      onClick={() => {
-                        console.log('Kanban button clicked!');
-                        setViewMode('kanban');
-                      }}
-                      className="h-12 px-8 font-bold bg-purple-600 text-white border-2 border-black hover:bg-purple-700 ml-2"
-                      data-testid="button-kanban-view"
-                      style={{ display: 'block !important', visibility: 'visible !important' }}
-                    >
-                      <Kanban className="h-5 w-5 mr-3" />
-                      KANBAN
-                    </Button>
-                  </div>
-
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-4">
                   <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
                     <DialogTrigger asChild>
                       <Button className="btn-primary h-10 px-6 font-semibold bg-green-600 hover:bg-green-700 text-white" data-testid="button-new-order">
