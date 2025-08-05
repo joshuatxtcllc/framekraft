@@ -336,9 +336,9 @@ FrameCraft`;
                     Manage all your custom framing orders and track their progress.
                   </p>
                 </div>
-                <div className="mt-4 flex items-center justify-between md:mt-0 md:ml-4">
+                <div className="mt-4 flex items-center gap-4 md:mt-0 md:ml-4">
                   {/* View Toggle */}
-                  <div className="flex items-center bg-muted rounded-lg p-1 border mr-4" data-testid="view-toggle">
+                  <div className="flex items-center bg-muted rounded-lg p-1 border" data-testid="view-toggle">
                     <Button
                       size="sm"
                       variant={viewMode === 'table' ? 'default' : 'ghost'}
