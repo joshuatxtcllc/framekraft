@@ -402,7 +402,7 @@ export function WorkOrderTemplate({ order }: WorkOrderProps) {
           </Button>
         </div>
       </CardHeader>
-      
+
       <CardContent className="p-6">
         <div className="grid grid-cols-2 gap-6 mb-6">
           <div className="space-y-4">
@@ -410,39 +410,39 @@ export function WorkOrderTemplate({ order }: WorkOrderProps) {
               <div className="font-semibold text-sm text-gray-600">Customer</div>
               <div className="text-lg">{order.customerName}</div>
             </div>
-            
+
             <div>
               <div className="font-semibold text-sm text-gray-600">Artwork Dimensions</div>
               <div className="text-lg">{order.artworkWidth}" × {order.artworkHeight}"</div>
             </div>
-            
+
             <div>
               <div className="font-semibold text-sm text-gray-600">Artwork Description</div>
               <div>{order.artworkDescription || 'N/A'}</div>
             </div>
-            
+
             <div>
               <div className="font-semibold text-sm text-gray-600">Artwork Type</div>
               <div>{order.artworkType || 'N/A'}</div>
             </div>
           </div>
-          
+
           <div className="space-y-4">
             <div>
               <div className="font-semibold text-sm text-gray-600">Frame</div>
               <div>{order.frameName || 'N/A'}</div>
             </div>
-            
+
             <div>
               <div className="font-semibold text-sm text-gray-600">Mat</div>
               <div>{order.matDescription || 'N/A'}</div>
             </div>
-            
+
             <div>
               <div className="font-semibold text-sm text-gray-600">Glass</div>
               <div>{order.glassType || 'N/A'}</div>
             </div>
-            
+
             <div>
               <div className="font-semibold text-sm text-gray-600">Special Services</div>
               <div>{order.specialServices?.join(', ') || 'None'}</div>
@@ -462,7 +462,7 @@ export function WorkOrderTemplate({ order }: WorkOrderProps) {
         )}
 
         <Separator className="my-6" />
-        
+
         <div className="grid grid-cols-2 gap-6 mb-6">
           <div>
             <div className="font-semibold text-sm text-gray-600">Due Date</div>
@@ -470,7 +470,7 @@ export function WorkOrderTemplate({ order }: WorkOrderProps) {
               {order.dueDate ? new Date(order.dueDate).toLocaleDateString() : 'Not set'}
             </div>
           </div>
-          
+
           <div>
             <div className="font-semibold text-sm text-gray-600">Order Total</div>
             <div className="text-2xl font-bold text-green-600">
@@ -480,12 +480,12 @@ export function WorkOrderTemplate({ order }: WorkOrderProps) {
         </div>
 
         <Separator className="my-6" />
-        
+
         <div className="mb-6">
           <div className="font-semibold text-sm text-gray-600 mb-2">Production Notes</div>
           <div className="h-24 border border-gray-300 rounded p-2 bg-gray-50"></div>
         </div>
-        
+
         <div>
           <div className="font-semibold text-sm text-gray-600 mb-3">Quality Checklist</div>
           <div className="grid grid-cols-2 gap-2 text-sm">

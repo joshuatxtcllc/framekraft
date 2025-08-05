@@ -87,7 +87,7 @@ export default function InvoiceTemplate({ order, customer, businessInfo }: Invoi
             <tbody>
               <tr className="border-t">
                 <td className="p-3">
-                  <div className="font-medium">{order.description}</div>
+                  <div className="font-medium">Custom Framing Services</div>
                   {order.artworkDescription && (
                     <div className="text-sm text-gray-600 mt-1">
                       Artwork: {order.artworkDescription}
