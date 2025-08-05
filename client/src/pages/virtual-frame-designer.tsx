@@ -112,19 +112,22 @@ export default function VirtualFrameDesigner() {
     ctx.restore();
   };
 
-  useEffect(() => {
-    drawVisualization();
-  }, [selectedFrame, selectedMat, artworkWidth, artworkHeight, matWidth, zoom, rotation]);
-
-  useEffect(() => {
-    // Set default selections only once when component mounts
-    if (frameOptions.length > 0 && !selectedFrame) {
+  // Set default selections using initial state instead of useEffect
+  React.useEffect(() => {
+    if (!selectedFrame && frameOptions.length > 0) {
       setSelectedFrame(frameOptions[0]);
     }
-    if (matOptions.length > 0 && !selectedMat) {
+  }, [frameOptions, selectedFrame]);
+
+  React.useEffect(() => {
+    if (!selectedMat && matOptions.length > 0) {
       setSelectedMat(matOptions[0]);
     }
-  }, []); // Empty dependency array ensures this only runs once
+  }, [matOptions, selectedMat]);
+
+  React.useEffect(() => {
+    drawVisualization();
+  }, [selectedFrame, selectedMat, artworkWidth, artworkHeight, matWidth, zoom, rotation]);
 
   const calculateTotal = () => {
     const framePrice = selectedFrame?.price || 0;
