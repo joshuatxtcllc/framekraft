@@ -327,70 +327,65 @@ FrameCraft`;
           <div className="py-6">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
               {/* Page Header */}
-              <div className="mb-8">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <h2 className="text-2xl font-bold leading-7 text-foreground sm:text-3xl sm:truncate">
-                      Orders
-                    </h2>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      Manage all your custom framing orders and track their progress.
-                    </p>
+              <div className="md:flex md:items-center md:justify-between mb-8">
+                <div className="flex-1 min-w-0">
+                  <h2 className="text-2xl font-bold leading-7 text-foreground sm:text-3xl sm:truncate">
+                    Orders
+                  </h2>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Manage all your custom framing orders and track their progress.
+                  </p>
+                </div>
+                <div className="mt-4 flex items-center justify-between md:mt-0 md:ml-4">
+                  {/* View Toggle */}
+                  <div className="flex items-center bg-muted rounded-lg p-1 border mr-4" data-testid="view-toggle">
+                    <Button
+                      size="sm"
+                      variant={viewMode === 'table' ? 'default' : 'ghost'}
+                      onClick={() => setViewMode('table')}
+                      className="h-8 px-3"
+                      data-testid="button-table-view"
+                    >
+                      <Table className="h-4 w-4 mr-1" />
+                      Table
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant={viewMode === 'kanban' ? 'default' : 'ghost'}
+                      onClick={() => setViewMode('kanban')}
+                      className="h-8 px-3"
+                      data-testid="button-kanban-view"
+                    >
+                      <Kanban className="h-4 w-4 mr-1" />
+                      Kanban
+                    </Button>
                   </div>
-                  
-                  {/* Right side controls */}
-                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-                    {/* View Toggle */}
-                    <div className="flex items-center bg-muted rounded-lg p-1 border shadow-sm" data-testid="view-toggle">
-                      <Button
-                        size="sm"
-                        variant={viewMode === 'table' ? 'default' : 'ghost'}
-                        onClick={() => setViewMode('table')}
-                        className="h-8 px-3 min-w-[70px] text-xs"
-                        data-testid="button-table-view"
-                      >
-                        <Table className="h-4 w-4 mr-1" />
-                        Table
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant={viewMode === 'kanban' ? 'default' : 'ghost'}
-                        onClick={() => setViewMode('kanban')}
-                        className="h-8 px-3 min-w-[70px] text-xs"
-                        data-testid="button-kanban-view"
-                      >
-                        <Kanban className="h-4 w-4 mr-1" />
-                        Kanban
-                      </Button>
-                    </div>
 
-                    {/* New Order Button */}
-                    <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-                      <DialogTrigger asChild>
-                        <Button className="btn-primary" data-testid="button-new-order">
-                          <Plus className="w-4 h-4 mr-2" />
-                          New Order
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                        <DialogHeader>
-                          <DialogTitle>
-                            {editingOrder ? 'Edit Order' : 'Create New Order'}
-                          </DialogTitle>
-                        </DialogHeader>
-                        <OrderForm
-                          customers={Array.isArray(customers) ? customers : []}
-                          initialData={editingOrder}
-                          onSubmit={handleSubmit}
-                          isLoading={createOrderMutation.isPending || updateOrderMutation.isPending}
-                          onCancel={() => {
-                            setIsFormOpen(false);
-                            setEditingOrder(null);
-                          }}
-                        />
-                      </DialogContent>
-                    </Dialog>
-                  </div>
+                  <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+                    <DialogTrigger asChild>
+                      <Button className="btn-primary" data-testid="button-new-order">
+                        <Plus className="w-4 h-4 mr-2" />
+                        New Order
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                      <DialogHeader>
+                        <DialogTitle>
+                          {editingOrder ? 'Edit Order' : 'Create New Order'}
+                        </DialogTitle>
+                      </DialogHeader>
+                      <OrderForm
+                        customers={Array.isArray(customers) ? customers : []}
+                        initialData={editingOrder}
+                        onSubmit={handleSubmit}
+                        isLoading={createOrderMutation.isPending || updateOrderMutation.isPending}
+                        onCancel={() => {
+                          setIsFormOpen(false);
+                          setEditingOrder(null);
+                        }}
+                      />
+                    </DialogContent>
+                  </Dialog>
                 </div>
               </div>
 
