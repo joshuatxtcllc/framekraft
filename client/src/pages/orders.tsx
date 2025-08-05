@@ -338,13 +338,17 @@ FrameCraft`;
                 </div>
                 
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                  {/* View Toggle - Always visible */}
-                  <div className="flex items-center bg-muted rounded-lg p-1 border-2 border-primary/20" data-testid="view-toggle">
+                  {/* View Toggle - Always visible with strong styling */}
+                  <div className="flex items-center bg-white border-2 border-blue-400 rounded-lg p-1 shadow-sm" data-testid="view-toggle">
                     <Button
                       size="sm"
-                      variant={viewMode === 'table' ? 'default' : 'ghost'}
+                      variant={viewMode === 'table' ? 'default' : 'outline'}
                       onClick={() => setViewMode('table')}
-                      className="h-9 px-4 font-medium"
+                      className={`h-10 px-6 font-semibold transition-all ${
+                        viewMode === 'table' 
+                          ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                          : 'bg-white text-blue-600 hover:bg-blue-50'
+                      }`}
                       data-testid="button-table-view"
                     >
                       <Table className="h-4 w-4 mr-2" />
@@ -352,9 +356,13 @@ FrameCraft`;
                     </Button>
                     <Button
                       size="sm"
-                      variant={viewMode === 'kanban' ? 'default' : 'ghost'}
+                      variant={viewMode === 'kanban' ? 'default' : 'outline'}
                       onClick={() => setViewMode('kanban')}
-                      className="h-9 px-4 font-medium"
+                      className={`h-10 px-6 font-semibold transition-all ${
+                        viewMode === 'kanban' 
+                          ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                          : 'bg-white text-blue-600 hover:bg-blue-50'
+                      }`}
                       data-testid="button-kanban-view"
                     >
                       <Kanban className="h-4 w-4 mr-2" />
@@ -364,7 +372,7 @@ FrameCraft`;
 
                   <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
                     <DialogTrigger asChild>
-                      <Button className="btn-primary h-9 px-4" data-testid="button-new-order">
+                      <Button className="btn-primary h-10 px-6 font-semibold bg-green-600 hover:bg-green-700 text-white" data-testid="button-new-order">
                         <Plus className="w-4 h-4 mr-2" />
                         New Order
                       </Button>
