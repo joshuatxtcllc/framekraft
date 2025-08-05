@@ -327,50 +327,7 @@ FrameCraft`;
           <div className="py-6">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
               
-              {/* MOVED TOGGLE TO TOP - ISOLATED POSITION */}
-              <div 
-                className="w-full bg-red-500 border-4 border-yellow-400 rounded-lg p-4 mb-6"
-                style={{
-                  display: 'block !important',
-                  visibility: 'visible !important',
-                  opacity: '1 !important',
-                  position: 'relative',
-                  zIndex: 9999
-                }}
-              >
-                <div className="flex items-center justify-center gap-4">
-                  <h3 className="text-white font-bold text-lg">VIEW MODE TOGGLE:</h3>
-                  <Button
-                    size="lg"
-                    variant={viewMode === 'table' ? 'default' : 'outline'}
-                    onClick={() => {
-                      console.log('Table button clicked!');
-                      setViewMode('table');
-                    }}
-                    className="h-12 px-8 font-bold bg-green-600 text-white border-2 border-black hover:bg-green-700"
-                    data-testid="button-table-view"
-                  >
-                    <Table className="h-5 w-5 mr-3" />
-                    TABLE VIEW
-                  </Button>
-                  <Button
-                    size="lg"
-                    variant={viewMode === 'kanban' ? 'default' : 'outline'}
-                    onClick={() => {
-                      console.log('Kanban button clicked!');
-                      setViewMode('kanban');
-                    }}
-                    className="h-12 px-8 font-bold bg-purple-600 text-white border-2 border-black hover:bg-purple-700"
-                    data-testid="button-kanban-view"
-                  >
-                    <Kanban className="h-5 w-5 mr-3" />
-                    KANBAN VIEW
-                  </Button>
-                  <div className="text-white font-bold">
-                    Current: {viewMode.toUpperCase()}
-                  </div>
-                </div>
-              </div>
+
 
               {/* Page Header */}
               <div className="flex flex-col space-y-4 mb-8">
@@ -383,7 +340,49 @@ FrameCraft`;
                   </p>
                 </div>
                 
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-4">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  {/* Export Orders Button */}
+                  <Button 
+                    variant="outline" 
+                    className="h-10 px-6 font-semibold"
+                    onClick={() => {
+                      toast({
+                        title: "Export Orders",
+                        description: "Exporting orders to CSV...",
+                      });
+                      // TODO: Implement CSV export functionality
+                    }}
+                    data-testid="button-export-orders"
+                  >
+                    <Printer className="w-4 h-4 mr-2" />
+                    Export Orders
+                  </Button>
+
+                  {/* View Mode Toggle */}
+                  <div className="flex items-center gap-2 bg-muted rounded-lg p-1">
+                    <Button
+                      size="sm"
+                      variant={viewMode === 'table' ? 'default' : 'ghost'}
+                      onClick={() => setViewMode('table')}
+                      className="h-8 px-3"
+                      data-testid="button-table-view"
+                    >
+                      <Table className="h-4 w-4 mr-2" />
+                      Table
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant={viewMode === 'kanban' ? 'default' : 'ghost'}
+                      onClick={() => setViewMode('kanban')}
+                      className="h-8 px-3"
+                      data-testid="button-kanban-view"
+                    >
+                      <Kanban className="h-4 w-4 mr-2" />
+                      Kanban
+                    </Button>
+                  </div>
+
+                  {/* New Order Button */}
                   <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
                     <DialogTrigger asChild>
                       <Button className="btn-primary h-10 px-6 font-semibold bg-green-600 hover:bg-green-700 text-white" data-testid="button-new-order">

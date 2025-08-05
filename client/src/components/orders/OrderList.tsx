@@ -68,6 +68,7 @@ export default function OrderList({
 
   const handleViewOrder = (order: any) => {
     setSelectedOrder(order);
+    setIsViewDialogOpen(true);
   };
 
   const handlePayBalance = (order: any) => {
