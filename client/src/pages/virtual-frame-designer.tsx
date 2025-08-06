@@ -112,21 +112,21 @@ export default function VirtualFrameDesigner() {
     ctx.restore();
   };
 
-  // Set default selections using initial state instead of useEffect
+  // Initialize defaults once when component mounts
   React.useEffect(() => {
-    if (!selectedFrame && frameOptions.length > 0) {
+    if (frameOptions.length > 0 && !selectedFrame) {
       setSelectedFrame(frameOptions[0]);
     }
-  }, [frameOptions, selectedFrame]);
-
-  React.useEffect(() => {
-    if (!selectedMat && matOptions.length > 0) {
+    if (matOptions.length > 0 && !selectedMat) {
       setSelectedMat(matOptions[0]);
     }
-  }, [matOptions, selectedMat]);
+  }, []); // Only run once on mount
 
   React.useEffect(() => {
-    drawVisualization();
+    const timeoutId = setTimeout(() => {
+      drawVisualization();
+    }, 100);
+    return () => clearTimeout(timeoutId);
   }, [selectedFrame, selectedMat, artworkWidth, artworkHeight, matWidth, zoom, rotation]);
 
   const calculateTotal = () => {
