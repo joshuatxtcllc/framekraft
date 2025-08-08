@@ -1,0 +1,551 @@
+import React, { useState, useCallback, useEffect } from 'react';
+import { 
+  Eye, 
+  Image, 
+  Check, 
+  X, 
+  ShoppingCart,
+  RotateCcw,
+  Upload,
+  Camera,
+  FileImage,
+  Info,
+  Palette,
+  Layers,
+  Square
+} from 'lucide-react';
+
+// Frame color definitions with realistic finishes
+const FRAME_COLORS = {
+  wood: [
+    { id: 'natural-oak', name: 'Natural Oak', hex: '#D2B48C', texture: 'wood-grain', finish: 'satin' },
+    { id: 'dark-walnut', name: 'Dark Walnut', hex: '#654321', texture: 'wood-grain', finish: 'satin' },
+    { id: 'cherry', name: 'Cherry', hex: '#8B4513', texture: 'wood-grain', finish: 'satin' },
+    { id: 'mahogany', name: 'Mahogany', hex: '#C04000', texture: 'wood-grain', finish: 'satin' },
+    { id: 'espresso', name: 'Espresso', hex: '#362D1D', texture: 'wood-grain', finish: 'satin' },
+    { id: 'maple', name: 'Maple', hex: '#F5DEB3', texture: 'wood-grain', finish: 'satin' },
+    { id: 'ebony', name: 'Ebony', hex: '#0C0C0C', texture: 'wood-grain', finish: 'satin' },
+    { id: 'pine', name: 'Pine', hex: '#E4D5B7', texture: 'wood-grain', finish: 'satin' }
+  ],
+  metal: [
+    { id: 'silver', name: 'Silver', hex: '#C0C0C0', texture: 'brushed-metal', finish: 'brushed' },
+    { id: 'brushed-silver', name: 'Brushed Silver', hex: '#B8B8B8', texture: 'brushed-metal', finish: 'brushed' },
+    { id: 'polished-silver', name: 'Polished Silver', hex: '#E5E5E5', texture: 'smooth', finish: 'polished' },
+    { id: 'gold', name: 'Gold', hex: '#FFD700', texture: 'brushed-metal', finish: 'brushed' },
+    { id: 'antique-gold', name: 'Antique Gold', hex: '#D4AF37', texture: 'brushed-metal', finish: 'antique' },
+    { id: 'rose-gold', name: 'Rose Gold', hex: '#E8B4B8', texture: 'brushed-metal', finish: 'brushed' },
+    { id: 'champagne', name: 'Champagne', hex: '#F7E7CE', texture: 'brushed-metal', finish: 'brushed' },
+    { id: 'pewter', name: 'Pewter', hex: '#96A8A1', texture: 'brushed-metal', finish: 'brushed' },
+    { id: 'bronze', name: 'Oil Rubbed Bronze', hex: '#CD7F32', texture: 'brushed-metal', finish: 'oil-rubbed' },
+    { id: 'copper', name: 'Copper', hex: '#B87333', texture: 'brushed-metal', finish: 'brushed' }
+  ],
+  modern: [
+    { id: 'matte-black', name: 'Matte Black', hex: '#1C1C1C', texture: 'smooth', finish: 'matte' },
+    { id: 'gloss-black', name: 'Gloss Black', hex: '#000000', texture: 'smooth', finish: 'gloss' },
+    { id: 'matte-white', name: 'Matte White', hex: '#F8F8F8', texture: 'smooth', finish: 'matte' },
+    { id: 'gloss-white', name: 'Gloss White', hex: '#FFFFFF', texture: 'smooth', finish: 'gloss' },
+    { id: 'light-gray', name: 'Light Gray', hex: '#D3D3D3', texture: 'smooth', finish: 'matte' },
+    { id: 'medium-gray', name: 'Medium Gray', hex: '#808080', texture: 'smooth', finish: 'matte' },
+    { id: 'dark-gray', name: 'Dark Gray', hex: '#404040', texture: 'smooth', finish: 'matte' },
+    { id: 'charcoal', name: 'Charcoal', hex: '#36454F', texture: 'smooth', finish: 'matte' }
+  ],
+  industrial: [
+    { id: 'raw-steel', name: 'Raw Steel', hex: '#71797E', texture: 'brushed-metal', finish: 'raw' },
+    { id: 'brushed-steel', name: 'Brushed Steel', hex: '#6E7B7E', texture: 'brushed-metal', finish: 'brushed' },
+    { id: 'polished-steel', name: 'Polished Steel', hex: '#8E9B9E', texture: 'smooth', finish: 'polished' },
+    { id: 'gunmetal', name: 'Gunmetal', hex: '#2C3539', texture: 'brushed-metal', finish: 'matte' },
+    { id: 'iron', name: 'Iron', hex: '#464451', texture: 'brushed-metal', finish: 'raw' },
+    { id: 'oxidized-steel', name: 'Oxidized Steel', hex: '#5C6B73', texture: 'brushed-metal', finish: 'oxidized' },
+    { id: 'blackened-steel', name: 'Blackened Steel', hex: '#2F3437', texture: 'brushed-metal', finish: 'blackened' },
+    { id: 'stainless', name: 'Stainless Steel', hex: '#A8A8A8', texture: 'brushed-metal', finish: 'brushed' }
+  ]
+};
+
+// Mat color definitions
+const MAT_COLORS = {
+  whites: [
+    { id: 'pure-white', name: 'Pure White', hex: '#FFFFFF' },
+    { id: 'antique-white', name: 'Antique White', hex: '#FAEBD7' },
+    { id: 'ivory', name: 'Ivory', hex: '#FFFFF0' },
+    { id: 'cream', name: 'Cream', hex: '#F5F5DC' },
+    { id: 'pearl', name: 'Pearl', hex: '#F8F6F0' },
+    { id: 'linen', name: 'Linen', hex: '#FAF0E6' }
+  ],
+  neutrals: [
+    { id: 'light-gray', name: 'Light Gray', hex: '#D3D3D3' },
+    { id: 'warm-gray', name: 'Warm Gray', hex: '#C7C2B8' },
+    { id: 'dove-gray', name: 'Dove Gray', hex: '#6D6D6D' },
+    { id: 'charcoal', name: 'Charcoal', hex: '#36454F' },
+    { id: 'black', name: 'Black', hex: '#000000' },
+    { id: 'off-black', name: 'Off Black', hex: '#1C1C1C' }
+  ],
+  blues: [
+    { id: 'navy', name: 'Navy Blue', hex: '#000080' },
+    { id: 'navy-dark', name: 'Deep Navy', hex: '#1A1A3A' },
+    { id: 'navy-midnight', name: 'Midnight Navy', hex: '#191970' },
+    { id: 'royal-blue', name: 'Royal Blue', hex: '#4169E1' },
+    { id: 'powder-blue', name: 'Powder Blue', hex: '#B0E0E6' },
+    { id: 'slate-blue', name: 'Slate Blue', hex: '#6A5ACD' },
+    { id: 'teal', name: 'Teal', hex: '#008080' },
+    { id: 'dusty-blue', name: 'Dusty Blue', hex: '#6B8CAE' },
+    { id: 'steel-blue', name: 'Steel Blue', hex: '#4682B4' }
+  ],
+  earth_tones: [
+    { id: 'sand', name: 'Sand', hex: '#C2B280' },
+    { id: 'taupe', name: 'Taupe', hex: '#483C32' },
+    { id: 'sienna', name: 'Sienna', hex: '#A0522D' },
+    { id: 'sage', name: 'Sage Green', hex: '#9CAF88' },
+    { id: 'moss', name: 'Moss Green', hex: '#8A9A5B' },
+    { id: 'terra-cotta', name: 'Terra Cotta', hex: '#E2725B' }
+  ],
+  warm_colors: [
+    { id: 'burgundy', name: 'Burgundy', hex: '#800020' },
+    { id: 'deep-red', name: 'Deep Red', hex: '#8B0000' },
+    { id: 'rose', name: 'Rose', hex: '#FF007F' },
+    { id: 'gold', name: 'Gold', hex: '#FFD700' },
+    { id: 'amber', name: 'Amber', hex: '#FFBF00' },
+    { id: 'peach', name: 'Peach', hex: '#FFCBA4' }
+  ]
+};
+
+// Frame style definitions
+const FRAME_STYLES = [
+  {
+    id: 'standard-wood',
+    name: 'Standard Wood',
+    description: 'Classic wood frame with clean lines',
+    width: 1.5,
+    price: 2.50,
+    colors: FRAME_COLORS.wood,
+    category: 'Traditional'
+  },
+  {
+    id: 'premium-wood',
+    name: 'Premium Wood',
+    description: 'High-quality hardwood with elegant profile',
+    width: 2,
+    price: 3.75,
+    colors: FRAME_COLORS.wood,
+    category: 'Traditional'
+  },
+  {
+    id: 'metal-classic',
+    name: 'Classic Metal',
+    description: 'Traditional metal finishes',
+    width: 1,
+    price: 3.25,
+    colors: FRAME_COLORS.metal,
+    category: 'Classic'
+  },
+  {
+    id: 'modern-minimal',
+    name: 'Modern Minimal',
+    description: 'Clean contemporary lines',
+    width: 0.75,
+    price: 2.95,
+    colors: FRAME_COLORS.modern,
+    category: 'Modern'
+  },
+  {
+    id: 'industrial',
+    name: 'Industrial Steel',
+    description: 'Raw steel and iron finishes',
+    width: 1.25,
+    price: 4.25,
+    colors: FRAME_COLORS.industrial,
+    category: 'Industrial'
+  }
+];
+
+interface VirtualFrameDesignerProps {
+  artworkImage?: string;
+  artworkDimensions?: { width: number; height: number; unit: string };
+}
+
+const VirtualFrameDesigner: React.FC<VirtualFrameDesignerProps> = ({
+  artworkImage: initialArtworkImage,
+  artworkDimensions: initialDimensions = { width: 16, height: 20, unit: 'inches' }
+}) => {
+  // State management - initialize with a sample image
+  const [artworkImage, setArtworkImage] = useState<string>('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjEzMyIgdmlld0JveD0iMCAwIDIwMCAxMzMiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMTMzIiBmaWxsPSIjNEY4NEY4Ii8+Cjx0ZXh0IHg9IjEwMCIgeT0iNzAiIGZpbGw9IndoaXRlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCI+U2FtcGxlIEFydHdvcms8L3RleHQ+Cgo8L3N2Zz4K');
+  const [artworkDimensions, setArtworkDimensions] = useState({ width: 24, height: 16, unit: 'inches' });
+  const [selectedFrameStyle, setSelectedFrameStyle] = useState<string>('standard-wood');
+  const [selectedFrameColor, setSelectedFrameColor] = useState<string>('natural-oak');
+  const [selectedMatOption, setSelectedMatOption] = useState<'none' | 'single' | 'double'>('none');
+  const [selectedMatColor1, setSelectedMatColor1] = useState<string>('');
+  const [selectedMatColor2, setSelectedMatColor2] = useState<string>('');
+  const [showInfo, setShowInfo] = useState(false);
+  const [isDragOver, setIsDragOver] = useState(false);
+
+  // Handle image upload
+  const handleImageUpload = (file: File) => {
+    if (file && file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const result = e.target?.result as string;
+        setArtworkImage(result);
+        
+        // Create image to get dimensions
+        const img = new window.Image();
+        img.onload = () => {
+          const aspectRatio = img.width / img.height;
+          let width, height;
+          
+          // Standard sizes based on aspect ratio
+          if (aspectRatio > 1.5) {
+            // Landscape
+            width = 24;
+            height = 16;
+          } else if (aspectRatio < 0.75) {
+            // Portrait
+            width = 16;
+            height = 24;
+          } else {
+            // Square-ish
+            width = 20;
+            height = 20;
+          }
+          
+          setArtworkDimensions({ width, height, unit: 'inches' });
+        };
+        img.src = result;
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Handle drag and drop
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length > 0) {
+      handleImageUpload(files[0]);
+    }
+  };
+
+  // Handle file input
+  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      handleImageUpload(files[0]);
+    }
+    // Reset the input so the same file can be selected again
+    e.target.value = '';
+  };
+
+  // Trigger file input
+  const triggerFileInput = () => {
+    const fileInput = document.getElementById('file-upload') as HTMLInputElement;
+    if (fileInput) {
+      fileInput.value = ''; // Reset before opening
+      fileInput.click();
+    }
+  };
+
+  // Calculate pricing
+  const calculatePrice = useCallback(() => {
+    const frameStyle = FRAME_STYLES.find(s => s.id === selectedFrameStyle);
+    if (!frameStyle) return 0;
+
+    const perimeter = (artworkDimensions.width + artworkDimensions.height) * 2;
+    const basePrice = perimeter * frameStyle.price;
+    
+    let matPrice = 0;
+    if (selectedMatOption === 'single') matPrice = 20;
+    if (selectedMatOption === 'double') matPrice = 35;
+
+    return Math.ceil(basePrice + matPrice);
+  }, [selectedFrameStyle, selectedMatOption, artworkDimensions]);
+
+  // Get texture pattern for frame colors
+  const getFrameTexture = (texture: string, color: string) => {
+    const patterns = {
+      'wood-grain': `linear-gradient(90deg, ${color} 0%, rgba(0,0,0,0.08) 25%, ${color} 50%, rgba(0,0,0,0.04) 75%, ${color} 100%)`,
+      'brushed-metal': `linear-gradient(90deg, ${color} 48%, rgba(255,255,255,0.2) 50%, ${color} 52%)`,
+      'smooth': color
+    };
+    
+    return patterns[texture as keyof typeof patterns] || color;
+  };
+
+  const resetDesign = () => {
+    setArtworkImage('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjEzMyIgdmlld0JveD0iMCAwIDIwMCAxMzMiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMTMzIiBmaWxsPSIjNEY4NEY4Ii8+Cjx0ZXh0IHg9IjEwMCIgeT0iNzAiIGZpbGw9IndoaXRlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCI+U2FtcGxlIEFydHdvcms8L3RleHQ+Cgo8L3N2Zz4K');
+    setArtworkDimensions({ width: 24, height: 16, unit: 'inches' });
+    setSelectedFrameStyle('standard-wood');
+    setSelectedFrameColor('natural-oak');
+    setSelectedMatOption('none');
+    setSelectedMatColor1('');
+    setSelectedMatColor2('');
+  };
+
+  // Preview component - simplified version
+  const FramePreview: React.FC<{ className?: string }> = ({ className = '' }) => {
+    return (
+      <div className={`flex items-center justify-center p-8 bg-gray-100 min-h-[400px] ${className}`}>
+        <div className="text-center">
+          {/* Always show something - debug version */}
+          <div className="bg-white p-8 rounded-lg shadow-lg border-2 border-gray-300 max-w-sm">
+            <h3 className="text-lg font-semibold mb-4">Frame Preview</h3>
+            
+            {/* Simple preview box */}
+            <div 
+              className="relative mx-auto shadow-xl"
+              style={{
+                width: '300px',
+                height: '240px',
+                background: selectedFrameColor ? 
+                  FRAME_STYLES.find(s => s.id === selectedFrameStyle)?.colors.find(c => c.id === selectedFrameColor)?.hex || '#8B4513' 
+                  : '#8B4513',
+                padding: '20px'
+              }}
+            >
+              {/* Mat layer */}
+              {selectedMatOption !== 'none' && (
+                <div 
+                  className="w-full h-full"
+                  style={{
+                    backgroundColor: selectedMatColor1 ? 
+                      Object.values(MAT_COLORS).flat().find(c => c.id === selectedMatColor1)?.hex || '#FFFFFF'
+                      : '#FFFFFF',
+                    padding: selectedMatOption === 'double' ? '16px' : '0'
+                  }}
+                >
+                  {selectedMatOption === 'double' && selectedMatColor2 && (
+                    <div 
+                      className="w-full h-full"
+                      style={{
+                        backgroundColor: Object.values(MAT_COLORS).flat().find(c => c.id === selectedMatColor2)?.hex || '#F0F0F0',
+                        padding: '16px'
+                      }}
+                    >
+                      <div className="w-full h-full flex items-center justify-center">
+                        {artworkImage ? (
+                          <img src={artworkImage} alt="Artwork" className="max-w-full max-h-full object-contain" />
+                        ) : (
+                          <div className="bg-gradient-to-br from-blue-400 to-purple-600 w-full h-full flex items-center justify-center text-white font-medium">
+                            Sample Artwork
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {selectedMatOption === 'single' && (
+                    <div className="w-full h-full p-4">
+                      <div className="w-full h-full flex items-center justify-center">
+                        {artworkImage ? (
+                          <img src={artworkImage} alt="Artwork" className="max-w-full max-h-full object-contain" />
+                        ) : (
+                          <div className="bg-gradient-to-br from-blue-400 to-purple-600 w-full h-full flex items-center justify-center text-white font-medium">
+                            Sample Artwork
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+              
+              {/* No mat */}
+              {selectedMatOption === 'none' && (
+                <div className="w-full h-full flex items-center justify-center">
+                  {artworkImage ? (
+                    <img src={artworkImage} alt="Artwork" className="max-w-full max-h-full object-contain" />
+                  ) : (
+                    <div className="bg-gradient-to-br from-blue-400 to-purple-600 w-full h-full flex items-center justify-center text-white font-medium">
+                      Sample Artwork
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+            
+            {/* Preview info */}
+            <div className="mt-4 text-sm text-gray-600">
+              <p>Frame: {selectedFrameStyle ? FRAME_STYLES.find(s => s.id === selectedFrameStyle)?.name : 'Select a frame'}</p>
+              <p>Color: {selectedFrameColor || 'Select a color'}</p>
+              <p>Mat: {selectedMatOption === 'none' ? 'No Mat' : selectedMatOption === 'single' ? 'Single Mat' : 'Double Mat'}</p>
+              {calculatePrice() > 0 && (
+                <p className="font-semibold text-green-600 mt-2">Total: ${calculatePrice()}.00</p>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Color swatch component
+  const ColorSwatch: React.FC<{
+    color: any;
+    isSelected: boolean;
+    onClick: () => void;
+    size?: 'sm' | 'md' | 'lg';
+  }> = ({ color, isSelected, onClick, size = 'md' }) => {
+    const sizeClasses = {
+      sm: 'w-8 h-8',
+      md: 'w-10 h-10',
+      lg: 'w-12 h-12'
+    };
+
+    const style = color.texture 
+      ? { background: getFrameTexture(color.texture, color.hex) }
+      : { backgroundColor: color.hex };
+
+    return (
+      <button
+        className={`
+          ${sizeClasses[size]} rounded-lg border-2 transition-all hover:scale-105 flex-shrink-0
+          ${isSelected ? 'border-blue-500 shadow-lg ring-2 ring-blue-200' : 'border-gray-300 hover:border-gray-400'}
+          ${color.hex === '#FFFFFF' ? 'shadow-inner' : ''}
+        `}
+        style={style}
+        onClick={onClick}
+        title={color.name}
+        aria-label={`Select ${color.name}`}
+      />
+    );
+  };
+
+  // Check if design is complete
+  const isDesignComplete = () => {
+    return artworkImage && selectedFrameStyle && selectedFrameColor && 
+           (selectedMatOption === 'none' || selectedMatColor1);
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white">
+        <div className="max-w-7xl mx-auto px-4 py-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold">Jay's Frames</h1>
+              <p className="text-blue-100">Virtual Frame Designer</p>
+            </div>
+            <button
+              onClick={() => setShowInfo(!showInfo)}
+              className="p-2 rounded-lg bg-white/20 hover:bg-white/30 transition-colors"
+            >
+              <Info className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-4 py-6">
+        <div className="grid lg:grid-cols-2 gap-8">
+          {/* Preview Panel */}
+          <div className="order-1">
+            <div className="sticky top-6">
+              <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+                <div className="bg-gradient-to-r from-gray-800 to-gray-900 text-white p-4">
+                  <div className="flex items-center gap-2">
+                    <Eye className="h-5 w-5" />
+                    <h2 className="font-semibold">Live Preview</h2>
+                  </div>
+                  <p className="text-gray-300 text-sm mt-1">
+                    See your custom frame design in real-time
+                  </p>
+                </div>
+                
+                <FramePreview className="min-h-[400px] lg:min-h-[600px]" />
+                
+                {/* Preview Details */}
+                <div className="p-4 bg-gray-50 border-t border-gray-200">
+                  <div className="text-center">
+                    {artworkImage && (
+                      <p className="text-sm text-gray-600 mb-2">
+                        Artwork: {artworkDimensions.width}" × {artworkDimensions.height}"
+                      </p>
+                    )}
+                    {calculatePrice() > 0 && (
+                      <div className="inline-flex items-center gap-2 bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
+                        <span>Estimated Total: ${calculatePrice()}.00</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Controls Panel */}
+          <div className="order-2 space-y-6">
+            {/* Upload Section */}
+            <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <Upload className="h-5 w-5 text-blue-600" />
+                <h3 className="text-lg font-semibold">1. Upload Your Artwork</h3>
+              </div>
+              
+              {!artworkImage ? (
+                <div 
+                  className={`
+                    border-2 border-dashed rounded-xl p-6 text-center transition-all cursor-pointer
+                    ${isDragOver ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-gray-400'}
+                  `}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  onClick={triggerFileInput}
+                >
+                  <input
+                    id="file-upload"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileInput}
+                    className="hidden"
+                  />
+                  
+                  <Upload className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                  <h4 className="font-medium mb-2">Upload Your Image</h4>
+                  <p className="text-gray-600 text-sm mb-3">
+                    Drag and drop or click to browse
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    Supports: JPG, PNG, GIF • Max size: 10MB
+                  </p>
+                </div>
+              ) : (
+                <div className="flex items-center gap-4 p-4 bg-green-50 rounded-lg border border-green-200">
+                  <img 
+                    src={artworkImage} 
+                    alt="Uploaded artwork" 
+                    className="w-16 h-16 rounded object-cover"
+                  />
+                  <div className="flex-1">
+                    <p className="text-green-800 font-medium">✓ Artwork uploaded successfully!</p>
+                    <p className="text-green-600 text-sm">
+                      Size: {artworkDimensions.width}" × {artworkDimensions.height}"
+                    </p>
+                  </div>
+                  <button
+                    onClick={triggerFileInput}
+                    className="text-blue-600 text-sm hover:underline"
+                  >
+                    Change Image
+                  </button>
+                </div>
+              )}
+
+              {/* Sample Images */}
+              <div className="mt-4">
+                <p className="text-sm font-medium text-gray-700 mb-2">Or try a sample:</p>
+                <div className="flex gap-2">
+                  {[
+                    { name: 'Landscape', src: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjEzMyIgdmlld0JveD0iMCAwIDIwMCAxMzMiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMTMzIiBmaWxsPSIjNEY4NEY4Ii8+Cjx0ZXh0IHg9IjEwMCIgeT0iNzAiIGZpbGw9IndoaXRlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCI+TGFuZHNjYXBlPC90ZXh0Pgo8L3N2Zz4K', width: 24, height: 16 },
+                    { name: 'Portrait', src: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTMzIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDEzMyAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxMzMiIGhlaWdodD0iMjAwIiBmaWxsPSIjRUM0ODk5Ii8+Cjx0ZXh0IHg9IjY2LjUiIHk9IjEwNSIgZmlsbD0id2hpdGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0Ij5Qb3J0cmFpdDwvdGV4dD4KPC9zdmc+Cg==', width: 16, height: 24 },
+                    { name: 'Square', src: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjMTA5OTVEIi8+Cjx0ZXh0IHg9IjEwMCIgeT0iMTA1IiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm

@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Frame Visualizer Preview</title>
+    <style>
+        :root {
+            --border-radius-md: 8px;
+            --shadow-color: rgba(0, 0, 0, 0.1);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f9f9f9;
+            transition: all 0.3s ease;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .demo-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .demo-section {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .demo-title {
+            margin: 0 0 15px 0;
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #007acc;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            z-index: 1000;
+        }
+
+        /* Your original CSS with fixes */
+        .frame-visualizer-3d {
+            width: 100%;
+            height: 400px;
+            border-radius: var(--border-radius-md, 8px);
+            overflow: hidden;
+            position: relative;
+            background-color: #f5f5f5;
+            box-shadow: 0 4px 12px var(--shadow-color, rgba(0, 0, 0, 0.1));
+        }
+
+        /* Dark theme styles */
+        .dark-theme .frame-visualizer-3d {
+            background-color: #1a1a2e;
+        }
+
+        /* Fixed loading state */
+        .frame-visualizer-3d.loading::before {
+            content: 'Loading 3D View...';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            font-weight: 500;
+            padding: 12px 20px;
+            border-radius: 4px;
+            z-index: 10;
+        }
+
+        /* Backdrop for loading */
+        .frame-visualizer-3d.loading::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.3);
+            z-index: 9;
+        }
+
+        /* Controls help overlay */
+        .controls-help {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(0, 0, 0, 0.6);
+            color: white;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            opacity: 0.8;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+
+        .frame-visualizer-3d:hover .controls-help {
+            opacity: 0.3;
+        }
+
+        /* Placeholder for when no image or frame is selected */
+        .frame-visualizer-placeholder {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background-color: #f0f0f0;
+            color: #666;
+        }
+
+        .dark-theme .frame-visualizer-placeholder {
+            background-color: #2a2a3a;
+            color: #aaa;
+        }
+
+        .frame-visualizer-placeholder svg {
+            width: 64px;
+            height: 64px;
+            margin-bottom: 16px;
+            opacity: 0.6;
+        }
+
+        /* Error state */
+        .frame-visualizer-error {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background-color: #fff5f5;
+            color: #e53e3e;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .dark-theme .frame-visualizer-error {
+            background-color: #2d1a1a;
+        }
+
+        /* Helper classes for responsive adjustments */
+        @media (max-width: 768px) {
+            .frame-visualizer-3d {
+                height: 300px;
+            }
+            
+            .demo-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .frame-visualizer-3d {
+                height: 250px;
+            }
+            
+            .controls-help {
+                font-size: 0.7rem;
+                padding: 4px 10px;
+            }
+        }
+
+        /* Dark theme for body */
+        .dark-theme {
+            background: #0f0f23;
+            color: #e0e0e0;
+        }
+
+        .dark-theme .demo-section {
+            background: #1a1a2e;
+            color: #e0e0e0;
+        }
+
+        .dark-theme .demo-title {
+            color: #e0e0e0;
+        }
+
+        /* Sample frame content */
+        .sample-frame {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            bottom: 40px;
+            background: linear-gradient(45deg, #667eea 0%, #764ba2 100%);
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 500;
+        }
+
+        .working-demo {
+            cursor: grab;
+            transition: transform 0.2s ease;
+        }
+
+        .working-demo:hover {
+            transform: scale(1.02);
+        }
+
+        .working-demo:active {
+            cursor: grabbing;
+            transform: scale(0.98);
+        }
+    </style>
+</head>
+<body>
+    <button class="theme-toggle" onclick="toggleTheme()">🌙 Toggle Dark Mode</button>
+    
+    <div class="container">
+        <h1 style="text-align: center; margin-bottom: 40px; color: #333;">Jay's Frames - 3D Visualizer CSS Preview</h1>
+        
+        <div class="demo-grid">
+            <!-- Working State -->
+            <div class="demo-section">
+                <h3 class="demo-title">Working State</h3>
+                <div class="frame-visualizer-3d working-demo">
+                    <div class="sample-frame">Sample Frame Preview</div>
+                    <div class="controls-help">Drag to rotate • Scroll to zoom</div>
+                </div>
+            </div>
+
+            <!-- Loading State -->
+            <div class="demo-section">
+                <h3 class="demo-title">Loading State</h3>
+                <div class="frame-visualizer-3d loading">
+                    <div class="sample-frame">Sample Frame Preview</div>
+                </div>
+            </div>
+
+            <!-- Placeholder State -->
+            <div class="demo-section">
+                <h3 class="demo-title">Placeholder State</h3>
+                <div class="frame-visualizer-3d">
+                    <div class="frame-visualizer-placeholder">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/>
+                        </svg>
+                        <p>Select an image and frame to start</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Error State -->
+            <div class="demo-section">
+                <h3 class="demo-title">Error State</h3>
+                <div class="frame-visualizer-3d">
+                    <div class="frame-visualizer-error">
+                        <svg viewBox="0 0 24 24" fill="currentColor" style="width: 48px; height: 48px; margin-bottom: 12px;">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                        </svg>
+                        <h4 style="margin: 0 0 8px 0;">Failed to load 3D view</h4>
+                        <p style="margin: 0; font-size: 14px;">Please check your browser's WebGL support</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div style="background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+            <h3 style="margin-top: 0;">Responsive Behavior</h3>
+            <p>Resize your browser window to see the responsive adjustments:</p>
+            <ul>
+                <li><strong>Desktop:</strong> 400px height</li>
+                <li><strong>Tablet (≤768px):</strong> 300px height</li>
+                <li><strong>Mobile (≤480px):</strong> 250px height, smaller controls text</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        function toggleTheme() {
+            document.body.classList.toggle('dark-theme');
+            const button = document.querySelector('.theme-toggle');
+            if (document.body.classList.contains('dark-theme')) {
+                button.textContent = '☀️ Toggle Light Mode';
+            } else {
+                button.textContent = '🌙 Toggle Dark Mode';
+            }
+        }
+
+        // Add some interactive behavior
+        document.querySelectorAll('.working-demo').forEach(demo => {
+            demo.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+            });
+        });
+    </script>
+</body>
+</html>

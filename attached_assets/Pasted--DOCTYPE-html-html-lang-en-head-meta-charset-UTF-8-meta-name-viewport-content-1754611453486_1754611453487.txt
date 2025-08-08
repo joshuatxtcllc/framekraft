@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Select Frame - Jay's Frames</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        
+        .frame-option {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+            background: white;
+        }
+        
+        .frame-option:hover {
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
+        }
+        
+        .frame-option.selected {
+            border-color: #007bff;
+            box-shadow: 0 5px 15px rgba(0,123,255,0.2);
+        }
+        
+        .frame-image {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, #8B4513, #D2691E);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+        
+        .frame-image.premium {
+            background: linear-gradient(135deg, #2C1810, #8B4513);
+        }
+        
+        .frame-image.luxury {
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+            color: #333;
+        }
+        
+        .frame-image.ornate {
+            background: linear-gradient(135deg, #B8860B, #DAA520);
+            color: #333;
+        }
+        
+        .frame-image.minimal {
+            background: linear-gradient(135deg, #2C3E50, #34495E);
+        }
+        
+        .artwork-preview {
+            background-color: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 20px;
+        }
+        
+        .artwork-image-container {
+            width: 100%;
+            height: 250px;
+            background: linear-gradient(45deg, #667eea 0%, #764ba2 100%);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 18px;
+            font-weight: 500;
+            margin-top: 15px;
+        }
+        
+        .color-swatch {
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            margin-right: 5px;
+            border: 2px solid #ddd;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .color-swatch:hover {
+            transform: scale(1.1);
+        }
+        
+        .color-swatch.selected {
+            border-color: #007bff;
+            border-width: 3px;
+        }
+        
+        .frame-colors {
+            margin-top: 15px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
+        
+        .price-highlight {
+            color: #007bff;
+            font-size: 1.2em;
+        }
+        
+        .section-header {
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .option-card {
+            transition: all 0.3s ease;
+            border: 1px solid #dee2e6;
+        }
+        
+        .option-card:hover {
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+        }
+        
+        .option-card.selected {
+            border-color: #007bff;
+            background-color: #f0f8ff;
+        }
+        
+        .total-price {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #007bff;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            z-index: 1000;
+        }
+        
+        .brand-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px 0;
+            margin-bottom: 30px;
+        }
+        
+        /* Color definitions */
+        .color-black { background-color: #000000; }
+        .color-white { background-color: #ffffff; border-color: #ccc; }
+        .color-walnut { background-color: #8B4513; }
+        .color-cherry { background-color: #DE3163; }
+        .color-natural { background-color: #D2B48C; }
+        .color-espresso { background-color: #4A2C2A; }
+        .color-gold { background-color: #FFD700; }
+        .color-silver { background-color: #C0C0C0; }
+        .color-bronze { background-color: #CD7F32; }
+        .color-antique-gold { background-color: #B8860B; }
+        .color-vintage-silver { background-color: #A8A8A8; }
+        .color-bronze-patina { background-color: #8C7853; }
+        .color-brushed-gold { background-color: #D4AF37; }
+    </style>
+</head>
+<body>
+    <div class="brand-header">
+        <div class="container">
+            <h1 class="mb-0">Jay's Frames</h1>
+            <p class="mb-0">Custom Picture Framing</p>
+        </div>
+    </div>
+
+    <div class="container my-5">
+        <div class="row">
+            <div class="col-12">
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item"><a href="#">Upload</a></li>
+                        <li class="breadcrumb-item active" aria-current="page">Select Frame</li>
+                        <li class="breadcrumb-item">Checkout</li>
+                    </ol>
+                </nav>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-4">
+                <div class="artwork-preview">
+                    <h3>Your Artwork</h3>
+                    <p><strong>Dimensions:</strong> 40.64 cm × 30.48 cm</p>
+                    <p><small class="text-muted">Order ID: #ORD001234</small></p>
+                    
+                    <div class="artwork-image-container">
+                        Sample Artwork Preview
+                    </div>
+                    
+                    <div class="mt-3">
+                        <small class="text-muted">
+                            <i>Your uploaded image will appear here</i>
+                        </small>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-8">
+                <form method="post" id="frameSelectionForm">
+                    <div class="mb-4">
+                        <h3 class="section-header">Frame Styles</h3>
+                        <div class="row">
+                            <!-- Standard Frame -->
+                            <div class="col-lg-6">
+                                <div class="frame-option" data-frame-id="standard" data-price="127">
+                                    <div class="frame-image">Standard Wood Frame</div>
+                                    <h4>Standard Wood Frame</h4>
+                                    <p class="text-muted">Classic wood frame with a timeless design.</p>
+                                    <p class="price-highlight">$127.00</p>
+                                    
+                                    <div class="form-check">
+                                        <input class="form-check-input frame-selection" type="radio" name="frame_style" id="frame_standard" value="standard" required>
+                                        <label class="form-check-label" for="frame_standard">
+                                            Select this frame
+                                        </label>
+                                    </div>
+                                    
+                                    <div class="frame-colors" style="display: none;">
+                                        <p><strong>Color options:</strong></p>
+                                        <div class="color-swatch color-black" data-color="black" title="Black"></div>
+                                        <div class="color-swatch color-white" data-color="white" title="White"></div>
+                                        <div class="color-swatch color-walnut" data-color="walnut" title="Walnut"></div>
+                                        <div class="color-swatch color-cherry" data-color="cherry" title="Cherry"></div>
+                                        <input type="hidden" name="frame_color" class="selected-color-input">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Premium Frame -->
+                            <div class="col-lg-6">
+                                <div class="frame-option" data-frame-id="premium" data-price="191">
+                                    <div class="frame-image premium">Premium Wood Frame</div>
+                                    <h4>Premium Wood Frame</h4>
+                                    <p class="text-muted">High-quality wood frame with elegant finishing.</p>
+                                    <p class="price-highlight">$191.00</p>
+                                    
+                                    <div class="form-check">
+                                        <input class="form-check-input frame-selection" type="radio" name="frame_style" id="frame_premium" value="premium" required>
+                                        <label class="form-check-label" for="frame_premium">
+                                            Select this frame
+                                        </label>
+                                    </div>
+                                    
+                                    <div class="frame-colors" style="display: none;">
+                                        <p><strong>Color options:</strong></p>
+                                        <div class="color-swatch color-black" data-color="black" title="Black"></div>
+                                        <div class="color-swatch color-white" data-color="white" title="White"></div>
+                                        <div class="color-swatch color-natural" data-color="natural" title="Natural"></div>
+                                        <div class="color-swatch color-espresso" data-color="espresso" title="Espresso"></div>
+                                        <div class="color-swatch color-gold" data-color="gold" title="Gold"></div>
+                                        <input type="hidden" name="frame_color" class="selected-color-input">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Luxury Frame -->
+                            <div class="col-lg-6">
+                                <div class="frame-option" data-frame-id="luxury" data-price="254">
+                                    <div class="frame-image luxury">Luxury Gold Frame</div>
+                                    <h4>Luxury Gold Frame</h4>
+                                    <p class="text-muted">Ornate gold-finished frame for a luxurious presentation.</p>
+                                    <p class="price-highlight">$254.00</p>
+                                    
+                                    <div class="form-check">
+                                        <input class="form-check-input frame-selection" type="radio" name="frame_style" id="frame_luxury" value="luxury" required>
+                                        <label class="form-check-label" for="frame_luxury">
+                                            Select this frame
+                                        </label>
+                                    </div>
+                                    
+                                    <div class="frame-colors" style="display: none;">
+                                        <p><strong>Color options:</strong></p>
+                                        <div class="color-swatch color-gold" data-color="gold" title="Gold"></div>
+                                        <div class="color-swatch color-silver" data-color="silver" title="Silver"></div>
+                                        <div class="color-swatch color-bronze" data-color="bronze" title="Bronze"></div>
+                                        <input type="hidden" name="frame_color" class="selected-color-input">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Minimal Frame -->
+                            <div class="col-lg-6">
+                                <div class="frame-option" data-frame-id="minimal" data-price="115">
+                                    <div class="frame-image minimal">Minimalist Metal Frame</div>
+                                    <h4>Minimalist Metal Frame</h4>
+                                    <p class="text-muted">Clean, modern metal frame for a contemporary look.</p>
+                                    <p class="price-highlight">$115.00</p>
+                                    
+                                    <div class="form-check">
+                                        <input class="form-check-input frame-selection" type="radio" name="frame_style" id="frame_minimal" value="minimal" required>
+                                        <label class="form-check-label" for="frame_minimal">
+                                            Select this frame
+                                        </label>
+                                    </div>
+                                    
+                                    <div class="frame-colors" style="display: none;">
+                                        <p><strong>Color options:</strong></p>
+                                        <div class="color-swatch color-black" data-color="black" title="Black"></div>
+                                        <div class="color-swatch color-white" data-color="white" title="White"></div>
+                                        <div class="color-swatch color-silver" data-color="silver" title="Silver"></div>
+                                        <div class="color-swatch color-brushed-gold" data-color="brushed-gold" title="Brushed Gold"></div>
+                                        <input type="hidden" name="frame_color" class="selected-color-input">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h3 class="section-header">Mat Options</h3>
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="card option-card">
+                                    <div class="card-body">
+                                        <div class="form-check">
+                                            <input class="form-check-input mat-option" type="radio" name="mat_option" id="mat_none" value="none" checked data-price="0">
+                                            <label class="form-check-label" for="mat_none">
+                                                <strong>No Mat</strong>
+                                            </label>
+                                        </div>
+                                        <small class="text-muted">Direct frame-to-artwork mounting</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card option-card">
+                                    <div class="card-body">
+                                        <div class="form-check">
+                                            <input class="form-check-input mat-option" type="radio" name="mat_option" id="mat_single" value="single" data-price="20">
+                                            <label class="form-check-label" for="mat_single">
+                                                <strong>Single Mat</strong>
+                                                <span class="text-muted">(+$20.00)</span>
+                                            </label>
+                                        </div>
+                                        <small class="text-muted">Classic single mat border</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card option-card">
+                                    <div class="card-body">
+                                        <div class="form-check">
+                                            <input class="form-check-input mat-option" type="radio" name="mat_option" id="mat_double" value="double" data-price="35">
+                                            <label class="form-check-label" for="mat_double">
+                                                <strong>Double Mat</strong>
+                                                <span class="text-muted">(+$35.00)</span>
+                                            </label>
+                                        </div>
+                                        <small class="text-muted">Premium double mat with accent border</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h3 class="section-header">Glass Options</h3>
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="card option-card">
+                                    <div class="card-body">
+                                        <div class="form-check">
+                                            <input class="form-check-input glass-option" type="radio" name="glass_option" id="glass_standard" value="standard" checked data-price="0">
+                                            <label class="form-check-label" for="glass_standard">
+                                                <strong>Standard Glass</strong>
+                                            </label>
+                                        </div>
+                                        <small class="text-muted">Clear glass with UV protection.</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card option-card">
+                                    <div class="card-body">
+                                        <div class="form-check">
+                                            <input class="form-check-input glass-option" type="radio" name="glass_option" id="glass_non_glare" value="non-glare" data-price="25">
+                                            <label class="form-check-label" for="glass_non_glare">
+                                                <strong>Non-Glare Glass</strong>
+                                                <span class="text-muted">(+$25.00)</span>
+                                            </label>
+                                        </div>
+                                        <small class="text-muted">Reduces reflections for better viewing.</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card option-card">
+                                    <div class="card-body">
+                                        <div class="form-check">
+                                            <input class="form-check-input glass-option" type="radio" name="glass_option" id="glass_museum" value="museum" data-price="60">
+                                            <label class="form-check-label" for="glass_museum">
+                                                <strong>Museum Glass</strong>
+                                                <span class="text-muted">(+$60.00)</span>
+                                            </label>
+                                        </div>
+                                        <small class="text-muted">Premium glass with 99% UV protection and anti-reflection.</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg" disabled id="continueBtn">
+                            Continue to Checkout
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="total-price" id="totalPrice" style="display: none;">
+        <div><strong>Total: $0.00</strong></div>
+        <small>Frame + Options</small>
+    </div>
+    
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            let selectedFramePrice = 0;
+            let selectedMatPrice = 0;
+            let selectedGlassPrice = 0;
+            
+            // Frame selection
+            const frameOptions = document.querySelectorAll('.frame-option');
+            const frameSelectionInputs = document.querySelectorAll('.frame-selection');
+            
+            frameSelectionInputs.forEach(input => {
+                input.addEventListener('change', function() {
+                    // Hide all color options
+                    document.querySelectorAll('.frame-colors').forEach(el => {
+                        el.style.display = 'none';
+                    });
+                    
+                    // Remove selected class from all frames
+                    frameOptions.forEach(option => {
+                        option.classList.remove('selected');
+                    });
+                    
+                    // Add selected class to current frame and show color options
+                    if (this.checked) {
+                        const frameOption = this.closest('.frame-option');
+                        frameOption.classList.add('selected');
+                        selectedFramePrice = parseInt(frameOption.dataset.price);
+                        
+                        const colorOptions = frameOption.querySelector('.frame-colors');
+                        if (colorOptions) {
+                            colorOptions.style.display = 'block';
+                            
+                            // Select first color by default
+                            const firstColor = colorOptions.querySelector('.color-swatch');
+                            if (firstColor) {
+                                firstColor.click();
+                            }
+                        }
+                        
+                        updateTotal();
+                        updateContinueButton();
+                    }
+                });
+            });
+            
+            // Color selection
+            const colorSwatches = document.querySelectorAll('.color-swatch');
+            
+            colorSwatches.forEach(swatch => {
+                swatch.addEventListener('click', function() {
+                    // Remove selected class from all swatches in this frame
+                    const frameOption = this.closest('.frame-option');
+                    frameOption.querySelectorAll('.color-swatch').forEach(el => {
+                        el.classList.remove('selected');
+                    });
+                    
+                    // Add selected class to current swatch
+                    this.classList.add('selected');
+                    
+                    // Update hidden input with selected color
+                    const colorInput = frameOption.querySelector('.selected-color-input');
+                    colorInput.value = this.getAttribute('data-color');
+                });
+            });
+            
+            // Mat option selection
+            const matOptions = document.querySelectorAll('.mat-option');
+            matOptions.forEach(option => {
+                option.addEventListener('change', function() {
+                    // Remove selected class from all mat cards
+                    document.querySelectorAll('.mat-option').forEach(mat => {
+                        mat.closest('.option-card').classList.remove('selected');
+                    });
+                    
+                    if (this.checked) {
+                        this.closest('.option-card').classList.add('selected');
+                        selectedMatPrice = parseInt(this.dataset.price);
+                        updateTotal();
+                    }
+                });
+            });
+            
+            // Glass option selection
+            const glassOptions = document.querySelectorAll('.glass-option');
+            glassOptions.forEach(option => {
+                option.addEventListener('change', function() {
+                    // Remove selected class from all glass cards
+                    document.querySelectorAll('.glass-option').forEach(glass => {
+                        glass.closest('.option-card').classList.remove('selected');
+                    });
+                    
+                    if (this.checked) {
+                        this.closest('.option-card').classList.add('selected');
+                        selectedGlassPrice = parseInt(this.dataset.price);
+                        updateTotal();
+                    }
+                });
+            });
+            
+            function updateTotal() {
+                const total = selectedFramePrice + selectedMatPrice + selectedGlassPrice;
+                const totalElement = document.getElementById('totalPrice');
+                if (total > 0) {
+                    totalElement.style.display = 'block';
+                    totalElement.querySelector('div').innerHTML = `<strong>Total: $${total}.00</strong>`;
+                } else {
+                    totalElement.style.display = 'none';
+                }
+            }
+            
+            function updateContinueButton() {
+                const continueBtn = document.getElementById('continueBtn');
+                const frameSelected = document.querySelector('input[name="frame_style"]:checked');
+                
+                if (frameSelected) {
+                    continueBtn.disabled = false;
+                    continueBtn.textContent = 'Continue to Checkout';
+                } else {
+                    continueBtn.disabled = true;
+                    continueBtn.textContent = 'Please select a frame style';
+                }
+            }
+            
+            // Initialize default selections
+            document.querySelector('#mat_none').closest('.option-card').classList.add('selected');
+            document.querySelector('#glass_standard').closest('.option-card').classList.add('selected');
+            
+            // Form submission
+            document.getElementById('frameSelectionForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                alert('Form submitted! In a real application, this would proceed to checkout.');
+            });
+        });
+    </script>
+</body>
+</html>

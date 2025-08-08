@@ -1,0 +1,616 @@
+import React, { useState, useCallback } from 'react';
+import { ChevronDown, Eye, Palette, Image } from 'lucide-react';
+
+// Frame color definitions with realistic finishes
+const FRAME_COLORS = {
+  wood: [
+    { id: 'natural-oak', name: 'Natural Oak', hex: '#D2B48C', texture: 'wood-grain', finish: 'satin' },
+    { id: 'dark-walnut', name: 'Dark Walnut', hex: '#654321', texture: 'wood-grain', finish: 'satin' },
+    { id: 'cherry', name: 'Cherry', hex: '#8B4513', texture: 'wood-grain', finish: 'satin' },
+    { id: 'mahogany', name: 'Mahogany', hex: '#C04000', texture: 'wood-grain', finish: 'satin' },
+    { id: 'espresso', name: 'Espresso', hex: '#362D1D', texture: 'wood-grain', finish: 'satin' },
+    { id: 'maple', name: 'Maple', hex: '#F5DEB3', texture: 'wood-grain', finish: 'satin' },
+    { id: 'ebony', name: 'Ebony', hex: '#0C0C0C', texture: 'wood-grain', finish: 'satin' },
+    { id: 'pine', name: 'Pine', hex: '#E4D5B7', texture: 'wood-grain', finish: 'satin' }
+  ],
+  metal: [
+    { id: 'silver', name: 'Silver', hex: '#C0C0C0', texture: 'brushed-metal', finish: 'brushed' },
+    { id: 'brushed-silver', name: 'Brushed Silver', hex: '#B8B8B8', texture: 'brushed-metal', finish: 'brushed' },
+    { id: 'polished-silver', name: 'Polished Silver', hex: '#E5E5E5', texture: 'smooth', finish: 'polished' },
+    { id: 'gold', name: 'Gold', hex: '#FFD700', texture: 'brushed-metal', finish: 'brushed' },
+    { id: 'antique-gold', name: 'Antique Gold', hex: '#D4AF37', texture: 'brushed-metal', finish: 'antique' },
+    { id: 'rose-gold', name: 'Rose Gold', hex: '#E8B4B8', texture: 'brushed-metal', finish: 'brushed' },
+    { id: 'champagne', name: 'Champagne', hex: '#F7E7CE', texture: 'brushed-metal', finish: 'brushed' },
+    { id: 'pewter', name: 'Pewter', hex: '#96A8A1', texture: 'brushed-metal', finish: 'brushed' },
+    { id: 'bronze', name: 'Oil Rubbed Bronze', hex: '#CD7F32', texture: 'brushed-metal', finish: 'oil-rubbed' },
+    { id: 'copper', name: 'Copper', hex: '#B87333', texture: 'brushed-metal', finish: 'brushed' }
+  ],
+  modern: [
+    { id: 'matte-black', name: 'Matte Black', hex: '#1C1C1C', texture: 'smooth', finish: 'matte' },
+    { id: 'gloss-black', name: 'Gloss Black', hex: '#000000', texture: 'smooth', finish: 'gloss' },
+    { id: 'matte-white', name: 'Matte White', hex: '#F8F8F8', texture: 'smooth', finish: 'matte' },
+    { id: 'gloss-white', name: 'Gloss White', hex: '#FFFFFF', texture: 'smooth', finish: 'gloss' },
+    { id: 'light-gray', name: 'Light Gray', hex: '#D3D3D3', texture: 'smooth', finish: 'matte' },
+    { id: 'medium-gray', name: 'Medium Gray', hex: '#808080', texture: 'smooth', finish: 'matte' },
+    { id: 'dark-gray', name: 'Dark Gray', hex: '#404040', texture: 'smooth', finish: 'matte' },
+    { id: 'charcoal', name: 'Charcoal', hex: '#36454F', texture: 'smooth', finish: 'matte' }
+  ],
+  industrial: [
+    { id: 'raw-steel', name: 'Raw Steel', hex: '#71797E', texture: 'brushed-metal', finish: 'raw' },
+    { id: 'brushed-steel', name: 'Brushed Steel', hex: '#6E7B7E', texture: 'brushed-metal', finish: 'brushed' },
+    { id: 'polished-steel', name: 'Polished Steel', hex: '#8E9B9E', texture: 'smooth', finish: 'polished' },
+    { id: 'gunmetal', name: 'Gunmetal', hex: '#2C3539', texture: 'brushed-metal', finish: 'matte' },
+    { id: 'iron', name: 'Iron', hex: '#464451', texture: 'brushed-metal', finish: 'raw' },
+    { id: 'oxidized-steel', name: 'Oxidized Steel', hex: '#5C6B73', texture: 'brushed-metal', finish: 'oxidized' },
+    { id: 'blackened-steel', name: 'Blackened Steel', hex: '#2F3437', texture: 'brushed-metal', finish: 'blackened' },
+    { id: 'stainless', name: 'Stainless Steel', hex: '#A8A8A8', texture: 'brushed-metal', finish: 'brushed' }
+  ],
+  ornate: [
+    { id: 'antique-gold-leaf', name: 'Antique Gold Leaf', hex: '#CFB53B', texture: 'ornate', finish: 'gilded' },
+    { id: 'silver-leaf', name: 'Silver Leaf', hex: '#C4C4C4', texture: 'ornate', finish: 'gilded' },
+    { id: 'bronze-patina', name: 'Bronze Patina', hex: '#8C7853', texture: 'ornate', finish: 'patina' },
+    { id: 'vintage-gold', name: 'Vintage Gold', hex: '#B8860B', texture: 'ornate', finish: 'aged' },
+    { id: 'copper-verdigris', name: 'Copper Verdigris', hex: '#43B3AE', texture: 'ornate', finish: 'patina' },
+    { id: 'pewter-antique', name: 'Antique Pewter', hex: '#8A8A8A', texture: 'ornate', finish: 'aged' }
+  ]
+};
+
+// Mat color definitions organized by category
+const MAT_COLORS = {
+  whites: [
+    { id: 'pure-white', name: 'Pure White', hex: '#FFFFFF', core: 'white' },
+    { id: 'antique-white', name: 'Antique White', hex: '#FAEBD7', core: 'white' },
+    { id: 'ivory', name: 'Ivory', hex: '#FFFFF0', core: 'white' },
+    { id: 'cream', name: 'Cream', hex: '#F5F5DC', core: 'white' },
+    { id: 'pearl', name: 'Pearl', hex: '#F8F6F0', core: 'white' },
+    { id: 'linen', name: 'Linen', hex: '#FAF0E6', core: 'white' }
+  ],
+  neutrals: [
+    { id: 'light-gray', name: 'Light Gray', hex: '#D3D3D3', core: 'white' },
+    { id: 'warm-gray', name: 'Warm Gray', hex: '#C7C2B8', core: 'white' },
+    { id: 'dove-gray', name: 'Dove Gray', hex: '#6D6D6D', core: 'black' },
+    { id: 'charcoal', name: 'Charcoal', hex: '#36454F', core: 'black' },
+    { id: 'black', name: 'Black', hex: '#000000', core: 'black' },
+    { id: 'off-black', name: 'Off Black', hex: '#1C1C1C', core: 'black' }
+  ],
+  earth_tones: [
+    { id: 'sand', name: 'Sand', hex: '#C2B280', core: 'white' },
+    { id: 'taupe', name: 'Taupe', hex: '#483C32', core: 'black' },
+    { id: 'sienna', name: 'Sienna', hex: '#A0522D', core: 'black' },
+    { id: 'sage', name: 'Sage Green', hex: '#9CAF88', core: 'white' },
+    { id: 'moss', name: 'Moss Green', hex: '#8A9A5B', core: 'black' },
+    { id: 'terra-cotta', name: 'Terra Cotta', hex: '#E2725B', core: 'white' }
+  ],
+  blues: [
+    { id: 'navy', name: 'Navy Blue', hex: '#000080', core: 'black' },
+    { id: 'navy-dark', name: 'Deep Navy', hex: '#1A1A3A', core: 'black' },
+    { id: 'navy-midnight', name: 'Midnight Navy', hex: '#191970', core: 'black' },
+    { id: 'royal-blue', name: 'Royal Blue', hex: '#4169E1', core: 'white' },
+    { id: 'powder-blue', name: 'Powder Blue', hex: '#B0E0E6', core: 'white' },
+    { id: 'slate-blue', name: 'Slate Blue', hex: '#6A5ACD', core: 'white' },
+    { id: 'teal', name: 'Teal', hex: '#008080', core: 'white' },
+    { id: 'dusty-blue', name: 'Dusty Blue', hex: '#6B8CAE', core: 'white' },
+    { id: 'steel-blue', name: 'Steel Blue', hex: '#4682B4', core: 'white' }
+  ],
+  warm_colors: [
+    { id: 'burgundy', name: 'Burgundy', hex: '#800020', core: 'black' },
+    { id: 'deep-red', name: 'Deep Red', hex: '#8B0000', core: 'black' },
+    { id: 'rose', name: 'Rose', hex: '#FF007F', core: 'white' },
+    { id: 'gold', name: 'Gold', hex: '#FFD700', core: 'black' },
+    { id: 'amber', name: 'Amber', hex: '#FFBF00', core: 'black' },
+    { id: 'peach', name: 'Peach', hex: '#FFCBA4', core: 'white' }
+  ]
+};
+
+// Frame style definitions
+const FRAME_STYLES = [
+  {
+    id: 'standard-wood',
+    name: 'Standard Wood',
+    description: 'Classic wood frame with clean lines',
+    width: '1.5"',
+    price: 2.50,
+    colors: FRAME_COLORS.wood,
+    preview: 'wood-standard'
+  },
+  {
+    id: 'premium-wood',
+    name: 'Premium Wood',
+    description: 'High-quality hardwood with elegant profile',
+    width: '2"',
+    price: 3.75,
+    colors: FRAME_COLORS.wood,
+    preview: 'wood-premium'
+  },
+  {
+    id: 'metal-classic',
+    name: 'Classic Metal',
+    description: 'Traditional metal finishes - gold, silver, bronze',
+    width: '1"',
+    price: 3.25,
+    colors: FRAME_COLORS.metal,
+    preview: 'metal-classic'
+  },
+  {
+    id: 'modern-minimal',
+    name: 'Modern Minimal',
+    description: 'Clean contemporary lines in modern finishes',
+    width: '0.75"',
+    price: 2.95,
+    colors: FRAME_COLORS.modern,
+    preview: 'modern-minimal'
+  },
+  {
+    id: 'industrial',
+    name: 'Industrial Steel',
+    description: 'Raw steel and iron finishes for modern art',
+    width: '1.25"',
+    price: 4.25,
+    colors: FRAME_COLORS.industrial,
+    preview: 'industrial'
+  },
+  {
+    id: 'ornate-traditional',
+    name: 'Ornate Traditional',
+    description: 'Decorative frame with intricate details',
+    width: '3"',
+    price: 6.50,
+    colors: FRAME_COLORS.ornate,
+    preview: 'ornate-traditional'
+  }
+];
+
+interface FrameMatSelectorProps {
+  artworkDimensions: { width: number; height: number; unit: string };
+  onSelectionChange?: (selection: any) => void;
+}
+
+const FrameMatSelector: React.FC<FrameMatSelectorProps> = ({
+  artworkDimensions,
+  onSelectionChange
+}) => {
+  const [selectedFrameStyle, setSelectedFrameStyle] = useState<string>('');
+  const [selectedFrameColor, setSelectedFrameColor] = useState<string>('');
+  const [selectedMatOption, setSelectedMatOption] = useState<'none' | 'single' | 'double'>('none');
+  const [selectedMatColor1, setSelectedMatColor1] = useState<string>('');
+  const [selectedMatColor2, setSelectedMatColor2] = useState<string>('');
+  const [showColorPicker, setShowColorPicker] = useState<{
+    type: 'frame' | 'mat1' | 'mat2' | null;
+    category?: string;
+  }>({ type: null });
+
+  // Calculate pricing
+  const calculatePrice = useCallback(() => {
+    const frameStyle = FRAME_STYLES.find(s => s.id === selectedFrameStyle);
+    if (!frameStyle) return 0;
+
+    const perimeter = (artworkDimensions.width + artworkDimensions.height) * 2;
+    const basePrice = perimeter * frameStyle.price;
+    
+    let matPrice = 0;
+    if (selectedMatOption === 'single') matPrice = 20;
+    if (selectedMatOption === 'double') matPrice = 35;
+
+    return Math.ceil(basePrice + matPrice);
+  }, [selectedFrameStyle, selectedMatOption, artworkDimensions]);
+
+  // Handle selection changes
+  const handleSelectionChange = useCallback(() => {
+    const selection = {
+      frameStyle: selectedFrameStyle,
+      frameColor: selectedFrameColor,
+      matOption: selectedMatOption,
+      matColor1: selectedMatColor1,
+      matColor2: selectedMatColor2,
+      totalPrice: calculatePrice()
+    };
+    
+    onSelectionChange?.(selection);
+  }, [selectedFrameStyle, selectedFrameColor, selectedMatOption, selectedMatColor1, selectedMatColor2, calculatePrice, onSelectionChange]);
+
+  // Get texture pattern for frame colors
+  const getFrameTexture = (texture: string, color: string) => {
+    const patterns = {
+      'wood-grain': `linear-gradient(45deg, ${color} 25%, transparent 25%), linear-gradient(-45deg, ${color} 25%, transparent 25%), linear-gradient(45deg, transparent 75%, ${color} 75%), linear-gradient(-45deg, transparent 75%, ${color} 75%)`,
+      'brushed-metal': `linear-gradient(90deg, ${color} 50%, rgba(255,255,255,0.1) 50%)`,
+      'ornate': `radial-gradient(circle, ${color} 60%, rgba(255,255,255,0.2) 70%)`,
+      'smooth': color
+    };
+    
+    return patterns[texture as keyof typeof patterns] || color;
+  };
+
+  // Color swatch component
+  const ColorSwatch: React.FC<{
+    color: any;
+    isSelected: boolean;
+    onClick: () => void;
+    size?: 'sm' | 'md' | 'lg';
+  }> = ({ color, isSelected, onClick, size = 'md' }) => {
+    const sizeClasses = {
+      sm: 'w-6 h-6',
+      md: 'w-8 h-8',
+      lg: 'w-12 h-12'
+    };
+
+    const style = color.texture 
+      ? { background: getFrameTexture(color.texture, color.hex) }
+      : { backgroundColor: color.hex };
+
+    return (
+      <button
+        className={`
+          ${sizeClasses[size]} rounded-full border-2 transition-all hover:scale-110
+          ${isSelected ? 'border-blue-500 shadow-lg' : 'border-gray-300 hover:border-gray-400'}
+          ${color.hex === '#FFFFFF' ? 'shadow-inner' : ''}
+        `}
+        style={style}
+        onClick={onClick}
+        title={color.name}
+        aria-label={`Select ${color.name}`}
+      />
+    );
+  };
+
+  // Frame preview component
+  const FramePreview: React.FC = () => {
+    const frameStyle = FRAME_STYLES.find(s => s.id === selectedFrameStyle);
+    const frameColor = frameStyle?.colors.find(c => c.id === selectedFrameColor);
+    const matColor1 = Object.values(MAT_COLORS).flat().find(c => c.id === selectedMatColor1);
+    const matColor2 = Object.values(MAT_COLORS).flat().find(c => c.id === selectedMatColor2);
+
+    if (!frameStyle || !frameColor) {
+      return (
+        <div className="w-full h-64 bg-gray-100 rounded-lg flex items-center justify-center">
+          <div className="text-center text-gray-500">
+            <Image className="mx-auto h-12 w-12 mb-2" />
+            <p>Select a frame style and color to preview</p>
+          </div>
+        </div>
+      );
+    }
+
+    const frameWidth = parseInt(frameStyle.width) * 8; // Convert inches to pixels (approximate)
+    const matWidth = selectedMatOption !== 'none' ? 24 : 0; // Mat width in pixels
+
+    return (
+      <div className="w-full max-w-md mx-auto">
+        <div 
+          className="relative mx-auto shadow-lg"
+          style={{
+            width: '300px',
+            height: '240px',
+            background: getFrameTexture(frameColor.texture, frameColor.hex),
+            padding: `${frameWidth}px`,
+            borderRadius: '4px'
+          }}
+        >
+          {/* Mat layers */}
+          {selectedMatOption !== 'none' && (
+            <div
+              className="relative w-full h-full"
+              style={{
+                backgroundColor: matColor1?.hex || '#FFFFFF',
+                padding: selectedMatOption === 'double' ? `${matWidth}px` : '0'
+              }}
+            >
+              {selectedMatOption === 'double' && matColor2 && (
+                <div
+                  className="w-full h-full"
+                  style={{
+                    backgroundColor: matColor2.hex,
+                    padding: `${matWidth}px`
+                  }}
+                >
+                  {/* Artwork area */}
+                  <div className="w-full h-full bg-gradient-to-br from-blue-400 to-purple-600 flex items-center justify-center text-white font-medium">
+                    Your Artwork
+                  </div>
+                </div>
+              )}
+              {selectedMatOption === 'single' && (
+                <div
+                  className="w-full h-full"
+                  style={{ padding: `${matWidth}px` }}
+                >
+                  {/* Artwork area */}
+                  <div className="w-full h-full bg-gradient-to-br from-blue-400 to-purple-600 flex items-center justify-center text-white font-medium">
+                    Your Artwork
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* No mat - direct artwork */}
+          {selectedMatOption === 'none' && (
+            <div className="w-full h-full bg-gradient-to-br from-blue-400 to-purple-600 flex items-center justify-center text-white font-medium">
+              Your Artwork
+            </div>
+          )}
+        </div>
+
+        {/* Selection summary */}
+        <div className="mt-4 p-3 bg-gray-50 rounded-lg text-sm">
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <span className="font-medium">Frame:</span>
+              <p>{frameStyle.name} - {frameColor.name}</p>
+            </div>
+            <div>
+              <span className="font-medium">Mat:</span>
+              <p>{selectedMatOption === 'none' ? 'No Mat' : 
+                 selectedMatOption === 'single' ? `Single - ${matColor1?.name || 'Not selected'}` :
+                 `Double - ${matColor1?.name || 'Not selected'} / ${matColor2?.name || 'Not selected'}`}</p>
+            </div>
+          </div>
+          <div className="mt-2 pt-2 border-t border-gray-200">
+            <span className="font-bold text-lg text-blue-600">
+              Total: ${calculatePrice()}.00
+            </span>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="max-w-6xl mx-auto p-6 space-y-8">
+      {/* Header */}
+      <div className="text-center">
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Jay's Frames - Custom Frame Designer</h1>
+        <p className="text-gray-600">Choose your perfect frame and mat combination</p>
+        <p className="text-sm text-gray-500 mt-1">
+          Artwork Size: {artworkDimensions.width}" × {artworkDimensions.height}"
+        </p>
+      </div>
+
+      <div className="grid lg:grid-cols-2 gap-8">
+        {/* Preview Panel */}
+        <div className="order-2 lg:order-1">
+          <div className="sticky top-6">
+            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+              <Eye className="h-5 w-5" />
+              Live Preview
+            </h2>
+            <FramePreview />
+          </div>
+        </div>
+
+        {/* Selection Panel */}
+        <div className="order-1 lg:order-2 space-y-6">
+          {/* Frame Style Selection */}
+          <div className="bg-white rounded-lg border border-gray-200 p-6">
+            <h2 className="text-xl font-semibold mb-4">1. Choose Frame Style</h2>
+            <div className="grid gap-4">
+              {FRAME_STYLES.map(style => (
+                <div
+                  key={style.id}
+                  className={`
+                    border rounded-lg p-4 cursor-pointer transition-all
+                    ${selectedFrameStyle === style.id 
+                      ? 'border-blue-500 bg-blue-50' 
+                      : 'border-gray-200 hover:border-gray-300'
+                    }
+                  `}
+                  onClick={() => {
+                    setSelectedFrameStyle(style.id);
+                    setSelectedFrameColor('');
+                  }}
+                >
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h3 className="font-medium">{style.name}</h3>
+                      <p className="text-sm text-gray-600">{style.description}</p>
+                      <p className="text-sm text-gray-500">Width: {style.width}</p>
+                    </div>
+                    <div className="text-right">
+                      <span className="font-semibold text-lg">${style.price}</span>
+                      <p className="text-xs text-gray-500">per linear inch</p>
+                    </div>
+                  </div>
+                  
+                  <input
+                    type="radio"
+                    name="frameStyle"
+                    value={style.id}
+                    checked={selectedFrameStyle === style.id}
+                    onChange={() => {
+                      setSelectedFrameStyle(style.id);
+                      setSelectedFrameColor('');
+                    }}
+                    className="mt-3"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Frame Color Selection */}
+          {selectedFrameStyle && (
+            <div className="bg-white rounded-lg border border-gray-200 p-6">
+              <h2 className="text-xl font-semibold mb-4">2. Choose Frame Color</h2>
+              <div className="space-y-4">
+                {FRAME_STYLES.find(s => s.id === selectedFrameStyle)?.colors.map((color, index) => (
+                  <div
+                    key={color.id}
+                    className={`
+                      flex items-center gap-4 p-3 rounded-lg border cursor-pointer transition-all
+                      ${selectedFrameColor === color.id
+                        ? 'border-blue-500 bg-blue-50'
+                        : 'border-gray-200 hover:border-gray-300'
+                      }
+                    `}
+                    onClick={() => setSelectedFrameColor(color.id)}
+                  >
+                    <ColorSwatch
+                      color={color}
+                      isSelected={selectedFrameColor === color.id}
+                      onClick={() => setSelectedFrameColor(color.id)}
+                    />
+                    <div className="flex-1">
+                      <h4 className="font-medium">{color.name}</h4>
+                      <p className="text-sm text-gray-500 capitalize">{color.finish} finish</p>
+                    </div>
+                    <input
+                      type="radio"
+                      name="frameColor"
+                      value={color.id}
+                      checked={selectedFrameColor === color.id}
+                      onChange={() => setSelectedFrameColor(color.id)}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Mat Selection */}
+          <div className="bg-white rounded-lg border border-gray-200 p-6">
+            <h2 className="text-xl font-semibold mb-4">3. Choose Mat Option</h2>
+            <div className="space-y-3">
+              {[
+                { id: 'none', label: 'No Mat', price: 0, description: 'Frame directly touches artwork' },
+                { id: 'single', label: 'Single Mat', price: 20, description: 'Classic single mat border' },
+                { id: 'double', label: 'Double Mat', price: 35, description: 'Premium double mat with accent' }
+              ].map(option => (
+                <div
+                  key={option.id}
+                  className={`
+                    flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-all
+                    ${selectedMatOption === option.id
+                      ? 'border-blue-500 bg-blue-50'
+                      : 'border-gray-200 hover:border-gray-300'
+                    }
+                  `}
+                  onClick={() => setSelectedMatOption(option.id as any)}
+                >
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="radio"
+                      name="matOption"
+                      value={option.id}
+                      checked={selectedMatOption === option.id}
+                      onChange={() => setSelectedMatOption(option.id as any)}
+                    />
+                    <div>
+                      <h4 className="font-medium">{option.label}</h4>
+                      <p className="text-sm text-gray-500">{option.description}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    {option.price > 0 ? (
+                      <span className="font-semibold">+${option.price}</span>
+                    ) : (
+                      <span className="text-gray-500">$0</span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Mat Color Selection */}
+          {selectedMatOption !== 'none' && (
+            <div className="bg-white rounded-lg border border-gray-200 p-6">
+              <h2 className="text-xl font-semibold mb-4">
+                4. Choose Mat Color{selectedMatOption === 'double' ? 's' : ''}
+              </h2>
+              
+              {/* Primary Mat Color */}
+              <div className="mb-6">
+                <h3 className="font-medium mb-3">
+                  {selectedMatOption === 'double' ? 'Outer Mat Color' : 'Mat Color'}
+                </h3>
+                
+                {Object.entries(MAT_COLORS).map(([category, colors]) => (
+                  <div key={category} className="mb-4">
+                    <h4 className="text-sm font-medium text-gray-700 mb-2 capitalize">
+                      {category.replace('_', ' ')}
+                    </h4>
+                    <div className="flex flex-wrap gap-2">
+                      {colors.map(color => (
+                        <div key={color.id} className="text-center">
+                          <ColorSwatch
+                            color={color}
+                            isSelected={selectedMatColor1 === color.id}
+                            onClick={() => setSelectedMatColor1(color.id)}
+                          />
+                          <p className="text-xs mt-1 max-w-16 truncate">{color.name}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Secondary Mat Color for Double Mat */}
+              {selectedMatOption === 'double' && (
+                <div>
+                  <h3 className="font-medium mb-3">Inner Mat Color (Accent)</h3>
+                  
+                  {Object.entries(MAT_COLORS).map(([category, colors]) => (
+                    <div key={category} className="mb-4">
+                      <h4 className="text-sm font-medium text-gray-700 mb-2 capitalize">
+                        {category.replace('_', ' ')}
+                      </h4>
+                      <div className="flex flex-wrap gap-2">
+                        {colors.map(color => (
+                          <div key={color.id} className="text-center">
+                            <ColorSwatch
+                              color={color}
+                              isSelected={selectedMatColor2 === color.id}
+                              onClick={() => setSelectedMatColor2(color.id)}
+                            />
+                            <p className="text-xs mt-1 max-w-16 truncate">{color.name}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Action Buttons */}
+          <div className="flex gap-4">
+            <button
+              className="flex-1 bg-blue-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={!selectedFrameStyle || !selectedFrameColor || (selectedMatOption !== 'none' && !selectedMatColor1)}
+              onClick={handleSelectionChange}
+            >
+              Add to Cart - ${calculatePrice()}.00
+            </button>
+            <button
+              className="px-6 py-3 border border-gray-300 rounded-lg font-medium hover:bg-gray-50 transition-colors"
+              onClick={() => {
+                setSelectedFrameStyle('');
+                setSelectedFrameColor('');
+                setSelectedMatOption('none');
+                setSelectedMatColor1('');
+                setSelectedMatColor2('');
+              }}
+            >
+              Reset
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Demo wrapper
+const FrameMatDemo: React.FC = () => {
+  return (
+    <FrameMatSelector
+      artworkDimensions={{ width: 16, height: 20, unit: 'inches' }}
+      onSelectionChange={(selection) => {
+        console.log('Selection changed:', selection);
+      }}
+    />
+  );
+};
+
+export default FrameMatDemo;

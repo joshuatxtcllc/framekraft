@@ -1,0 +1,868 @@
+import React, { useState, useMemo, useCallback, useReducer } from "react";
+import { 
+  Search, 
+  Filter, 
+  ChevronDown, 
+  Package, 
+  Truck, 
+  Check, 
+  Clock, 
+  AlertTriangle,
+  Plus,
+  ShoppingCart,
+  FileText,
+  ClipboardList,
+  ArrowDownToLine,
+  Eye,
+  Edit,
+  X
+} from "lucide-react";
+
+// Types
+interface MaterialItem {
+  id: string;
+  orderIds: number[];
+  name: string;
+  sku: string;
+  supplier: string;
+  type: string;
+  quantity: number;
+  status: 'pending' | 'ordered' | 'received' | 'backorder' | 'cancelled';
+  stockStatus?: 'in_stock' | 'low_stock' | 'out_of_stock' | 'unknown';
+  stockQuantity?: number;
+  orderDate?: string;
+  receiveDate?: string;
+  priority: 'low' | 'medium' | 'high';
+  notes?: string;
+}
+
+type SortField = "name" | "supplier" | "type" | "quantity" | "status" | "priority";
+type BadgeVariant = 'default' | 'secondary' | 'destructive' | 'outline';
+
+// Constants
+const ORDER_STATUSES = [
+  { value: "pending", label: "Pending", color: "default" as BadgeVariant },
+  { value: "ordered", label: "Ordered", color: "secondary" as BadgeVariant },
+  { value: "received", label: "Received", color: "default" as BadgeVariant },
+  { value: "backorder", label: "Back Ordered", color: "destructive" as BadgeVariant },
+  { value: "cancelled", label: "Cancelled", color: "destructive" as BadgeVariant },
+];
+
+const STOCK_STATUSES = [
+  { value: "in_stock", label: "In Stock", color: "default" as BadgeVariant, icon: Check },
+  { value: "low_stock", label: "Low Stock", color: "destructive" as BadgeVariant, icon: AlertTriangle },
+  { value: "out_of_stock", label: "Out of Stock", color: "destructive" as BadgeVariant, icon: AlertTriangle },
+  { value: "unknown", label: "Check Stock", color: "outline" as BadgeVariant, icon: Clock }
+];
+
+// Mock data
+const mockMaterials: MaterialItem[] = [
+  {
+    id: "1",
+    orderIds: [1001, 1002],
+    name: "Premium Wood Frame 24x36",
+    sku: "WF-24x36-WAL",
+    supplier: "FrameCorp",
+    type: "Frame",
+    quantity: 15,
+    status: "pending",
+    stockStatus: "low_stock",
+    stockQuantity: 3,
+    priority: "high",
+    notes: "Rush order for gallery exhibition"
+  },
+  {
+    id: "2",
+    orderIds: [1003],
+    name: "Museum Quality Glass 16x20",
+    sku: "MG-16x20",
+    supplier: "GlassTech",
+    type: "Glass",
+    quantity: 8,
+    status: "ordered",
+    stockStatus: "in_stock",
+    stockQuantity: 25,
+    priority: "medium",
+    orderDate: "2025-01-15"
+  },
+  {
+    id: "3",
+    orderIds: [1004, 1005, 1006],
+    name: "Acid-Free Mat Board White",
+    sku: "MAT-AF-WHT-20x24",
+    supplier: "MatSupply Co",
+    type: "Matting",
+    quantity: 25,
+    status: "received",
+    stockStatus: "in_stock",
+    stockQuantity: 50,
+    priority: "low",
+    orderDate: "2025-01-10",
+    receiveDate: "2025-01-20"
+  },
+  {
+    id: "4",
+    orderIds: [1007],
+    name: "Metal Frame Black 18x24",
+    sku: "MF-18x24-BLK",
+    supplier: "MetalFrames Inc",
+    type: "Frame",
+    quantity: 12,
+    status: "backorder",
+    stockStatus: "out_of_stock",
+    stockQuantity: 0,
+    priority: "high",
+    notes: "Supplier delay expected 2 weeks"
+  },
+  {
+    id: "5",
+    orderIds: [1008, 1009],
+    name: "Hanging Hardware Kit",
+    sku: "HW-KIT-STD",
+    supplier: "Hardware Plus",
+    type: "Hardware",
+    quantity: 30,
+    status: "pending",
+    stockStatus: "in_stock",
+    stockQuantity: 45,
+    priority: "low"
+  }
+];
+
+// Filter reducer
+interface FilterState {
+  searchQuery: string;
+  supplier: string | null;
+  type: string | null;
+  status: string | null;
+  sortField: SortField;
+  sortDirection: 'asc' | 'desc';
+  currentTab: string;
+}
+
+type FilterAction = 
+  | { type: 'SET_SEARCH'; payload: string }
+  | { type: 'SET_SUPPLIER'; payload: string | null }
+  | { type: 'SET_TYPE'; payload: string | null }
+  | { type: 'SET_STATUS'; payload: string | null }
+  | { type: 'SET_SORT'; payload: { field: SortField; direction: 'asc' | 'desc' } }
+  | { type: 'SET_TAB'; payload: string }
+  | { type: 'RESET_FILTERS' };
+
+const initialFilterState: FilterState = {
+  searchQuery: '',
+  supplier: null,
+  type: null,
+  status: null,
+  sortField: 'name',
+  sortDirection: 'asc',
+  currentTab: 'all'
+};
+
+function filterReducer(state: FilterState, action: FilterAction): FilterState {
+  switch (action.type) {
+    case 'SET_SEARCH':
+      return { ...state, searchQuery: action.payload };
+    case 'SET_SUPPLIER':
+      return { ...state, supplier: action.payload };
+    case 'SET_TYPE':
+      return { ...state, type: action.payload };
+    case 'SET_STATUS':
+      return { ...state, status: action.payload };
+    case 'SET_SORT':
+      return { ...state, sortField: action.payload.field, sortDirection: action.payload.direction };
+    case 'SET_TAB':
+      return { ...state, currentTab: action.payload };
+    case 'RESET_FILTERS':
+      return initialFilterState;
+    default:
+      return state;
+  }
+}
+
+// Utility functions
+const sanitizeString = (str: string): string => {
+  return str.replace(/[<>\"'&]/g, '');
+};
+
+const exportToCSV = (data: MaterialItem[], filename: string) => {
+  const headers = ["SKU", "Name", "Supplier", "Type", "Quantity", "Status", "Priority", "Notes"];
+  const rows = data.map(item => [
+    sanitizeString(item.sku),
+    sanitizeString(item.name),
+    sanitizeString(item.supplier),
+    sanitizeString(item.type),
+    item.quantity.toString(),
+    ORDER_STATUSES.find(s => s.value === item.status)?.label || item.status,
+    item.priority,
+    sanitizeString(item.notes || "")
+  ]);
+  
+  const csvContent = [
+    headers.join(","),
+    ...rows.map(row => row.map(cell => `"${cell.replace(/"/g, '""')}"`).join(","))
+  ].join("\n");
+  
+  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.setAttribute("href", url);
+  link.setAttribute("download", filename);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+};
+
+// Components
+const Badge: React.FC<{ variant: BadgeVariant; children: React.ReactNode; className?: string }> = ({ 
+  variant, 
+  children, 
+  className = '' 
+}) => {
+  const baseClasses = "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium";
+  const variantClasses = {
+    default: "bg-gray-100 text-gray-800",
+    secondary: "bg-blue-100 text-blue-800",
+    destructive: "bg-red-100 text-red-800",
+    outline: "border border-gray-300 text-gray-700"
+  };
+  
+  return (
+    <span className={`${baseClasses} ${variantClasses[variant]} ${className}`}>
+      {children}
+    </span>
+  );
+};
+
+const Button: React.FC<{ 
+  variant?: 'default' | 'outline' | 'ghost';
+  size?: 'sm' | 'default' | 'lg';
+  disabled?: boolean;
+  onClick?: () => void;
+  children: React.ReactNode;
+  className?: string;
+  'aria-label'?: string;
+}> = ({ 
+  variant = 'default', 
+  size = 'default', 
+  disabled = false, 
+  onClick, 
+  children, 
+  className = '',
+  'aria-label': ariaLabel
+}) => {
+  const baseClasses = "inline-flex items-center justify-center rounded-md font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none";
+  
+  const variantClasses = {
+    default: "bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500",
+    outline: "border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 focus:ring-blue-500",
+    ghost: "text-gray-700 hover:bg-gray-100 focus:ring-blue-500"
+  };
+  
+  const sizeClasses = {
+    sm: "h-8 px-3 text-sm",
+    default: "h-10 px-4",
+    lg: "h-12 px-6 text-lg"
+  };
+  
+  return (
+    <button 
+      className={`${baseClasses} ${variantClasses[variant]} ${sizeClasses[size]} ${className}`}
+      disabled={disabled}
+      onClick={onClick}
+      aria-label={ariaLabel}
+    >
+      {children}
+    </button>
+  );
+};
+
+const Checkbox: React.FC<{ 
+  checked: boolean; 
+  onChange: (checked: boolean) => void; 
+  'aria-label'?: string;
+}> = ({ checked, onChange, 'aria-label': ariaLabel }) => {
+  return (
+    <input
+      type="checkbox"
+      checked={checked}
+      onChange={(e) => onChange(e.target.checked)}
+      className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+      aria-label={ariaLabel}
+    />
+  );
+};
+
+const Input: React.FC<{ 
+  placeholder?: string; 
+  value: string; 
+  onChange: (value: string) => void; 
+  className?: string;
+}> = ({ placeholder, value, onChange, className = '' }) => {
+  return (
+    <input
+      type="text"
+      placeholder={placeholder}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className={`w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${className}`}
+    />
+  );
+};
+
+const Select: React.FC<{ 
+  value: string | null; 
+  onChange: (value: string | null) => void; 
+  options: { value: string | null; label: string }[];
+  placeholder: string;
+}> = ({ value, onChange, options, placeholder }) => {
+  return (
+    <select
+      value={value || ''}
+      onChange={(e) => onChange(e.target.value || null)}
+      className="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+    >
+      <option value="">{placeholder}</option>
+      {options.map(option => (
+        <option key={option.value || 'null'} value={option.value || ''}>
+          {option.label}
+        </option>
+      ))}
+    </select>
+  );
+};
+
+// Main component
+const MaterialsPickList: React.FC = () => {
+  const [selectedItems, setSelectedItems] = useState<string[]>([]);
+  const [materials] = useState<MaterialItem[]>(mockMaterials);
+  const [isLoading] = useState(false);
+  const [filters, dispatch] = useReducer(filterReducer, initialFilterState);
+  const [showStatusDialog, setShowStatusDialog] = useState(false);
+  const [selectedMaterial, setSelectedMaterial] = useState<MaterialItem | null>(null);
+
+  // Memoized computed values
+  const suppliers = useMemo(() => 
+    Array.from(new Set(materials.map(item => item.supplier))), 
+    [materials]
+  );
+  
+  const materialTypes = useMemo(() => 
+    Array.from(new Set(materials.map(item => item.type))), 
+    [materials]
+  );
+
+  const filteredMaterials = useMemo(() => {
+    return materials.filter(item => {
+      const matchesSearch = filters.searchQuery === "" || 
+        item.name.toLowerCase().includes(filters.searchQuery.toLowerCase()) ||
+        item.sku.toLowerCase().includes(filters.searchQuery.toLowerCase()) ||
+        item.supplier.toLowerCase().includes(filters.searchQuery.toLowerCase());
+      
+      const matchesSupplier = filters.supplier === null || item.supplier === filters.supplier;
+      const matchesType = filters.type === null || item.type === filters.type;
+      const matchesStatus = filters.status === null || item.status === filters.status;
+      
+      const matchesTab = 
+        filters.currentTab === "all" || 
+        (filters.currentTab === "pending" && item.status === "pending") ||
+        (filters.currentTab === "ordered" && item.status === "ordered") ||
+        (filters.currentTab === "received" && item.status === "received");
+      
+      return matchesSearch && matchesSupplier && matchesType && matchesStatus && matchesTab;
+    }).sort((a, b) => {
+      const direction = filters.sortDirection === "asc" ? 1 : -1;
+      
+      switch (filters.sortField) {
+        case "name":
+          return direction * a.name.localeCompare(b.name);
+        case "supplier":
+          return direction * a.supplier.localeCompare(b.supplier);
+        case "type":
+          return direction * a.type.localeCompare(b.type);
+        case "quantity":
+          return direction * (a.quantity - b.quantity);
+        case "status":
+          return direction * a.status.localeCompare(b.status);
+        case "priority":
+          const priorityValue = (p: string) => p === "high" ? 3 : p === "medium" ? 2 : 1;
+          return direction * (priorityValue(a.priority) - priorityValue(b.priority));
+        default:
+          return 0;
+      }
+    });
+  }, [materials, filters]);
+
+  // Event handlers
+  const handleSort = useCallback((field: SortField) => {
+    const direction = filters.sortField === field && filters.sortDirection === "asc" ? "desc" : "asc";
+    dispatch({ type: 'SET_SORT', payload: { field, direction } });
+  }, [filters.sortField, filters.sortDirection]);
+
+  const toggleSelectAll = useCallback(() => {
+    if (selectedItems.length === filteredMaterials.length) {
+      setSelectedItems([]);
+    } else {
+      setSelectedItems(filteredMaterials.map(item => item.id));
+    }
+  }, [selectedItems.length, filteredMaterials]);
+
+  const toggleSelectItem = useCallback((id: string) => {
+    setSelectedItems(prev => 
+      prev.includes(id) 
+        ? prev.filter(item => item !== id)
+        : [...prev, id]
+    );
+  }, []);
+
+  const handleExport = useCallback(() => {
+    const itemsToExport = selectedItems.length > 0 
+      ? materials.filter(item => selectedItems.includes(item.id))
+      : filteredMaterials;
+      
+    if (itemsToExport.length === 0) {
+      alert("No items to export");
+      return;
+    }
+    
+    const filename = `materials-pick-list-${new Date().toISOString().split("T")[0]}.csv`;
+    exportToCSV(itemsToExport, filename);
+    alert(`Exported ${itemsToExport.length} items to CSV file`);
+  }, [selectedItems, materials, filteredMaterials]);
+
+  const handleBulkStatusUpdate = useCallback((status: string) => {
+    if (selectedItems.length === 0) {
+      alert("No items selected");
+      return;
+    }
+    
+    // Simulate API call
+    setTimeout(() => {
+      alert(`Updated ${selectedItems.length} items to ${status}`);
+      setSelectedItems([]);
+    }, 500);
+  }, [selectedItems]);
+
+  const getStatusBadge = useCallback((status: string) => {
+    const statusConfig = ORDER_STATUSES.find(s => s.value === status) || ORDER_STATUSES[0];
+    return <Badge variant={statusConfig.color}>{statusConfig.label}</Badge>;
+  }, []);
+
+  const getPriorityBadge = useCallback((priority: "low" | "medium" | "high") => {
+    const colors: Record<string, BadgeVariant> = {
+      high: "destructive",
+      medium: "secondary",
+      low: "outline"
+    };
+    return <Badge variant={colors[priority]}>{priority}</Badge>;
+  }, []);
+
+  const getStockStatusBadge = useCallback((item: MaterialItem) => {
+    const stockStatus = STOCK_STATUSES.find(s => s.value === (item.stockStatus || 'unknown'));
+    const Icon = stockStatus?.icon || Clock;
+    
+    return (
+      <div className="flex items-center gap-2">
+        <Badge variant={stockStatus?.color || 'outline'} className="flex items-center gap-1">
+          <Icon className="h-3 w-3" />
+          {stockStatus?.label}
+        </Badge>
+        {item.stockQuantity !== undefined && (
+          <span className="text-sm text-gray-500">
+            Qty: {item.stockQuantity}
+          </span>
+        )}
+      </div>
+    );
+  }, []);
+
+  const openStatusDialog = useCallback((material: MaterialItem) => {
+    setSelectedMaterial(material);
+    setShowStatusDialog(true);
+  }, []);
+
+  const tabs = [
+    { id: "all", label: "All Materials", icon: ClipboardList },
+    { id: "pending", label: "Pending", icon: Clock },
+    { id: "ordered", label: "Ordered", icon: Truck },
+    { id: "received", label: "Received", icon: Check },
+  ];
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center py-8">
+        <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-7xl mx-auto p-6 space-y-6">
+      {/* Header */}
+      <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6 rounded-lg">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">Jay's Frames - Materials Pick List</h1>
+            <p className="text-blue-100">Track and manage materials needed for custom framing orders</p>
+          </div>
+          
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" onClick={handleExport} className="bg-white text-gray-700">
+              <FileText className="h-4 w-4 mr-2" />
+              Export
+            </Button>
+            
+            <Button 
+              onClick={() => handleBulkStatusUpdate("ordered")}
+              disabled={selectedItems.length === 0}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              <Check className="h-4 w-4 mr-2" />
+              Mark as Ordered
+            </Button>
+            
+            <Button 
+              onClick={() => handleBulkStatusUpdate("received")}
+              disabled={selectedItems.length === 0}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              <Package className="h-4 w-4 mr-2" />
+              Mark as Received
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Filters */}
+      <div className="bg-white p-4 rounded-lg border border-gray-200 space-y-4">
+        <div className="flex flex-col gap-4 md:flex-row">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+            <Input
+              placeholder="Search materials, SKUs, or suppliers..."
+              value={filters.searchQuery}
+              onChange={(value) => dispatch({ type: 'SET_SEARCH', payload: value })}
+              className="pl-10"
+            />
+          </div>
+          
+          <div className="flex flex-wrap gap-2">
+            <Select
+              value={filters.supplier}
+              onChange={(value) => dispatch({ type: 'SET_SUPPLIER', payload: value })}
+              options={[
+                { value: null, label: "All Suppliers" },
+                ...suppliers.map(s => ({ value: s, label: s }))
+              ]}
+              placeholder="All Suppliers"
+            />
+            
+            <Select
+              value={filters.type}
+              onChange={(value) => dispatch({ type: 'SET_TYPE', payload: value })}
+              options={[
+                { value: null, label: "All Types" },
+                ...materialTypes.map(t => ({ value: t, label: t }))
+              ]}
+              placeholder="All Types"
+            />
+            
+            <Select
+              value={filters.status}
+              onChange={(value) => dispatch({ type: 'SET_STATUS', payload: value })}
+              options={[
+                { value: null, label: "All Statuses" },
+                ...ORDER_STATUSES.map(s => ({ value: s.value, label: s.label }))
+              ]}
+              placeholder="All Statuses"
+            />
+            
+            <Button 
+              variant="outline" 
+              onClick={() => dispatch({ type: 'RESET_FILTERS' })}
+            >
+              Reset Filters
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="bg-white border border-gray-200 rounded-lg">
+        <div className="border-b border-gray-200">
+          <nav className="-mb-px flex space-x-8 px-6">
+            {tabs.map(tab => {
+              const Icon = tab.icon;
+              const isActive = filters.currentTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => dispatch({ type: 'SET_TAB', payload: tab.id })}
+                  className={`
+                    flex items-center gap-2 py-4 px-1 border-b-2 font-medium text-sm
+                    ${isActive 
+                      ? 'border-blue-500 text-blue-600' 
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }
+                  `}
+                >
+                  <Icon className="h-4 w-4" />
+                  {tab.label}
+                </button>
+              );
+            })}
+          </nav>
+        </div>
+
+        {/* Table */}
+        <div className="overflow-x-auto">
+          {filteredMaterials.length === 0 ? (
+            <div className="text-center py-12">
+              <Package className="mx-auto h-12 w-12 text-gray-400" />
+              <h3 className="mt-4 text-lg font-semibold text-gray-900">No materials found</h3>
+              <p className="text-gray-500">
+                {filters.searchQuery || filters.supplier || filters.type || filters.status
+                  ? "Try adjusting your filters"
+                  : "No materials in the pick list"}
+              </p>
+            </div>
+          ) : (
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left">
+                    <Checkbox 
+                      checked={filteredMaterials.length > 0 && selectedItems.length === filteredMaterials.length}
+                      onChange={toggleSelectAll}
+                      aria-label="Select all materials"
+                    />
+                  </th>
+                  {[
+                    { key: "name" as SortField, label: "Material" },
+                    { key: "supplier" as SortField, label: "Supplier" },
+                    { key: "type" as SortField, label: "Type" },
+                    { key: "quantity" as SortField, label: "Quantity" },
+                    { key: "priority" as SortField, label: "Priority" },
+                    { key: "status" as SortField, label: "Order Status" },
+                  ].map(({ key, label }) => (
+                    <th 
+                      key={key}
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >
+                      <button 
+                        className="flex items-center space-x-1 hover:text-gray-700"
+                        onClick={() => handleSort(key)}
+                        aria-label={`Sort by ${label}`}
+                      >
+                        <span>{label}</span>
+                        <ChevronDown 
+                          className={`h-4 w-4 transition-transform ${
+                            filters.sortField === key && filters.sortDirection === "desc" ? "rotate-180" : ""
+                          }`}
+                        />
+                      </button>
+                    </th>
+                  ))}
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Stock Status
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredMaterials.map(item => (
+                  <tr key={item.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4">
+                      <Checkbox 
+                        checked={selectedItems.includes(item.id)}
+                        onChange={() => toggleSelectItem(item.id)}
+                        aria-label={`Select ${item.name}`}
+                      />
+                    </td>
+                    <td className="px-6 py-4">
+                      <div>
+                        <div className="font-medium text-gray-900">{item.name}</div>
+                        <div className="text-sm text-gray-500">SKU: {item.sku}</div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-900">{item.supplier}</td>
+                    <td className="px-6 py-4 text-sm text-gray-900">{item.type}</td>
+                    <td className="px-6 py-4 text-sm text-gray-900">{item.quantity}</td>
+                    <td className="px-6 py-4">{getPriorityBadge(item.priority)}</td>
+                    <td className="px-6 py-4">{getStatusBadge(item.status)}</td>
+                    <td className="px-6 py-4">{getStockStatusBadge(item)}</td>
+                    <td className="px-6 py-4">
+                      <div className="flex space-x-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => openStatusDialog(item)}
+                          aria-label="View details"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => openStatusDialog(item)}
+                          aria-label="Edit material"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </div>
+
+      {/* Selection Footer */}
+      {selectedItems.length > 0 && (
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 shadow-lg">
+          <div className="max-w-7xl mx-auto flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <span className="font-medium text-gray-900">
+                {selectedItems.length} item{selectedItems.length === 1 ? '' : 's'} selected
+              </span>
+            </div>
+            <div className="flex space-x-2">
+              <Button 
+                variant="outline" 
+                onClick={() => setSelectedItems([])}
+              >
+                Clear Selection
+              </Button>
+              <Button 
+                onClick={() => handleBulkStatusUpdate("ordered")}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                Mark as Ordered
+              </Button>
+              <Button 
+                onClick={() => handleBulkStatusUpdate("received")}
+              >
+                Mark as Received
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Status Dialog */}
+      {showStatusDialog && selectedMaterial && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">Material Details</h3>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowStatusDialog(false)}
+                aria-label="Close dialog"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <h4 className="font-medium text-gray-900">{selectedMaterial.name}</h4>
+                <p className="text-sm text-gray-500">SKU: {selectedMaterial.sku}</p>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="font-medium">Supplier:</span>
+                  <p>{selectedMaterial.supplier}</p>
+                </div>
+                <div>
+                  <span className="font-medium">Type:</span>
+                  <p>{selectedMaterial.type}</p>
+                </div>
+                <div>
+                  <span className="font-medium">Quantity:</span>
+                  <p>{selectedMaterial.quantity}</p>
+                </div>
+                <div>
+                  <span className="font-medium">Priority:</span>
+                  <p className="mt-1">{getPriorityBadge(selectedMaterial.priority)}</p>
+                </div>
+                <div>
+                  <span className="font-medium">Status:</span>
+                  <p className="mt-1">{getStatusBadge(selectedMaterial.status)}</p>
+                </div>
+                <div>
+                  <span className="font-medium">Stock:</span>
+                  <p className="mt-1">{getStockStatusBadge(selectedMaterial)}</p>
+                </div>
+              </div>
+              
+              {selectedMaterial.orderIds.length > 0 && (
+                <div>
+                  <span className="font-medium text-sm">Related Orders:</span>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {selectedMaterial.orderIds.map(orderId => (
+                      <Badge key={orderId} variant="outline">
+                        #{orderId}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              {selectedMaterial.notes && (
+                <div>
+                  <span className="font-medium text-sm">Notes:</span>
+                  <p className="text-sm text-gray-600 mt-1">{selectedMaterial.notes}</p>
+                </div>
+              )}
+              
+              {selectedMaterial.orderDate && (
+                <div>
+                  <span className="font-medium text-sm">Order Date:</span>
+                  <p className="text-sm text-gray-600 mt-1">
+                    {new Date(selectedMaterial.orderDate).toLocaleDateString()}
+                  </p>
+                </div>
+              )}
+              
+              {selectedMaterial.receiveDate && (
+                <div>
+                  <span className="font-medium text-sm">Received Date:</span>
+                  <p className="text-sm text-gray-600 mt-1">
+                    {new Date(selectedMaterial.receiveDate).toLocaleDateString()}
+                  </p>
+                </div>
+              )}
+            </div>
+            
+            <div className="flex justify-end space-x-2 mt-6">
+              <Button 
+                variant="outline" 
+                onClick={() => setShowStatusDialog(false)}
+              >
+                Close
+              </Button>
+              <Button 
+                onClick={() => {
+                  alert(`Updated status for ${selectedMaterial.name}`);
+                  setShowStatusDialog(false);
+                }}
+              >
+                Update Status
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default MaterialsPickList;
