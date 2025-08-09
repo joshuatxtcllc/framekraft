@@ -352,7 +352,7 @@ export default function VirtualFrameDesigner() {
       }
     }
 
-    // Draw artwork
+    // Draw artwork background
     ctx.fillStyle = '#f0f0f0';
     ctx.fillRect(-displayWidth / 2, -displayHeight / 2, displayWidth, displayHeight);
 
@@ -360,7 +360,28 @@ export default function VirtualFrameDesigner() {
     if (artworkImage) {
       const img = new window.Image();
       img.onload = () => {
-        ctx.drawImage(img, -displayWidth / 2, -displayHeight / 2, displayWidth, displayHeight);
+        // Calculate the actual image dimensions and aspect ratio
+        const imgAspectRatio = img.naturalWidth / img.naturalHeight;
+        const displayAspectRatio = displayWidth / displayHeight;
+        
+        let drawWidth, drawHeight, drawX, drawY;
+        
+        // Scale image to fit within the display area while maintaining aspect ratio
+        if (imgAspectRatio > displayAspectRatio) {
+          // Image is wider - fit to width
+          drawWidth = displayWidth;
+          drawHeight = displayWidth / imgAspectRatio;
+        } else {
+          // Image is taller - fit to height
+          drawHeight = displayHeight;
+          drawWidth = displayHeight * imgAspectRatio;
+        }
+        
+        // Center the image
+        drawX = -drawWidth / 2;
+        drawY = -drawHeight / 2;
+        
+        ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight);
       };
       img.src = artworkImage;
     } else {
