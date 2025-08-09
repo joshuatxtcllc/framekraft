@@ -356,19 +356,28 @@ export default function VirtualFrameDesigner() {
     ctx.fillStyle = '#f0f0f0';
     ctx.fillRect(-displayWidth / 2, -displayHeight / 2, displayWidth, displayHeight);
 
-    // Draw sample artwork if available
-    if (artworkImage) {
-      const img = new window.Image();
-      img.onload = () => {
-        ctx.drawImage(img, -displayWidth / 2, -displayHeight / 2, displayWidth, displayHeight);
-      };
-      img.src = artworkImage;
-    } else {
+    // Draw artwork or placeholder
+    const drawPlaceholder = () => {
       ctx.fillStyle = '#666';
       ctx.font = '24px Arial';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText('Your Artwork', 0, 0);
+    };
+
+    if (artworkImage && !artworkImage.includes('data:image/svg+xml')) {
+      const img = new window.Image();
+      img.onload = () => {
+        // Clear the artwork area first
+        ctx.fillStyle = '#f0f0f0';
+        ctx.fillRect(-displayWidth / 2, -displayHeight / 2, displayWidth, displayHeight);
+        // Draw the actual image
+        ctx.drawImage(img, -displayWidth / 2, -displayHeight / 2, displayWidth, displayHeight);
+      };
+      img.onerror = () => drawPlaceholder();
+      img.src = artworkImage;
+    } else {
+      drawPlaceholder();
     }
 
     ctx.restore();
