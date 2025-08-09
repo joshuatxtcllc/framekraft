@@ -14,6 +14,7 @@ export default function Header() {
     { name: 'Customers', href: '/customers', icon: Users },
     { name: 'API Explorer', href: '/api-explorer', icon: Database },
     { name: 'AI Assistant', href: '/ai-assistant', icon: Brain },
+    { name: 'Virtual Frame Designer', href: '/virtual-frame-designer', icon: Frame },
     { name: 'Price Structure', href: '/pricing', icon: DollarSign },
     { name: 'Invoices', href: '/invoices', icon: FileText },
     { name: 'Wholesalers', href: '/wholesalers', icon: Building2 },
