@@ -318,15 +318,19 @@ export default function VirtualFrameDesigner() {
     const displayWidth = 300;
     const displayHeight = (displayWidth * artworkDimensions.height) / artworkDimensions.width;
 
-    ctx.save();
-    ctx.translate(centerX, centerY);
-
-    // Draw frame
+    // Calculate absolute positions
     const totalWidth = displayWidth + (matWidth * 2) + (frameWidth * 2);
     const totalHeight = displayHeight + (matWidth * 2) + (frameWidth * 2);
+    
+    const frameX = centerX - totalWidth / 2;
+    const frameY = centerY - totalHeight / 2;
+    
+    const artworkX = centerX - displayWidth / 2;
+    const artworkY = centerY - displayHeight / 2;
 
+    // Draw frame
     ctx.fillStyle = frameColor.hex;
-    ctx.fillRect(-totalWidth / 2, -totalHeight / 2, totalWidth, totalHeight);
+    ctx.fillRect(frameX, frameY, totalWidth, totalHeight);
 
     // Draw mat if selected
     if (selectedMatOption !== 'none') {
@@ -334,9 +338,11 @@ export default function VirtualFrameDesigner() {
       if (matColor1) {
         const matTotalWidth = displayWidth + (matWidth * 2);
         const matTotalHeight = displayHeight + (matWidth * 2);
+        const matX = centerX - matTotalWidth / 2;
+        const matY = centerY - matTotalHeight / 2;
         
         ctx.fillStyle = matColor1.hex;
-        ctx.fillRect(-matTotalWidth / 2, -matTotalHeight / 2, matTotalWidth, matTotalHeight);
+        ctx.fillRect(matX, matY, matTotalWidth, matTotalHeight);
 
         if (selectedMatOption === 'double' && selectedMatColor2) {
           const matColor2 = Object.values(MAT_COLORS).flat().find(c => c.id === selectedMatColor2);
@@ -344,9 +350,11 @@ export default function VirtualFrameDesigner() {
             const innerMatWidth = matWidth * 0.6;
             const innerTotalWidth = displayWidth + (innerMatWidth * 2);
             const innerTotalHeight = displayHeight + (innerMatWidth * 2);
+            const innerMatX = centerX - innerTotalWidth / 2;
+            const innerMatY = centerY - innerTotalHeight / 2;
             
             ctx.fillStyle = matColor2.hex;
-            ctx.fillRect(-innerTotalWidth / 2, -innerTotalHeight / 2, innerTotalWidth, innerTotalHeight);
+            ctx.fillRect(innerMatX, innerMatY, innerTotalWidth, innerTotalHeight);
           }
         }
       }
@@ -354,7 +362,7 @@ export default function VirtualFrameDesigner() {
 
     // Draw artwork background
     ctx.fillStyle = '#f0f0f0';
-    ctx.fillRect(-displayWidth / 2, -displayHeight / 2, displayWidth, displayHeight);
+    ctx.fillRect(artworkX, artworkY, displayWidth, displayHeight);
 
     // Draw artwork or placeholder
     if (artworkImage && !artworkImage.includes('data:image/svg+xml')) {
@@ -377,11 +385,11 @@ export default function VirtualFrameDesigner() {
           drawWidth = displayHeight * imgAspectRatio;
         }
         
-        // Center the scaled image in the display area
-        const drawX = -drawWidth / 2;
-        const drawY = -drawHeight / 2;
+        // Center the scaled image in the display area using absolute coordinates
+        const imageX = centerX - drawWidth / 2;
+        const imageY = centerY - drawHeight / 2;
         
-        ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight);
+        ctx.drawImage(img, imageX, imageY, drawWidth, drawHeight);
       };
       img.onerror = () => {
         // Fallback placeholder
@@ -389,7 +397,7 @@ export default function VirtualFrameDesigner() {
         ctx.font = '24px Arial';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText('Your Artwork', 0, 0);
+        ctx.fillText('Your Artwork', centerX, centerY);
       };
       img.src = artworkImage;
     } else {
@@ -398,10 +406,8 @@ export default function VirtualFrameDesigner() {
       ctx.font = '24px Arial';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText('Your Artwork', 0, 0);
+      ctx.fillText('Your Artwork', centerX, centerY);
     }
-
-    ctx.restore();
   };
 
   useEffect(() => {
