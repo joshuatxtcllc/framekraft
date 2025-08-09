@@ -357,27 +357,48 @@ export default function VirtualFrameDesigner() {
     ctx.fillRect(-displayWidth / 2, -displayHeight / 2, displayWidth, displayHeight);
 
     // Draw artwork or placeholder
-    const drawPlaceholder = () => {
+    if (artworkImage && !artworkImage.includes('data:image/svg+xml')) {
+      const img = new window.Image();
+      img.onload = () => {
+        // Calculate aspect ratio to maintain image proportions
+        const imgAspectRatio = img.naturalWidth / img.naturalHeight;
+        const displayAspectRatio = displayWidth / displayHeight;
+        
+        let drawWidth, drawHeight;
+        
+        // Scale image to fit within display area while maintaining aspect ratio
+        if (imgAspectRatio > displayAspectRatio) {
+          // Image is wider - fit to width
+          drawWidth = displayWidth;
+          drawHeight = displayWidth / imgAspectRatio;
+        } else {
+          // Image is taller - fit to height
+          drawHeight = displayHeight;
+          drawWidth = displayHeight * imgAspectRatio;
+        }
+        
+        // Center the scaled image in the display area
+        const drawX = -drawWidth / 2;
+        const drawY = -drawHeight / 2;
+        
+        ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight);
+      };
+      img.onerror = () => {
+        // Fallback placeholder
+        ctx.fillStyle = '#666';
+        ctx.font = '24px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('Your Artwork', 0, 0);
+      };
+      img.src = artworkImage;
+    } else {
+      // Draw placeholder text
       ctx.fillStyle = '#666';
       ctx.font = '24px Arial';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText('Your Artwork', 0, 0);
-    };
-
-    if (artworkImage && !artworkImage.includes('data:image/svg+xml')) {
-      const img = new window.Image();
-      img.onload = () => {
-        // Clear the artwork area first
-        ctx.fillStyle = '#f0f0f0';
-        ctx.fillRect(-displayWidth / 2, -displayHeight / 2, displayWidth, displayHeight);
-        // Draw the actual image
-        ctx.drawImage(img, -displayWidth / 2, -displayHeight / 2, displayWidth, displayHeight);
-      };
-      img.onerror = () => drawPlaceholder();
-      img.src = artworkImage;
-    } else {
-      drawPlaceholder();
     }
 
     ctx.restore();
