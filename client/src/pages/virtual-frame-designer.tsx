@@ -347,7 +347,7 @@ export default function VirtualFrameDesigner() {
         if (selectedMatOption === 'double' && selectedMatColor2) {
           const matColor2 = Object.values(MAT_COLORS).flat().find(c => c.id === selectedMatColor2);
           if (matColor2) {
-            const innerMatWidth = matWidth * 0.6;
+            const innerMatWidth = matWidth * 0.15; // Much thinner - just 15% of outer mat width
             const innerTotalWidth = displayWidth + (innerMatWidth * 2);
             const innerTotalHeight = displayHeight + (innerMatWidth * 2);
             const innerMatX = centerX - innerTotalWidth / 2;
