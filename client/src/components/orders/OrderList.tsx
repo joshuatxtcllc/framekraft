@@ -74,7 +74,6 @@ export default function OrderList({
   const handlePayBalance = (order: any) => {
     const balanceAmount = parseFloat(order.totalAmount) - parseFloat(order.depositAmount || "0");
     if (confirm(`Mark balance of $${balanceAmount.toFixed(2)} as paid for order ${order.orderNumber}?`)) {
-      // Update order to mark balance as paid
       fetch(`/api/orders/${order.id}`, {
         method: 'PUT',
         headers: {
@@ -86,7 +85,32 @@ export default function OrderList({
           status: order.status === "ready" ? "completed" : order.status,
         }),
       }).then(() => {
-        // Refresh orders list
+        toast({
+          title: "Payment Recorded",
+          description: `Balance of $${balanceAmount.toFixed(2)} marked as paid for order ${order.orderNumber}`,
+        });
+        window.location.reload();
+      });
+    }
+  };
+
+  const handlePaidInFull = (order: any) => {
+    if (confirm(`Mark order ${order.orderNumber} as paid in full ($${parseFloat(order.totalAmount).toFixed(2)})?`)) {
+      fetch(`/api/orders/${order.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...order,
+          depositAmount: order.totalAmount,
+          status: "completed",
+        }),
+      }).then(() => {
+        toast({
+          title: "Payment Recorded",
+          description: `Order ${order.orderNumber} marked as paid in full and completed`,
+        });
         window.location.reload();
       });
     }
@@ -521,11 +545,22 @@ FrameCraft`;
                             <CreditCard className="w-4 h-4" />
                           </Button>
                         )}
+                        {order.status !== 'completed' && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handlePaidInFull(order)}
+                            title="Mark Paid in Full"
+                            className="text-green-600 hover:text-green-700"
+                          >
+                            <CreditCard className="w-4 h-4" />
+                          </Button>
+                        )}
                         {order.depositAmount && parseFloat(order.depositAmount) > 0 && parseFloat(order.depositAmount) < parseFloat(order.totalAmount) && (
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => onPayBalance?.(order)}
+                            onClick={() => handlePayBalance(order)}
                             title="Pay Remaining Balance"
                             className="text-blue-600 hover:text-blue-700"
                           >

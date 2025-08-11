@@ -290,14 +290,38 @@ export default function OrderForm({
     };
   };
 
-  // Watch for changes and recalculate price (include matColor for united inch calculations)
+  // Watch for changes and recalculate price only in auto mode
   useEffect(() => {
+    if (!useCalculatedPrice) return; // Don't override manual pricing
+    
     const pricing = calculatePrice();
     setCalculatedPrice(pricing.total);
-    if (pricing.total > 0 && useCalculatedPrice) {
+    if (pricing.total > 0) {
       form.setValue("totalAmount", pricing.total.toFixed(2));
     }
-  }, [form.watch("frameStyle"), form.watch("glazing"), form.watch("dimensions"), form.watch("matColor"), form.watch("quantity"), form.watch("discountPercentage"), form.watch("taxExempt"), priceStructure, laborCost, useCalculatedPrice, specialServices]);
+  }, [
+    form.watch("frameStyle"), 
+    form.watch("glazing"), 
+    form.watch("dimensions"), 
+    form.watch("matColor"), 
+    form.watch("quantity"), 
+    form.watch("discountPercentage"), 
+    form.watch("taxExempt"), 
+    priceStructure, 
+    laborCost, 
+    useCalculatedPrice, 
+    specialServices,
+    // Force recalculation when any watched field changes
+    JSON.stringify(form.watch())
+  ]);
+
+  // Initialize pricing mode based on whether we're editing
+  useEffect(() => {
+    if (initialData && initialData.totalAmount) {
+      // If editing existing order, default to manual mode to preserve existing price
+      setUseCalculatedPrice(false);
+    }
+  }, [initialData]);
 
   // Get frame options with wholesale prices from pricing structure
   const frameOptions = [
@@ -382,24 +406,45 @@ export default function OrderForm({
   const selectedMat = matOptions.find(m => m.value === form.watch("matColor"));
 
   const handleFormSubmit = (data: OrderFormData) => {
-    const baseAmount = parseFloat(data.totalAmount);
-    const quantity = parseInt(data.quantity) || 1;
-    const discount = parseFloat(data.discountPercentage || "0");
+    const totalAmount = parseFloat(data.totalAmount);
+    const discountPercentage = parseFloat(data.discountPercentage || "0");
+    
+    // If using calculated pricing, the total already includes tax
+    // If manual pricing, we need to handle tax calculation
+    let finalTotal = totalAmount;
+    let subtotal = totalAmount;
+    let taxAmount = 0;
+    let discountAmount = 0;
 
-    // Calculate amounts
-    const discountAmount = (baseAmount * discount) / 100;
-    const subtotal = baseAmount - discountAmount;
-    const taxAmount = data.taxExempt ? 0 : subtotal * 0.08;
-    const finalTotal = subtotal + taxAmount;
+    if (useCalculatedPrice) {
+      // Auto-calculated prices already include everything
+      const pricing = calculatePrice();
+      finalTotal = pricing.total;
+      subtotal = pricing.subtotal;
+      taxAmount = pricing.tax;
+      if (discountPercentage > 0) {
+        discountAmount = (subtotal / (1 - discountPercentage / 100)) - subtotal;
+      }
+    } else {
+      // Manual pricing - calculate tax on the entered amount
+      if (discountPercentage > 0) {
+        discountAmount = (totalAmount * discountPercentage) / 100;
+        subtotal = totalAmount - discountAmount;
+      } else {
+        subtotal = totalAmount;
+      }
+      taxAmount = data.taxExempt ? 0 : subtotal * 0.08;
+      finalTotal = subtotal + taxAmount;
+    }
 
     const submitData: OrderSubmitData = {
       ...data,
       customerId: parseInt(data.customerId),
       dueDate: data.dueDate ? data.dueDate.toISOString().split('T')[0] : null,
       taxExempt: data.taxExempt,
-      totalAmount: finalTotal.toString(),
-      taxAmount: taxAmount.toString(),
-      discountAmount: discountAmount.toString(),
+      totalAmount: finalTotal.toFixed(2),
+      taxAmount: taxAmount.toFixed(2),
+      discountAmount: discountAmount.toFixed(2),
       specialServices: specialServices,
     };
     onSubmit(submitData);
@@ -521,7 +566,7 @@ export default function OrderForm({
                       </Button>
                     </FormControl>
                   </PopoverTrigger>
-                  <PopoverContent className="w-full p-0">
+                  <PopoverContent className="w-[400px] p-0">
                     <Command>
                       <CommandInput
                         placeholder="Search customers or type new name..."
@@ -557,7 +602,7 @@ export default function OrderForm({
                           </div>
                         )}
                       </CommandEmpty>
-                      <CommandGroup>
+                      <CommandGroup className="max-h-[300px] overflow-y-auto">
                         {filteredCustomers.map((customer) => (
                           <CommandItem
                             key={customer.id}
@@ -743,7 +788,7 @@ export default function OrderForm({
                       </Button>
                     </FormControl>
                   </PopoverTrigger>
-                  <PopoverContent className="w-full p-0">
+                  <PopoverContent className="w-[400px] p-0">
                     <Command>
                       <CommandInput
                         placeholder="Search frame styles..."
@@ -752,7 +797,7 @@ export default function OrderForm({
                         data-testid="input-frame-search"
                       />
                       <CommandEmpty>No frame style found.</CommandEmpty>
-                      <CommandGroup className="max-h-60 overflow-auto">
+                      <CommandGroup className="max-h-[300px] overflow-y-auto">
                         {filteredFrames.map((option) => (
                           <CommandItem
                             key={option.value}
@@ -813,7 +858,7 @@ export default function OrderForm({
                       </Button>
                     </FormControl>
                   </PopoverTrigger>
-                  <PopoverContent className="w-full p-0">
+                  <PopoverContent className="w-[400px] p-0">
                     <Command>
                       <CommandInput
                         placeholder="Search mat colors..."
@@ -822,7 +867,7 @@ export default function OrderForm({
                         data-testid="input-mat-search"
                       />
                       <CommandEmpty>No mat color found.</CommandEmpty>
-                      <CommandGroup className="max-h-60 overflow-auto">
+                      <CommandGroup className="max-h-[300px] overflow-y-auto">
                         {filteredMats.map((option) => (
                           <CommandItem
                             key={option.value}
