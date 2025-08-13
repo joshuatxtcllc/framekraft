@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Sidebar from "@/components/layout/Sidebar";
 import Header from "@/components/layout/Header";
 import MetricsCards from "@/components/dashboard/MetricsCards";
@@ -8,15 +8,18 @@ import ProjectTracking from "@/components/dashboard/ProjectTracking";
 import { useAuth } from "@/hooks/useAuth";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { Plus, FileDown } from "lucide-react";
+import { Plus, FileDown, RefreshCw } from "lucide-react";
 import { useLocation } from "wouter";
+import { toast } from "sonner";
 
 export default function Dashboard() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
+  const queryClient = useQueryClient();
   
   const { data: metrics, isLoading: metricsLoading } = useQuery({
     queryKey: ["/api/dashboard/metrics"],
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
   const { data: orders, isLoading: ordersLoading } = useQuery({
@@ -25,6 +28,21 @@ export default function Dashboard() {
 
   const { data: customers, isLoading: customersLoading } = useQuery({
     queryKey: ["/api/customers"],
+  });
+
+  const refreshMetrics = useMutation({
+    mutationFn: () => 
+      fetch('/api/dashboard/metrics/refresh', { 
+        method: 'POST',
+        credentials: 'include'
+      }).then(res => res.json()),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/metrics"] });
+      toast.success("Metrics refreshed successfully");
+    },
+    onError: () => {
+      toast.error("Failed to refresh metrics");
+    }
   });
 
   return (
@@ -48,6 +66,14 @@ export default function Dashboard() {
                   </p>
                 </div>
                 <div className="mt-4 flex md:mt-0 md:ml-4 space-x-3">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => refreshMetrics.mutate()}
+                    disabled={refreshMetrics.isPending}
+                  >
+                    <RefreshCw className={`w-4 h-4 mr-2 ${refreshMetrics.isPending ? 'animate-spin' : ''}`} />
+                    Refresh Data
+                  </Button>
                   <Button variant="outline" onClick={() => console.log("Export report functionality coming soon")}>
                     <FileDown className="w-4 h-4 mr-2" />
                     Export Report

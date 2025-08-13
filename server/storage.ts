@@ -86,6 +86,7 @@ export interface IStorage {
   // Business metrics
   getBusinessMetrics(type?: string, dateRange?: { start: Date; end: Date }): Promise<BusinessMetric[]>;
   createBusinessMetric(metric: Omit<BusinessMetric, 'id' | 'createdAt'>): Promise<BusinessMetric>;
+  storeBusinessMetric(metricType: string, value: number): Promise<void>;
 
   // Inventory
   getInventory(): Promise<Inventory[]>;
@@ -446,6 +447,37 @@ export class DatabaseStorage implements IStorage {
     const [metric] = await db.insert(businessMetrics).values(metricData).returning();
     return metric;
   }
+
+  async storeBusinessMetric(metricType: string, value: number): Promise<void> {
+    try {
+      await db.insert(businessMetrics).values({
+        metricType,
+        value: value.toString(),
+        date: new Date(),
+        metadata: { source: 'dashboard_calculation' }
+      });
+    } catch (error) {
+      console.error(`Error storing metric ${metricType}:`, error);
+      // Don't throw - this is for persistence, not critical functionality
+    }
+  }
+
+  async getBusinessMetrics(metricType?: string, days?: number): Promise<any[]> {
+    let query = db.select().from(businessMetrics);
+
+    if (metricType) {
+      query = query.where(eq(businessMetrics.metricType, metricType));
+    }
+
+    if (days) {
+      const cutoffDate = new Date();
+      cutoffDate.setDate(cutoffDate.getDate() - days);
+      query = query.where(gte(businessMetrics.date, cutoffDate));
+    }
+
+    return query.orderBy(desc(businessMetrics.date));
+  }
+
 
   // Inventory
   async getInventory(): Promise<Inventory[]> {

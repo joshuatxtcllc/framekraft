@@ -26,7 +26,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
-      res.json(user);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      res.json({
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        profileImageUrl: user.profileImageUrl,
+        isAuthenticated: true
+      });
     } catch (error) {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
@@ -36,40 +48,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Dashboard metrics
   app.get('/api/dashboard/metrics', isAuthenticated, async (req, res) => {
     try {
-      const orders = await storage.getOrders();
-      const customers = await storage.getCustomers();
-
-      const currentMonth = new Date();
-      currentMonth.setDate(1);
-
-      const monthlyOrders = orders.filter(order => 
-        new Date(order.createdAt!) >= currentMonth
-      );
-
-      const monthlyRevenue = monthlyOrders.reduce(
-        (sum, order) => sum + parseFloat(order.totalAmount), 0
-      );
-
-      const activeOrders = orders.filter(order => 
-        !['completed', 'cancelled'].includes(order.status)
-      ).length;
-
-      const completedOrders = orders.filter(order => order.status === 'completed').length;
-      const completionRate = orders.length > 0 ? (completedOrders / orders.length) * 100 : 0;
-
-      res.json({
-        monthlyRevenue,
-        activeOrders,
-        totalCustomers: customers.length,
-        completionRate: Math.round(completionRate * 10) / 10,
-        newCustomersThisMonth: customers.filter(customer => 
-          new Date(customer.createdAt!) >= currentMonth
-        ).length,
-        recentOrders: orders.slice(0, 5)
-      });
+      const { metricsService } = await import('./services/metricsService');
+      const metrics = await metricsService.getDashboardMetrics();
+      res.json(metrics);
     } catch (error) {
       console.error("Error fetching dashboard metrics:", error);
       res.status(500).json({ message: "Failed to fetch dashboard metrics" });
+    }
+  });
+
+  // Force refresh metrics endpoint
+  app.post('/api/dashboard/metrics/refresh', isAuthenticated, async (req, res) => {
+    try {
+      const { metricsService } = await import('./services/metricsService');
+      const metrics = await metricsService.refreshMetrics();
+      res.json({ message: "Metrics refreshed successfully", metrics });
+    } catch (error) {
+      console.error("Error refreshing dashboard metrics:", error);
+      res.status(500).json({ message: "Failed to refresh dashboard metrics" });
     }
   });
 

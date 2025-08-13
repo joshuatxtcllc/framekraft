@@ -13,8 +13,11 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
-import { relations } from "drizzle-orm";
+import { relations, eq, gte, desc } from "drizzle-orm";
 import { z } from "zod";
+
+// Export additional operators for use in storage.ts
+export { eq, gte, desc };
 
 // Session storage table for Replit Auth
 export const sessions = pgTable(
