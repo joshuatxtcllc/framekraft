@@ -7,23 +7,44 @@ class MetricsService {
   private cacheValidityMs = 5 * 60 * 1000; // 5 minutes
 
   async getDashboardMetrics() {
-    // Check if cache is still valid
-    if (this.metricsCache && this.lastCalculated && 
-        (Date.now() - this.lastCalculated.getTime()) < this.cacheValidityMs) {
-      return this.metricsCache;
-    }
+    try {
+      // Check if cache is still valid
+      if (this.metricsCache && this.lastCalculated && 
+          (Date.now() - this.lastCalculated.getTime()) < this.cacheValidityMs) {
+        return this.metricsCache;
+      }
 
-    // Calculate fresh metrics
-    const metrics = await this.calculateMetrics();
-    
-    // Store in database for persistence
-    await this.storeMetrics(metrics);
-    
-    // Update cache
-    this.metricsCache = metrics;
-    this.lastCalculated = new Date();
-    
-    return metrics;
+      // Try to get stored metrics first
+      const storedMetrics = await this.getStoredMetrics();
+      
+      // Calculate fresh metrics
+      const metrics = await this.calculateMetrics();
+      
+      // Compare with stored metrics for consistency check
+      if (storedMetrics && this.areMetricsConsistent(storedMetrics, metrics)) {
+        console.log('Metrics consistent with stored values');
+      } else {
+        console.log('Metrics inconsistency detected, using calculated values');
+      }
+      
+      // Store in database for persistence
+      await this.storeMetrics(metrics);
+      
+      // Update cache
+      this.metricsCache = metrics;
+      this.lastCalculated = new Date();
+      
+      return metrics;
+    } catch (error) {
+      console.error('Error in getDashboardMetrics:', error);
+      
+      // Return cached metrics if available, otherwise return default
+      if (this.metricsCache) {
+        return this.metricsCache;
+      }
+      
+      return this.getDefaultMetrics();
+    }
   }
 
   private async calculateMetrics() {
@@ -96,6 +117,69 @@ class MetricsService {
 
   // Force refresh of metrics cache
   async refreshMetrics() {
+
+  
+  private async getStoredMetrics() {
+    try {
+      const storedMetrics = await storage.getBusinessMetrics();
+      if (storedMetrics.length === 0) return null;
+      
+      // Convert stored metrics back to dashboard format
+      const metricsMap = storedMetrics.reduce((acc, metric) => {
+        acc[metric.metricType] = metric.value;
+        return acc;
+      }, {} as Record<string, number>);
+      
+      return {
+        monthlyRevenue: metricsMap.monthly_revenue || 0,
+        activeOrders: metricsMap.active_orders || 0,
+        totalCustomers: metricsMap.total_customers || 0,
+        completionRate: metricsMap.completion_rate || 0,
+        averageOrderValue: metricsMap.average_order_value || 0,
+        retrievedAt: new Date().toISOString()
+      };
+    } catch (error) {
+      console.error('Error retrieving stored metrics:', error);
+      return null;
+    }
+  }
+
+  private areMetricsConsistent(stored: any, calculated: any): boolean {
+    const tolerance = 0.01; // Allow 1% difference for floating point
+    
+    const keys = ['monthlyRevenue', 'activeOrders', 'totalCustomers', 'completionRate', 'averageOrderValue'];
+    
+    return keys.every(key => {
+      const storedVal = stored[key] || 0;
+      const calcVal = calculated[key] || 0;
+      
+      // For integer values, check exact match
+      if (key === 'activeOrders' || key === 'totalCustomers') {
+        return storedVal === calcVal;
+      }
+      
+      // For floating point values, allow small tolerance
+      const diff = Math.abs(storedVal - calcVal);
+      const avg = (storedVal + calcVal) / 2;
+      return diff <= (avg * tolerance);
+    });
+  }
+
+  private getDefaultMetrics() {
+    return {
+      monthlyRevenue: 0,
+      activeOrders: 0,
+      totalCustomers: 0,
+      completionRate: 0,
+      newCustomersThisMonth: 0,
+      totalRevenue: 0,
+      averageOrderValue: 0,
+      totalOrders: 0,
+      recentOrders: [],
+      calculatedAt: new Date().toISOString()
+    };
+  }
+
     this.metricsCache = null;
     this.lastCalculated = null;
     return this.getDashboardMetrics();
