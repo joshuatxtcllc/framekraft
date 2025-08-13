@@ -203,18 +203,33 @@ export default function OrderForm({
 
     // Calculate frame price with advanced pricing - FIXED: multiply by quantity for frame moulding
     let framePrice = 0;
-    if (frameStyle && frameStyle !== "none" && priceStructure && Array.isArray(priceStructure)) {
-      const frameItem = priceStructure.find((item: any) => 
-        item && item.category === "frame" && item.itemName === frameStyle
-      );
+    if (frameStyle && frameStyle !== "none") {
+      // First check database items
+      let frameItem = null;
+      let pricePerFoot = 0;
+      
+      if (priceStructure && Array.isArray(priceStructure)) {
+        frameItem = priceStructure.find((item: any) => 
+          item && item.category === "frame" && item.itemName === frameStyle
+        );
+      }
 
-      if (frameItem) {
+      // If not found in database, check manual items
+      if (!frameItem) {
+        const manualFrame = manualItems.find(item => item.type === 'frame' && item.name === frameStyle);
+        if (manualFrame) {
+          pricePerFoot = manualFrame.wholesalePrice;
+        }
+      } else {
+        pricePerFoot = parseFloat(frameItem.basePrice);
+      }
+
+      if (pricePerFoot > 0) {
         // Frame size with mat: 16x20 becomes 20x24 with 2" mat (add 4" to each dimension)
         const frameWidth = artworkWidth + (matColor ? matWidth * 2 : 0);
         const frameHeight = artworkHeight + (matColor ? matWidth * 2 : 0);
         const framePerimeterInches = (frameWidth * 2) + (frameHeight * 2);
         const framePerimeterFeet = framePerimeterInches / 12;
-        const pricePerFoot = parseFloat(frameItem.basePrice);
 
         // Wholesale cost = feet × price per foot × quantity, then round up to nearest dollar
         const wholesaleCost = Math.ceil(framePerimeterFeet * pricePerFoot * quantity);
@@ -529,14 +544,33 @@ export default function OrderForm({
     };
 
     setManualItems([...manualItems, newItem]);
+
+    // If it's a frame, add it to the frame options temporarily for this order
+    if (manualItemType === 'frame') {
+      frameOptions.push({
+        value: manualItemName,
+        label: `${manualItemName} - $${manualItemPrice}/ft wholesale (Custom Entry)`,
+        basePrice: parseFloat(manualItemPrice),
+        retailPrice: retailPrice
+      });
+      
+      // Set this as the selected frame
+      form.setValue("frameStyle", manualItemName);
+      
+      toast({
+        title: "Custom Frame Added",
+        description: `${manualItemName} has been added and selected for this order.`
+      });
+    } else {
+      toast({
+        title: "Item Added",
+        description: `${manualItemName} has been added to the order.`
+      });
+    }
+
     setManualItemType('');
     setManualItemName('');
     setManualItemPrice('');
-
-    toast({
-      title: "Item Added",
-      description: `${manualItemName} has been added to the order.`
-    });
   };
 
   return (
@@ -1393,51 +1427,102 @@ export default function OrderForm({
           )}
         />
           {/* Manual Item Entry */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Manual Item Entry</h3>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 border rounded-lg">
-              <div>
-                <Label>Item Type</Label>
-                <Select value={manualItemType} onValueChange={setManualItemType}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="frame">Frame</SelectItem>
-                    <SelectItem value="mat">Mat</SelectItem>
-                    <SelectItem value="glass">Glass</SelectItem>
-                    <SelectItem value="service">Service</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Item Name</Label>
-                <Input
-                  value={manualItemName}
-                  onChange={(e) => setManualItemName(e.target.value)}
-                  placeholder="Enter item name"
-                />
-              </div>
-              <div>
-                <Label>Wholesale Price</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={manualItemPrice}
-                  onChange={(e) => setManualItemPrice(e.target.value)}
-                  placeholder="Wholesale price"
-                />
-              </div>
-              <div className="flex flex-col justify-end">
-                <div className="text-sm text-muted-foreground mb-1">
-                  Retail: ${calculateManualItemRetailPrice()}
+          <Card className="border-purple-200 bg-purple-50">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-purple-800 text-sm">Custom Item Entry</CardTitle>
+              <p className="text-xs text-purple-600">
+                Add items not found in the database (frames, mats, glass, services)
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                  <Label>Item Type *</Label>
+                  <Select value={manualItemType} onValueChange={setManualItemType}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="frame">Frame (per linear foot)</SelectItem>
+                      <SelectItem value="mat">Mat Board</SelectItem>
+                      <SelectItem value="glass">Glass/Glazing (per sq ft)</SelectItem>
+                      <SelectItem value="service">Service/Labor</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
-                <Button onClick={addManualItemToOrder} type="button">
-                  Add Item
-                </Button>
+                <div>
+                  <Label>Item Name/Description *</Label>
+                  <Input
+                    value={manualItemName}
+                    onChange={(e) => setManualItemName(e.target.value)}
+                    placeholder={manualItemType === 'frame' ? 'e.g., Custom Oak 2" Profile' : 'Enter item name'}
+                  />
+                </div>
+                <div>
+                  <Label>
+                    {manualItemType === 'frame' ? 'Wholesale $/linear foot' : 
+                     manualItemType === 'glass' ? 'Wholesale $/sq ft' : 
+                     'Wholesale Price'} *
+                  </Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={manualItemPrice}
+                    onChange={(e) => setManualItemPrice(e.target.value)}
+                    placeholder="0.00"
+                  />
+                </div>
+                <div className="flex flex-col justify-end">
+                  {manualItemPrice && (
+                    <div className="text-sm text-muted-foreground mb-2">
+                      <div>Retail: ${calculateManualItemRetailPrice()}</div>
+                      {manualItemType === 'frame' && (
+                        <div className="text-xs">
+                          Markup: {getFrameMarkupFactor(parseFloat(manualItemPrice) || 0)}x
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  <Button onClick={addManualItemToOrder} type="button" size="sm">
+                    {manualItemType === 'frame' ? 'Add & Select Frame' : 'Add Item'}
+                  </Button>
+                </div>
               </div>
-            </div>
-          </div>
+
+              {manualItems.length > 0 && (
+                <div className="mt-4 p-3 bg-white rounded border">
+                  <h4 className="text-sm font-medium mb-2">Custom Items Added:</h4>
+                  <div className="space-y-1">
+                    {manualItems.map((item) => (
+                      <div key={item.id} className="flex justify-between items-center text-sm">
+                        <span>{item.name} ({item.type})</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-muted-foreground">
+                            ${item.wholesalePrice} → ${item.retailPrice.toFixed(2)}
+                          </span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setManualItems(manualItems.filter(i => i.id !== item.id));
+                              // If removing a frame, clear the selection
+                              if (item.type === 'frame' && form.watch("frameStyle") === item.name) {
+                                form.setValue("frameStyle", "");
+                              }
+                            }}
+                            className="h-6 w-6 p-0"
+                          >
+                            ×
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
         {/* Form Actions */}
         <div className="flex justify-end space-x-4 pt-6">
