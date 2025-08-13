@@ -26,7 +26,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       if (!req.user || !req.user.claims || !req.user.claims.sub) {
         console.error("Invalid user session data:", req.user);
-        return res.status(401).json({ message: "Invalid session" });
+        return res.status(401).json({ message: "Invalid session", isAuthenticated: false });
       }
 
       const userId = req.user.claims.sub;
@@ -36,7 +36,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!user) {
         console.error("User not found in database:", userId);
-        return res.status(404).json({ message: "User not found" });
+        return res.status(404).json({ message: "User not found", isAuthenticated: false });
       }
       
       const userResponse = {
@@ -52,7 +52,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(userResponse);
     } catch (error) {
       console.error("Error fetching user:", error);
-      res.status(500).json({ message: "Failed to fetch user" });
+      res.status(500).json({ message: "Failed to fetch user", isAuthenticated: false });
     }
   });
 

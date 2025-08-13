@@ -117,7 +117,10 @@ class MetricsService {
 
   // Force refresh of metrics cache
   async refreshMetrics() {
-
+    this.metricsCache = null;
+    this.lastCalculated = null;
+    return this.getDashboardMetrics();
+  }
   
   private async getStoredMetrics() {
     try {

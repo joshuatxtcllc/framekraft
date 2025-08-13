@@ -87,6 +87,7 @@ export interface IStorage {
   getBusinessMetrics(type?: string, dateRange?: { start: Date; end: Date }): Promise<BusinessMetric[]>;
   createBusinessMetric(metric: Omit<BusinessMetric, 'id' | 'createdAt'>): Promise<BusinessMetric>;
   storeBusinessMetric(metricType: string, value: number): Promise<void>;
+  getBusinessMetrics(): Promise<Array<{metricType: string, value: number, updatedAt: Date}>>;
 
   // Inventory
   getInventory(): Promise<Inventory[]>;
@@ -448,36 +449,44 @@ export class DatabaseStorage implements IStorage {
     return metric;
   }
 
+  // The following method was updated to use raw SQL for upserting metrics
   async storeBusinessMetric(metricType: string, value: number): Promise<void> {
     try {
-      await db.insert(businessMetrics).values({
-        metricType,
-        value: value.toString(),
-        date: new Date(),
-        metadata: { source: 'dashboard_calculation' }
-      });
+      // Create a simple key-value table for storing metrics if it doesn't exist
+      // For now, we'll store in a JSON format in a simple table
+      await db.raw(`
+        CREATE TABLE IF NOT EXISTS business_metrics (
+          id SERIAL PRIMARY KEY,
+          metric_type VARCHAR(255) NOT NULL UNIQUE,
+          metric_value DECIMAL(10,2) NOT NULL,
+          updated_at TIMESTAMP DEFAULT NOW()
+        )
+      `);
+
+      await db.raw(`
+        INSERT INTO business_metrics (metric_type, metric_value, updated_at)
+        VALUES (?, ?, NOW())
+        ON CONFLICT (metric_type) 
+        DO UPDATE SET metric_value = EXCLUDED.metric_value, updated_at = NOW()
+      `, [metricType, value]);
     } catch (error) {
-      console.error(`Error storing metric ${metricType}:`, error);
-      // Don't throw - this is for persistence, not critical functionality
+      console.error('Error storing business metric:', error);
     }
   }
 
-  async getBusinessMetrics(metricType?: string, days?: number): Promise<any[]> {
-    let query = db.select().from(businessMetrics);
-
-    if (metricType) {
-      query = query.where(eq(businessMetrics.metricType, metricType));
+  // The following method was added to retrieve business metrics using raw SQL
+  async getBusinessMetrics(): Promise<Array<{metricType: string, value: number, updatedAt: Date}>> {
+    try {
+      const result = await db.raw(`
+        SELECT metric_type as "metricType", metric_value as value, updated_at as "updatedAt"
+        FROM business_metrics
+      `);
+      return result.rows || [];
+    } catch (error) {
+      console.error('Error retrieving business metrics:', error);
+      return [];
     }
-
-    if (days) {
-      const cutoffDate = new Date();
-      cutoffDate.setDate(cutoffDate.getDate() - days);
-      query = query.where(gte(businessMetrics.date, cutoffDate));
-    }
-
-    return query.orderBy(desc(businessMetrics.date));
   }
-
 
   // Inventory
   async getInventory(): Promise<Inventory[]> {
@@ -493,12 +502,9 @@ export class DatabaseStorage implements IStorage {
     return item;
   }
 
-  async getLowStockItems(): Promise<Inventory[]> {
-    return await db
-      .select()
-      .from(inventory)
-      .where(sql`${inventory.quantity} <= ${inventory.minQuantity}`)
-      .orderBy(inventory.itemName);
+  async getLowStockItems(): Promise<any[]> {
+    const items = await db.select().from(inventory).where(lte(inventory.quantity, inventory.lowStockThreshold));
+    return items;
   }
 
   // Price Structure methods
