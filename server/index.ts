@@ -4,6 +4,15 @@ import { setupVite, serveStatic, log } from "./vite";
 import { securityHeaders, sanitizeRequest, apiSecurity } from "./middleware/security";
 import { rateLimit } from "./middleware/rateLimiting";
 
+// Validate required environment variables
+const requiredEnvVars = ['DATABASE_URL'];
+for (const envVar of requiredEnvVars) {
+  if (!process.env[envVar]) {
+    console.error(`Missing required environment variable: ${envVar}`);
+    process.exit(1);
+  }
+}
+
 const app = express();
 
 // Trust proxy for accurate IP addresses behind reverse proxies

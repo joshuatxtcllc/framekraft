@@ -130,7 +130,82 @@ export default function Settings() {
     },
   });
 
-  const [businessForm, setBusinessForm] = useState<BusinessSettings>({
+  import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+
+interface BusinessSettings {
+  companyName: string;
+  address: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  phone: string;
+  email: string;
+  website: string;
+  taxRate: number;
+  defaultMarkup: number;
+  laborRate: number;
+  overheadCost: number;
+}
+
+interface NotificationSettings {
+  emailNotifications: boolean;
+  orderUpdates: boolean;
+  paymentReminders: boolean;
+  lowInventory: boolean;
+  dailyReports: boolean;
+}
+
+interface DisplaySettings {
+  theme: string;
+  language: string;
+  timezone: string;
+}
+
+const queryClient = useQueryClient();
+
+// API hooks
+const { data: businessSettings } = useQuery({
+  queryKey: ['business-settings'],
+  queryFn: () => fetch('/api/settings/business').then(res => res.json())
+});
+
+const { data: notificationSettings } = useQuery({
+  queryKey: ['notification-settings'],
+  queryFn: () => fetch('/api/settings/notifications').then(res => res.json())
+});
+
+const updateBusinessMutation = useMutation({
+  mutationFn: (data: BusinessSettings) => 
+    fetch('/api/settings/business', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    }).then(res => res.json()),
+  onSuccess: () => queryClient.invalidateQueries({ queryKey: ['business-settings'] })
+});
+
+const updateNotificationMutation = useMutation({
+  mutationFn: (data: NotificationSettings) => 
+    fetch('/api/settings/notifications', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    }).then(res => res.json()),
+  onSuccess: () => queryClient.invalidateQueries({ queryKey: ['notification-settings'] })
+});
+
+const updateDisplayMutation = useMutation({
+  mutationFn: (data: DisplaySettings) => 
+    fetch('/api/settings/display', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    }).then(res => res.json())
+});
+
+const displaySettings = { theme: 'light', language: 'en', timezone: 'UTC' };
+
+const [businessForm, setBusinessForm] = useState<BusinessSettings>({
     companyName: businessSettings?.companyName || "Jay's Frames",
     address: businessSettings?.address || "",
     city: businessSettings?.city || "",

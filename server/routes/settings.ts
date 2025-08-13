@@ -2,6 +2,8 @@
 import { Router } from 'express';
 import { isAuthenticated } from '../middleware/auth.js';
 
+import { Router } from 'express';
+
 const router = Router();
 
 // In-memory storage for demo purposes
@@ -28,6 +30,27 @@ let notificationSettings = {
   lowInventory: true,
   dailyReports: false,
 };
+
+// Add routes here
+router.get('/business', (req, res) => {
+  res.json(businessSettings);
+});
+
+router.put('/business', (req, res) => {
+  businessSettings = { ...businessSettings, ...req.body };
+  res.json(businessSettings);
+});
+
+router.get('/notifications', (req, res) => {
+  res.json(notificationSettings);
+});
+
+router.put('/notifications', (req, res) => {
+  notificationSettings = { ...notificationSettings, ...req.body };
+  res.json(notificationSettings);
+});
+
+export default router;
 
 let displaySettings = {
   theme: 'light',
