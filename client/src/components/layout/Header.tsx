@@ -58,12 +58,15 @@ export default function Header() {
           </Button>
 
           {/* AI Assistant Quick Access */}
-          <Button
-            className="bg-primary text-primary-foreground hover:bg-primary/90"
-            size="icon"
-          >
-            <Brain className="h-5 w-5" />
-          </Button>
+          <Link href="/ai-assistant">
+            <Button
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
+              size="icon"
+              title="AI Assistant"
+            >
+              <Brain className="h-5 w-5" />
+            </Button>
+          </Link>
         </div>
       </div>
     </div>

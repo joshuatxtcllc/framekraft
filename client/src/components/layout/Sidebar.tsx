@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { Frame, LayoutDashboard, ShoppingBag, Users, Brain, Sparkles, Package, DollarSign, Settings, BarChart3, Building2, FileText, Database } from "lucide-react";
+import { Frame, LayoutDashboard, ShoppingBag, Users, Brain, Sparkles, Package, DollarSign, Settings, BarChart3, Building2, FileText, Database, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
@@ -39,16 +39,10 @@ export default function Sidebar() {
       current: location === '/customers',
     },
     {
-      name: 'API Explorer',
-      href: '/api-explorer',
-      icon: Database,
-      current: location === '/api-explorer',
-    },
-        {
-      name: 'Integrations',
-      href: '/settings',
-      icon: Settings,
-      current: location === '/settings',
+      name: 'AI Assistant',
+      href: '/ai-assistant',
+      icon: Brain,
+      current: location === '/ai-assistant',
     },
     {
       name: 'Virtual Frame Designer',
@@ -60,10 +54,16 @@ export default function Sidebar() {
 
   const businessTools = [
     {
-      name: 'Vendor Catalog',
-      href: '/vendor-catalog',
-      icon: Package,
-      current: location === '/vendor-catalog',
+      name: 'Price Structure',
+      href: '/pricing',
+      icon: DollarSign,
+      current: location === '/pricing',
+    },
+    {
+      name: 'Invoices',
+      href: '/invoices',
+      icon: FileText,
+      current: location === '/invoices',
     },
     {
       name: 'Inventory',
@@ -72,10 +72,28 @@ export default function Sidebar() {
       current: location === '/inventory',
     },
     {
+      name: 'Vendor Catalog',
+      href: '/vendor-catalog',
+      icon: Package,
+      current: location === '/vendor-catalog',
+    },
+    {
+      name: 'Wholesalers',
+      href: '/wholesalers',
+      icon: Building2,
+      current: location === '/wholesalers',
+    },
+    {
       name: 'Finance',
       href: '/finance',
-      icon: DollarSign,
+      icon: BarChart3,
       current: location === '/finance',
+    },
+    {
+      name: 'API Explorer',
+      href: '/api-explorer',
+      icon: Database,
+      current: location === '/api-explorer',
     },
     {
       name: 'Settings',
@@ -125,10 +143,33 @@ export default function Sidebar() {
             </Link>
           ))}
 
+          {/* Quick Actions */}
+          <div className="pt-4">
+            <h3 className="px-3 text-xs font-semibold text-wood-200 uppercase tracking-wider">
+              Quick Actions
+            </h3>
+            <div className="mt-2 space-y-1">
+              <Link
+                href="/orders"
+                className="sidebar-nav-item sidebar-nav-item-inactive text-sm"
+              >
+                <Plus className="text-wood-200 mr-3 h-5 w-5" />
+                New Order
+              </Link>
+              <Link
+                href="/customers"
+                className="sidebar-nav-item sidebar-nav-item-inactive text-sm"
+              >
+                <Users className="text-wood-200 mr-3 h-5 w-5" />
+                Add Customer
+              </Link>
+            </div>
+          </div>
+
           {/* Business Tools */}
           <div className="pt-4">
             <h3 className="px-3 text-xs font-semibold text-wood-200 uppercase tracking-wider">
-              Business
+              Business Tools
             </h3>
             <div className="mt-2 space-y-1">
               {businessTools.map((item) => (
