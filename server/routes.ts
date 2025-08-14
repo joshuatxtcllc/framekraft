@@ -14,6 +14,8 @@ import { registerFileUploadRoutes } from "./routes/fileUpload";
 import settingsRoutes from './routes/settings.js';
 import vendorCatalogRoutes from './routes/vendorCatalog.js';
 import inventoryRoutes from "./routes/inventory.js";
+import ai from "./routes/ai.js";
+import giclee from "./routes/giclee.js";
 import { rateLimit } from "./middleware/rateLimiting";
 import { requestLogger } from "./middleware/logging";
 
@@ -31,14 +33,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const userId = req.user.claims.sub;
       console.log("Fetching user for ID:", userId);
-      
+
       const user = await storage.getUser(userId);
-      
+
       if (!user) {
         console.error("User not found in database:", userId);
         return res.status(404).json({ message: "User not found", isAuthenticated: false });
       }
-      
+
       const userResponse = {
         id: user.id,
         email: user.email,
@@ -47,7 +49,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         profileImageUrl: user.profileImageUrl,
         isAuthenticated: true
       };
-      
+
       console.log("Successfully fetched user:", userResponse.email);
       res.json(userResponse);
     } catch (error) {
@@ -458,9 +460,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerWholesalerRoutes(app);
   registerInvoiceRoutes(app);
   registerFileUploadRoutes(app);
-  app.use('/api/settings', settingsRoutes);
-  app.use('/api/vendor', vendorCatalogRoutes);
-  app.use('/api/inventory', inventoryRoutes);
+  app.use("/api/ai", ai);
+  app.use("/api/communication", communication);
+  app.use("/api/file-upload", fileUpload);
+  app.use("/api/giclee", giclee);
+  app.use("/api/inventory", inventory);
+  app.use("/api/invoices", invoices);
+  app.use("/api/pricing", pricing);
+  app.use("/api/settings", settings);
+  app.use("/api/vendor-catalog", vendorCatalog);
+  app.use("/api/wholesalers", wholesalers);
 
   const httpServer = createServer(app);
   return httpServer;

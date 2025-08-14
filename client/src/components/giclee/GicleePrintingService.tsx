@@ -45,7 +45,7 @@ export default function GicleePrintingService() {
     { minQty: 25, maxQty: Infinity, discount: 0.2 }
   ];
 
-  const calculatePricing = () => {
+  const calculatePricing = async () => {
     setIsCalculating(true);
     
     const w = parseFloat(width);
@@ -57,36 +57,30 @@ export default function GicleePrintingService() {
       return;
     }
 
-    const substrate = substrateOptions.find(s => s.value === substrateType);
-    if (!substrate) {
-      setIsCalculating(false);
-      return;
-    }
-
-    const squareInches = w * h;
-    const basePrice = squareInches * substrate.pricePerSqIn * q;
-    
-    // Apply quantity discount
-    const discountTier = bulkDiscounts.find(tier => q >= tier.minQty && q <= tier.maxQty);
-    const quantityDiscount = discountTier ? discountTier.discount : 0;
-    const finalPrice = basePrice * (1 - quantityDiscount);
-    const savings = basePrice - finalPrice;
-
-    setTimeout(() => {
-      setPricing({
-        substrateType: substrate.label,
-        width: w,
-        height: h,
-        quantity: q,
-        squareInches,
-        pricePerSquareInch: substrate.pricePerSqIn,
-        basePrice,
-        quantityDiscount,
-        finalPrice,
-        savings
+    try {
+      const response = await fetch('/api/giclee/calculate-pricing', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          substrateType,
+          width: w,
+          height: h,
+          quantity: q
+        })
       });
+
+      if (!response.ok) {
+        throw new Error('Failed to calculate pricing');
+      }
+
+      const pricingData = await response.json();
+      setPricing(pricingData);
+    } catch (error) {
+      console.error('Pricing calculation error:', error);
+      alert('Failed to calculate pricing. Please try again.');
+    } finally {
       setIsCalculating(false);
-    }, 500);
+    }
   };
 
   const formatCurrency = (amount: number) => `$${amount.toFixed(2)}`;

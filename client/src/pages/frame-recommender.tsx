@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -54,21 +53,80 @@ export default function FrameRecommender() {
   ];
 
   const handleGetRecommendations = async () => {
+    if (!artworkType || !dimensions.width || !dimensions.height) {
+      alert("Please fill in all required fields");
+      return;
+    }
+
     setIsLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      setRecommendations(mockRecommendations);
+
+    try {
+      const response = await fetch('/api/ai/frame-recommendations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          artworkDescription: `${artworkType}: ${description}`,
+          dimensions: `${dimensions.width}" × ${dimensions.height}"`,
+          customerPreferences: `Color preference: ${colorPreference}`,
+          budget: budget ? parseInt(budget) : undefined
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to get recommendations');
+      }
+
+      const recommendation = await response.json();
+
+      // Create multiple variations based on the primary recommendation
+      const variations = [
+        {
+          id: 1,
+          frameStyle: recommendation.frameStyle,
+          matColor: recommendation.matColor,
+          glazing: recommendation.glazing,
+          price: recommendation.estimatedCost,
+          confidence: recommendation.confidence,
+          reasoning: recommendation.reasoning
+        },
+        {
+          id: 2,
+          frameStyle: recommendation.frameStyle.includes('Wood') ?
+            recommendation.frameStyle.replace('Wood', 'Metal') :
+            recommendation.frameStyle + ' (Alternative)',
+          matColor: recommendation.matColor === 'Warm white' ? 'Cool gray' : 'Warm white',
+          glazing: recommendation.glazing === 'UV-protective glass' ? 'Anti-reflective glass' : 'UV-protective glass',
+          price: Math.round(recommendation.estimatedCost * 0.85),
+          confidence: Math.round((recommendation.confidence - 0.1) * 100) / 100,
+          reasoning: "Alternative option with different styling approach for comparison."
+        },
+        {
+          id: 3,
+          frameStyle: "Premium " + recommendation.frameStyle,
+          matColor: "Museum " + recommendation.matColor,
+          glazing: "Conservation glass with anti-reflective coating",
+          price: Math.round(recommendation.estimatedCost * 1.4),
+          confidence: Math.round((recommendation.confidence - 0.05) * 100) / 100,
+          reasoning: "Premium option with enhanced materials and conservation-grade protection."
+        }
+      ];
+
+      setRecommendations(variations);
+    } catch (error) {
+      console.error('Error getting recommendations:', error);
+      alert('Failed to get AI recommendations. Please try again.');
+    } finally {
       setIsLoading(false);
-    }, 1500);
+    }
   };
 
   return (
     <div className="min-h-screen flex bg-background">
       <Sidebar />
-      
+
       <div className="lg:pl-64 flex flex-col flex-1">
         <Header />
-        
+
         <main className="flex-1 p-4 lg:p-6">
           <div className="max-w-7xl mx-auto">
             <div className="flex items-center justify-between mb-6">
@@ -175,7 +233,7 @@ export default function FrameRecommender() {
                     />
                   </div>
 
-                  <Button 
+                  <Button
                     onClick={handleGetRecommendations}
                     disabled={isLoading || !artworkType}
                     className="w-full"
@@ -207,27 +265,27 @@ export default function FrameRecommender() {
                       {recommendations.map((rec) => (
                         <div key={rec.id} className="border rounded-lg p-4 space-y-3">
                           <div className="flex items-center justify-between">
-                            <h3 className="font-semibold">{rec.name}</h3>
-                            <Badge variant="secondary">{rec.confidence}% match</Badge>
+                            <h3 className="font-semibold">{rec.frameStyle || rec.name}</h3>
+                            <Badge variant="secondary">{rec.confidence ? Math.round(rec.confidence * 100) : rec.confidence}% match</Badge>
                           </div>
-                          
+
                           <div className="grid grid-cols-2 gap-4 text-sm text-muted-foreground">
                             <div>
-                              <span className="font-medium">Style:</span> {rec.style}
+                              <span className="font-medium">Mat Color:</span> {rec.matColor}
                             </div>
                             <div>
-                              <span className="font-medium">Material:</span> {rec.material}
+                              <span className="font-medium">Glazing:</span> {rec.glazing}
                             </div>
                             <div>
-                              <span className="font-medium">Color:</span> {rec.color}
+                              <span className="font-medium">Style:</span> {rec.style || 'N/A'}
                             </div>
                             <div>
                               <span className="font-medium">Price:</span> ${rec.price}
                             </div>
                           </div>
-                          
-                          <p className="text-sm">{rec.reason}</p>
-                          
+
+                          <p className="text-sm">{rec.reasoning || rec.reason}</p>
+
                           <Button variant="outline" size="sm" className="w-full">
                             Add to Quote
                           </Button>
