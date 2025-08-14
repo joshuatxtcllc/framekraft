@@ -10,11 +10,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Plus, FileDown, RefreshCw } from "lucide-react";
 import { useLocation } from "wouter";
-import { toast } from "sonner";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Dashboard() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
+  const { toast } = useToast();
   const queryClient = useQueryClient();
   
   const { data: metrics, isLoading: metricsLoading } = useQuery({
@@ -38,10 +39,17 @@ export default function Dashboard() {
       }).then(res => res.json()),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard/metrics"] });
-      toast.success("Metrics refreshed successfully");
+      toast({
+        title: "Success",
+        description: "Metrics refreshed successfully",
+      });
     },
     onError: () => {
-      toast.error("Failed to refresh metrics");
+      toast({
+        title: "Error",
+        description: "Failed to refresh metrics",
+        variant: "destructive",
+      });
     }
   });
 

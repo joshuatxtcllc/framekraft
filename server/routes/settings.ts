@@ -1,8 +1,6 @@
 
 import { Router } from 'express';
-import { isAuthenticated } from '../middleware/auth.js';
-
-import { Router } from 'express';
+import { isAuthenticated } from '../replitAuth';
 
 const router = Router();
 
@@ -49,8 +47,6 @@ router.put('/notifications', (req, res) => {
   notificationSettings = { ...notificationSettings, ...req.body };
   res.json(notificationSettings);
 });
-
-export default router;
 
 let displaySettings = {
   theme: 'light',

@@ -2,7 +2,7 @@
 import { Router } from 'express';
 import { twilioService } from '../services/twilioService';
 import { storage } from '../storage';
-import { isAuthenticated } from '../middleware/auth';
+import { isAuthenticated } from '../replitAuth';
 
 const router = Router();
 
@@ -72,7 +72,7 @@ router.post('/test-call', isAuthenticated, async (req, res) => {
       orderId: null,
       status: 'completed',
       message: 'Test communication',
-      twilioSid: result.callSid || result.messageSid
+      twilioSid: result?.callSid || result?.messageSid || 'unknown'
     });
 
     res.json({ message: 'Test communication sent successfully', result });
@@ -114,10 +114,10 @@ router.post('/trigger-status-update', isAuthenticated, async (req, res) => {
           orderId: orderId,
           status: 'initiated',
           message: `Status update: ${oldStatus} -> ${newStatus}`,
-          twilioSid: callResult.callSid
+          twilioSid: callResult?.callSid || 'unknown'
         });
         results.push({ type: 'voice', status: 'sent' });
-      } catch (error) {
+      } catch (error: any) {
         console.error('Voice call failed:', error);
         results.push({ type: 'voice', status: 'failed', error: error.message });
       }
@@ -132,10 +132,10 @@ router.post('/trigger-status-update', isAuthenticated, async (req, res) => {
           orderId: orderId,
           status: 'sent',
           message: `Status update: ${oldStatus} -> ${newStatus}`,
-          twilioSid: smsResult.messageSid
+          twilioSid: smsResult?.messageSid || 'unknown'
         });
         results.push({ type: 'sms', status: 'sent' });
-      } catch (error) {
+      } catch (error: any) {
         console.error('SMS failed:', error);
         results.push({ type: 'sms', status: 'failed', error: error.message });
       }

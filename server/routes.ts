@@ -16,6 +16,7 @@ import vendorCatalogRoutes from './routes/vendorCatalog.js';
 import inventoryRoutes from "./routes/inventory.js";
 import ai from "./routes/ai.js";
 import giclee from "./routes/giclee.js";
+import communication from "./routes/communication.js";
 import { rateLimit } from "./middleware/rateLimiting";
 import { requestLogger } from "./middleware/logging";
 
@@ -462,14 +463,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerFileUploadRoutes(app);
   app.use("/api/ai", ai);
   app.use("/api/communication", communication);
-  app.use("/api/file-upload", fileUpload);
   app.use("/api/giclee", giclee);
-  app.use("/api/inventory", inventory);
-  app.use("/api/invoices", invoices);
-  app.use("/api/pricing", pricing);
-  app.use("/api/settings", settings);
-  app.use("/api/vendor-catalog", vendorCatalog);
-  app.use("/api/wholesalers", wholesalers);
+  app.use("/api/inventory", inventoryRoutes);
+  app.use("/api/settings", settingsRoutes);
+  app.use("/api/vendor-catalog", vendorCatalogRoutes);
 
   const httpServer = createServer(app);
   return httpServer;
