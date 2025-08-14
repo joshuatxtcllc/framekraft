@@ -182,11 +182,7 @@ class MetricsService {
       calculatedAt: new Date().toISOString()
     };
   }
-
-    this.metricsCache = null;
-    this.lastCalculated = null;
-    return this.getDashboardMetrics();
-  }
+}
 }
 
 export const metricsService = new MetricsService();
