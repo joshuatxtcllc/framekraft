@@ -25,14 +25,26 @@ export default function MetricsCards({ metrics }: MetricsCardsProps) {
     }).format(amount);
   };
 
+  const getChangeType = (value: number): "increase" | "decrease" | "neutral" => {
+    if (value > 0) return "increase";
+    if (value < 0) return "decrease";
+    return "neutral";
+  };
+
+  const formatChange = (value: number): string => {
+    if (value === 0) return "No change";
+    const sign = value > 0 ? "+" : "";
+    return `${sign}${value.toFixed(1)}%`;
+  };
+
   const metricCards = [
     {
       title: "Monthly Revenue",
       value: formatCurrency(metrics.monthlyRevenue),
       icon: DollarSign,
       iconColor: "text-green-600",
-      change: "+12.2%",
-      changeType: "increase",
+      change: formatChange(metrics.revenueGrowth || 0),
+      changeType: getChangeType(metrics.revenueGrowth || 0),
       subtitle: "from last month",
     },
     {
@@ -40,32 +52,50 @@ export default function MetricsCards({ metrics }: MetricsCardsProps) {
       value: metrics.activeOrders.toString(),
       icon: ShoppingBag,
       iconColor: "text-secondary",
-      change: `${metrics.newCustomersThisMonth || 6} new`,
-      changeType: "increase",
-      subtitle: "this week",
+      change: `${metrics.weeklyOrders || 0} this week`,
+      changeType: "neutral",
+      subtitle: "orders in progress",
     },
     {
       title: "Total Customers",
       value: metrics.totalCustomers.toString(),
       icon: Users,
       iconColor: "text-accent-foreground",
-      change: `${metrics.newCustomersThisMonth || 8} new`,
-      changeType: "increase",
-      subtitle: "this month",
+      change: formatChange(metrics.customerGrowth || 0),
+      changeType: getChangeType(metrics.customerGrowth || 0),
+      subtitle: "customer growth",
+    },
+    {
+      title: "Average Order Value",
+      value: formatCurrency(metrics.averageOrderValue),
+      icon: CheckCircle,
+      iconColor: "text-primary",
+      change: `${metrics.totalOrders} total`,
+      changeType: "neutral",
+      subtitle: "all orders",
+    },
+    {
+      title: "Weekly Revenue",
+      value: formatCurrency(metrics.weeklyRevenue || 0),
+      icon: DollarSign,
+      iconColor: "text-blue-600",
+      change: `${metrics.weeklyOrders || 0} orders`,
+      changeType: "neutral",
+      subtitle: "last 7 days",
     },
     {
       title: "Completion Rate",
       value: `${metrics.completionRate}%`,
       icon: CheckCircle,
-      iconColor: "text-primary",
-      change: "On time",
+      iconColor: "text-emerald-600",
+      change: "On track",
       changeType: "neutral",
-      subtitle: "delivery",
+      subtitle: "project delivery",
     },
   ];
 
   return (
-    <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-8">
+    <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 mb-8">
       {metricCards.map((metric) => (
         <Card key={metric.title} className="metric-card">
           <CardContent className="metric-card-content">

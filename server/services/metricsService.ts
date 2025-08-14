@@ -77,6 +77,52 @@ class MetricsService {
       const totalRevenue = orders.reduce((sum, order) => sum + parseFloat(order.totalAmount), 0);
       const averageOrderValue = orders.length > 0 ? totalRevenue / orders.length : 0;
 
+      // Additional sales metrics
+      const previousMonth = new Date();
+      previousMonth.setMonth(previousMonth.getMonth() - 1);
+      previousMonth.setDate(1);
+      
+      const previousMonthOrders = orders.filter(order => {
+        const orderDate = new Date(order.createdAt!);
+        return orderDate >= previousMonth && orderDate < currentMonth;
+      });
+      
+      const previousMonthRevenue = previousMonthOrders.reduce(
+        (sum, order) => sum + parseFloat(order.totalAmount), 0
+      );
+      
+      // Calculate growth percentages
+      const revenueGrowth = previousMonthRevenue > 0 
+        ? ((monthlyRevenue - previousMonthRevenue) / previousMonthRevenue) * 100 
+        : monthlyRevenue > 0 ? 100 : 0;
+      
+      const previousMonthCustomers = customers.filter(customer => {
+        const customerDate = new Date(customer.createdAt!);
+        return customerDate >= previousMonth && customerDate < currentMonth;
+      }).length;
+      
+      const customerGrowth = previousMonthCustomers > 0 
+        ? ((newCustomersThisMonth - previousMonthCustomers) / previousMonthCustomers) * 100 
+        : newCustomersThisMonth > 0 ? 100 : 0;
+
+      // Sales velocity metrics
+      const thisWeek = new Date();
+      thisWeek.setDate(thisWeek.getDate() - 7);
+      
+      const weeklyOrders = orders.filter(order => 
+        new Date(order.createdAt!) >= thisWeek
+      ).length;
+
+      const weeklyRevenue = orders.filter(order => 
+        new Date(order.createdAt!) >= thisWeek
+      ).reduce((sum, order) => sum + parseFloat(order.totalAmount), 0);
+
+      // Order status breakdown
+      const ordersByStatus = orders.reduce((acc, order) => {
+        acc[order.status] = (acc[order.status] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+
       return {
         monthlyRevenue: Number(monthlyRevenue.toFixed(2)),
         activeOrders,
@@ -87,7 +133,18 @@ class MetricsService {
         averageOrderValue: Number(averageOrderValue.toFixed(2)),
         totalOrders: orders.length,
         recentOrders: orders.slice(0, 5),
-        calculatedAt: new Date().toISOString()
+        calculatedAt: new Date().toISOString(),
+        // Enhanced sales metrics
+        previousMonthRevenue: Number(previousMonthRevenue.toFixed(2)),
+        revenueGrowth: Number(revenueGrowth.toFixed(1)),
+        customerGrowth: Number(customerGrowth.toFixed(1)),
+        weeklyOrders,
+        weeklyRevenue: Number(weeklyRevenue.toFixed(2)),
+        ordersByStatus,
+        topCustomers: customers
+          .filter(c => c.totalSpent && parseFloat(c.totalSpent) > 0)
+          .sort((a, b) => parseFloat(b.totalSpent || "0") - parseFloat(a.totalSpent || "0"))
+          .slice(0, 5)
       };
     } catch (error) {
       console.error('Error calculating metrics:', error);
@@ -129,7 +186,7 @@ class MetricsService {
       
       // Convert stored metrics back to dashboard format
       const metricsMap = storedMetrics.reduce((acc, metric) => {
-        acc[metric.metricType] = metric.value;
+        acc[metric.metricType] = typeof metric.value === 'number' ? metric.value : parseFloat(metric.value);
         return acc;
       }, {} as Record<string, number>);
       
@@ -179,10 +236,17 @@ class MetricsService {
       averageOrderValue: 0,
       totalOrders: 0,
       recentOrders: [],
-      calculatedAt: new Date().toISOString()
+      calculatedAt: new Date().toISOString(),
+      // Enhanced sales metrics defaults
+      previousMonthRevenue: 0,
+      revenueGrowth: 0,
+      customerGrowth: 0,
+      weeklyOrders: 0,
+      weeklyRevenue: 0,
+      ordersByStatus: {},
+      topCustomers: []
     };
   }
-}
 }
 
 export const metricsService = new MetricsService();
