@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { PageLayout } from "@/components/navigation/PageLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -240,7 +241,8 @@ export default function Receivables() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <PageLayout>
+      <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold text-foreground">Accounts Receivable</h1>
         <Button variant="outline" className="gap-2">
@@ -513,6 +515,7 @@ export default function Receivables() {
           )}
         </DialogContent>
       </Dialog>
-    </div>
+      </div>
+    </PageLayout>
   );
 }

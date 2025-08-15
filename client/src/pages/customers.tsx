@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import Sidebar from "@/components/layout/Sidebar";
-import Header from "@/components/layout/Header";
+import { PageLayout } from "@/components/navigation/PageLayout";
 import CustomerList from "@/components/customers/CustomerList";
 import CustomerForm from "@/components/customers/CustomerForm";
 import { Button } from "@/components/ui/button";
@@ -81,15 +80,9 @@ export default function Customers() {
   };
 
   return (
-    <div className="min-h-screen flex bg-background">
-      <Sidebar />
-      
-      <div className="lg:pl-64 flex flex-col flex-1">
-        <Header />
-        
-        <main className="flex-1">
-          <div className="py-6">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
+    <PageLayout>
+      <div className="py-6">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
               {/* Page Header */}
               <div className="md:flex md:items-center md:justify-between mb-8">
                 <div className="flex-1 min-w-0">
@@ -134,10 +127,8 @@ export default function Customers() {
                 isLoading={isLoading}
                 onEdit={handleEdit}
               />
-            </div>
-          </div>
-        </main>
+        </div>
       </div>
-    </div>
+    </PageLayout>
   );
 }
