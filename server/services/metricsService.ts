@@ -1,6 +1,5 @@
 
 import { storage } from '../storage';
-import { metricsAuditService } from './metricsAuditService';
 
 class MetricsService {
   private metricsCache: any = null;
@@ -21,31 +20,11 @@ class MetricsService {
       // Calculate fresh metrics
       const metrics = await this.calculateMetrics();
       
-      // Validate metrics for business logic errors
-      const validation = metricsAuditService.validateMetrics(metrics);
-      if (!validation.valid) {
-        console.error('METRIC VALIDATION FAILED:', validation.errors);
-        // Log errors but continue with corrected metrics
-      }
-      
-      // Record snapshot for trend analysis
-      metricsAuditService.recordSnapshot(metrics);
-      
-      // Cross-validate with database for data integrity
-      const crossValidation = await metricsAuditService.crossValidateWithDatabase();
-      if (!crossValidation.valid) {
-        console.warn('DATABASE CROSS-VALIDATION FAILED:', crossValidation.discrepancies);
-      }
-      
       // Compare with stored metrics for consistency check
       if (storedMetrics && this.areMetricsConsistent(storedMetrics, metrics)) {
         console.log('Metrics consistent with stored values');
       } else {
         console.log('Metrics inconsistency detected, using calculated values');
-        if (storedMetrics) {
-          console.log('Previous:', storedMetrics);
-          console.log('Current:', metrics);
-        }
       }
       
       // Store in database for persistence
@@ -97,90 +76,6 @@ class MetricsService {
 
       const totalRevenue = orders.reduce((sum, order) => sum + parseFloat(order.totalAmount), 0);
       const averageOrderValue = orders.length > 0 ? totalRevenue / orders.length : 0;
-
-      // Calculate paid revenue - balanceAmount represents amount still OWED
-      // Paid amount = deposit amount (what's already been received)
-      const paidRevenue = orders.reduce((sum, order) => {
-        const totalAmount = parseFloat(order.totalAmount);
-        const deposit = order.depositAmount ? parseFloat(order.depositAmount) : 0;
-        const balanceDue = order.balanceAmount ? parseFloat(order.balanceAmount) : 0;
-        
-        // For completed orders, assume full payment received
-        if (order.status === 'completed') {
-          return sum + totalAmount;
-        }
-        
-        // For other orders, only count what's actually been paid (deposits)
-        return sum + deposit;
-      }, 0);
-
-      const monthlyPaidRevenue = orders
-        .filter(order => new Date(order.createdAt!) >= currentMonth)
-        .reduce((sum, order) => {
-          const totalAmount = parseFloat(order.totalAmount);
-          const deposit = order.depositAmount ? parseFloat(order.depositAmount) : 0;
-          const balanceDue = order.balanceAmount ? parseFloat(order.balanceAmount) : 0;
-          
-          // For completed orders, assume full payment received
-          if (order.status === 'completed') {
-            return sum + totalAmount;
-          }
-          
-          // For other orders, only count what's actually been paid (deposits)
-          return sum + deposit;
-        }, 0);
-
-      // Calculate total outstanding balances - CORRECT CALCULATION
-      // Use actual math: total_amount - deposit_amount = what customer owes
-      const totalOutstanding = orders
-        .filter(order => order.status !== 'completed' && order.status !== 'cancelled')
-        .reduce((sum, order) => {
-          const totalAmount = parseFloat(order.totalAmount);
-          const deposit = order.depositAmount ? parseFloat(order.depositAmount) : 0;
-          const actualBalance = totalAmount - deposit;
-          return sum + Math.max(0, actualBalance); // Only positive balances owed
-        }, 0);
-
-      const monthlyOutstanding = orders
-        .filter(order => new Date(order.createdAt!) >= currentMonth && order.status !== 'completed' && order.status !== 'cancelled')
-        .reduce((sum, order) => {
-          const totalAmount = parseFloat(order.totalAmount);
-          const deposit = order.depositAmount ? parseFloat(order.depositAmount) : 0;
-          const actualBalance = totalAmount - deposit;
-          return sum + Math.max(0, actualBalance); // Only positive balances owed
-        }, 0);
-
-      const paymentRate = monthlyRevenue > 0 ? (monthlyPaidRevenue / monthlyRevenue) * 100 : 0;
-
-      // Calculate aging of receivables for better tracking
-      const currentDate = new Date();
-      const receivablesAging = orders
-        .filter(order => order.status !== 'completed' && order.status !== 'cancelled')
-        .map(order => {
-          const totalAmount = parseFloat(order.totalAmount);
-          const deposit = order.depositAmount ? parseFloat(order.depositAmount) : 0;
-          const actualBalance = totalAmount - deposit;
-          if (actualBalance <= 0) return null;
-          
-          const daysPastDue = order.dueDate 
-            ? Math.floor((currentDate.getTime() - new Date(order.dueDate).getTime()) / (1000 * 60 * 60 * 24))
-            : 0;
-          
-          return {
-            orderId: order.id,
-            orderNumber: order.orderNumber,
-            customerId: order.customerId,
-            balanceAmount: actualBalance,
-            daysPastDue,
-            urgencyLevel: daysPastDue > 30 ? 'critical' : daysPastDue > 14 ? 'high' : daysPastDue > 7 ? 'medium' : 'normal'
-          };
-        })
-        .filter(Boolean);
-
-      const criticalReceivables = receivablesAging.filter((r: any) => r.urgencyLevel === 'critical');
-      const highPriorityReceivables = receivablesAging.filter((r: any) => r.urgencyLevel === 'high');
-      const totalCriticalAmount = criticalReceivables.reduce((sum: number, r: any) => sum + r.balanceAmount, 0);
-      const totalHighPriorityAmount = highPriorityReceivables.reduce((sum: number, r: any) => sum + r.balanceAmount, 0);
 
       // Additional sales metrics
       const previousMonth = new Date();
@@ -249,21 +144,7 @@ class MetricsService {
         topCustomers: customers
           .filter(c => c.totalSpent && parseFloat(c.totalSpent) > 0)
           .sort((a, b) => parseFloat(b.totalSpent || "0") - parseFloat(a.totalSpent || "0"))
-          .slice(0, 5),
-        // Payment tracking metrics
-        paidRevenue: Number(paidRevenue.toFixed(2)),
-        monthlyPaidRevenue: Number(monthlyPaidRevenue.toFixed(2)),
-        paymentRate: Number(paymentRate.toFixed(1)),
-        outstandingAmount: Number(monthlyOutstanding.toFixed(2)),
-        totalOutstanding: Number(totalOutstanding.toFixed(2)),
-        
-        // Receivables analytics for business survival
-        receivablesAging,
-        criticalReceivablesCount: criticalReceivables.length,
-        highPriorityReceivablesCount: highPriorityReceivables.length,
-        totalCriticalAmount: Number(totalCriticalAmount.toFixed(2)),
-        totalHighPriorityAmount: Number(totalHighPriorityAmount.toFixed(2)),
-        totalReceivablesCount: receivablesAging.length
+          .slice(0, 5)
       };
     } catch (error) {
       console.error('Error calculating metrics:', error);
@@ -273,18 +154,13 @@ class MetricsService {
 
   private async storeMetrics(metrics: any) {
     try {
-      // Store critical business metrics for consistency checking
+      // Store key metrics in database for persistence
       const metricsToStore = [
         { type: 'monthly_revenue', value: metrics.monthlyRevenue },
         { type: 'active_orders', value: metrics.activeOrders },
         { type: 'total_customers', value: metrics.totalCustomers },
         { type: 'completion_rate', value: metrics.completionRate },
-        { type: 'average_order_value', value: metrics.averageOrderValue },
-        { type: 'total_outstanding', value: metrics.totalOutstanding },
-        { type: 'paid_revenue', value: metrics.paidRevenue },
-        { type: 'payment_rate', value: metrics.paymentRate },
-        { type: 'critical_receivables_count', value: metrics.criticalReceivablesCount },
-        { type: 'last_calculated', value: Date.now() }
+        { type: 'average_order_value', value: metrics.averageOrderValue }
       ];
 
       for (const metric of metricsToStore) {
@@ -301,6 +177,53 @@ class MetricsService {
     this.metricsCache = null;
     this.lastCalculated = null;
     return this.getDashboardMetrics();
+  }
+
+  // Validate metrics accuracy
+  async validateMetrics() {
+    try {
+      const calculated = await this.calculateMetrics();
+      const stored = await this.getStoredMetrics();
+      
+      const validation = {
+        timestamp: new Date().toISOString(),
+        calculated,
+        stored,
+        consistent: stored ? this.areMetricsConsistent(stored, calculated) : false,
+        issues: []
+      };
+
+      // Additional validation checks
+      if (calculated.monthlyRevenue < 0) {
+        validation.issues.push('Negative monthly revenue detected');
+      }
+      
+      if (calculated.completionRate > 100) {
+        validation.issues.push('Completion rate exceeds 100%');
+      }
+      
+      if (calculated.averageOrderValue < 0) {
+        validation.issues.push('Negative average order value detected');
+      }
+
+      // Check for data integrity
+      const orders = await storage.getOrders();
+      const calculatedTotal = orders.reduce((sum, order) => sum + parseFloat(order.totalAmount), 0);
+      
+      if (Math.abs(calculatedTotal - calculated.totalRevenue) > 0.01) {
+        validation.issues.push('Total revenue calculation mismatch');
+      }
+
+      return validation;
+    } catch (error) {
+      console.error('Error validating metrics:', error);
+      return {
+        timestamp: new Date().toISOString(),
+        error: error.message,
+        consistent: false,
+        issues: ['Validation failed due to error']
+      };
+    }
   }
   
   private async getStoredMetrics() {
@@ -331,37 +254,40 @@ class MetricsService {
   private areMetricsConsistent(stored: any, calculated: any): boolean {
     const tolerance = 0.01; // Allow 1% difference for floating point
     
-    // Critical business metrics that must be consistent
-    const criticalKeys = ['monthlyRevenue', 'activeOrders', 'totalCustomers', 'totalOutstanding', 'paidRevenue'];
+    const keys = ['monthlyRevenue', 'activeOrders', 'totalCustomers', 'completionRate', 'averageOrderValue'];
     
-    const inconsistencies: string[] = [];
+    let inconsistencies = [];
     
-    const isConsistent = criticalKeys.every(key => {
+    const isConsistent = keys.every(key => {
       const storedVal = stored[key] || 0;
       const calcVal = calculated[key] || 0;
       
+      let consistent = false;
+      
       // For integer values, check exact match
       if (key === 'activeOrders' || key === 'totalCustomers') {
-        const consistent = storedVal === calcVal;
-        if (!consistent) {
-          inconsistencies.push(`${key}: stored=${storedVal}, calculated=${calcVal}`);
-        }
-        return consistent;
+        consistent = storedVal === calcVal;
+      } else {
+        // For floating point values, allow small tolerance
+        const diff = Math.abs(storedVal - calcVal);
+        const avg = (storedVal + calcVal) / 2;
+        consistent = diff <= (avg * tolerance);
       }
       
-      // For financial values, use absolute tolerance (not percentage)
-      const diff = Math.abs(storedVal - calcVal);
-      const consistent = diff <= tolerance;
-      
       if (!consistent) {
-        inconsistencies.push(`${key}: stored=$${storedVal}, calculated=$${calcVal}, diff=$${diff.toFixed(2)}`);
+        inconsistencies.push({
+          metric: key,
+          stored: storedVal,
+          calculated: calcVal,
+          difference: Math.abs(storedVal - calcVal)
+        });
       }
       
       return consistent;
     });
     
-    if (!isConsistent) {
-      console.warn('BUSINESS CRITICAL METRICS INCONSISTENT:', inconsistencies);
+    if (inconsistencies.length > 0) {
+      console.warn('Metrics inconsistencies detected:', inconsistencies);
     }
     
     return isConsistent;
@@ -386,21 +312,7 @@ class MetricsService {
       weeklyOrders: 0,
       weeklyRevenue: 0,
       ordersByStatus: {},
-      topCustomers: [],
-      // Payment tracking defaults
-      paidRevenue: 0,
-      monthlyPaidRevenue: 0,
-      paymentRate: 0,
-      outstandingAmount: 0,
-      totalOutstanding: 0,
-      
-      // Receivables defaults
-      receivablesAging: [],
-      criticalReceivablesCount: 0,
-      highPriorityReceivablesCount: 0,
-      totalCriticalAmount: 0,
-      totalHighPriorityAmount: 0,
-      totalReceivablesCount: 0
+      topCustomers: []
     };
   }
 }

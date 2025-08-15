@@ -19,8 +19,6 @@ import giclee from "./routes/giclee.js";
 import communication from "./routes/communication.js";
 import { rateLimit } from "./middleware/rateLimiting";
 import { requestLogger } from "./middleware/logging";
-import { metricsService } from "./services/metricsService";
-import { metricsAuditService } from "./services/metricsAuditService";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
@@ -64,6 +62,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Dashboard metrics
   app.get('/api/dashboard/metrics', isAuthenticated, async (req, res) => {
     try {
+      const { metricsService } = await import('./services/metricsService');
       const metrics = await metricsService.getDashboardMetrics();
       res.json(metrics);
     } catch (error) {
@@ -75,6 +74,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Force refresh metrics endpoint
   app.post('/api/dashboard/metrics/refresh', isAuthenticated, async (req, res) => {
     try {
+      const { metricsService } = await import('./services/metricsService');
       const metrics = await metricsService.refreshMetrics();
       res.json({ message: "Metrics refreshed successfully", metrics });
     } catch (error) {
@@ -83,41 +83,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Metrics audit and consistency monitoring
-  app.get('/api/dashboard/metrics/audit', isAuthenticated, async (req, res) => {
+  // Metrics validation endpoint
+  app.get('/api/dashboard/metrics/validate', isAuthenticated, async (req: any, res: any) => {
     try {
-      const hours = parseInt(req.query.hours as string) || 6;
-      const history = metricsAuditService.getRecentHistory(hours);
-      const crossValidation = await metricsAuditService.crossValidateWithDatabase();
-      
-      res.json({
-        message: "Metrics audit completed",
-        recentHistory: history,
-        databaseConsistency: crossValidation,
-        auditTimestamp: new Date().toISOString(),
-        hoursChecked: hours
-      });
+      const { metricsService } = await import('./services/metricsService');
+      const validation = await metricsService.validateMetrics();
+      res.json(validation);
     } catch (error) {
-      console.error("Error performing metrics audit:", error);
-      res.status(500).json({ message: "Failed to perform metrics audit" });
-    }
-  });
-
-  // Validate current metrics for business logic errors
-  app.get('/api/dashboard/metrics/validate', isAuthenticated, async (req, res) => {
-    try {
-      const currentMetrics = await metricsService.getDashboardMetrics();
-      const validation = metricsAuditService.validateMetrics(currentMetrics);
-      
-      res.json({
-        message: "Metrics validation completed",
-        validation,
-        metrics: currentMetrics,
-        validationTimestamp: new Date().toISOString()
-      });
-    } catch (error) {
-      console.error("Error validating metrics:", error);
-      res.status(500).json({ message: "Failed to validate metrics" });
+      console.error('Metrics validation error:', error);
+      res.status(500).json({ message: 'Failed to validate metrics' });
     }
   });
 
@@ -267,7 +241,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         errorDetails.type = "database";
       }
 
-      res.status(400).json({ 
+      res.status(400).json({
         message: errorMessage,
         error: error?.message,
         details: errorDetails,
@@ -337,7 +311,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // New Orders endpoint with full middleware stack
-  app.get('/api/orders/', 
+  app.get('/api/orders/',
     requestLogger,
     rateLimit({ windowMs: 15 * 60 * 1000, max: 100 }),
     isAuthenticated,
@@ -374,16 +348,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       } catch (error) {
         console.error("Error fetching orders:", error);
-        res.status(500).json({ 
+        res.status(500).json({
           message: "Failed to fetch orders",
           timestamp: new Date().toISOString()
         });
       }
     }
   );
-
-  // Communication routes - commented out until communication routes module is created
-  // app.use('/api/communication', require('./routes/communication').default);
 
   // Document generation and email routes
   app.post('/api/orders/email-document', isAuthenticated, async (req, res) => {
@@ -412,9 +383,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Simulate processing delay
       await new Promise(resolve => setTimeout(resolve, 1000));
 
-      res.json({ 
-        success: true, 
-        message: `${type === 'invoice' ? 'Invoice' : 'Work order'} email sent successfully` 
+      res.json({
+        success: true,
+        message: `${type === 'invoice' ? 'Invoice' : 'Work order'} email sent successfully`
       });
     } catch (error) {
       console.error("Error sending document email:", error);
@@ -499,77 +470,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerWholesalerRoutes(app);
   registerInvoiceRoutes(app);
   registerFileUploadRoutes(app);
-  app.use("/api/ai", ai);
-  app.use("/api/communication", communication);
-  app.use("/api/giclee", giclee);
-  app.use("/api/inventory", inventoryRoutes);
+
+  // Register AI routes
+  const aiRoutes = await import('./routes/ai.js');
+  app.use('/api/ai', aiRoutes.default);
+
+  // Register other routes that were not covered by the new registration system
   app.use("/api/settings", settingsRoutes);
   app.use("/api/vendor-catalog", vendorCatalogRoutes);
-
-  // Receivables management routes for business survival tracking
-  app.post('/api/receivables/record-payment', isAuthenticated, async (req, res) => {
-    try {
-      const { orderId, paymentAmount, paymentMethod, notes } = req.body;
-      
-      const order = await storage.getOrder(orderId);
-      if (!order) {
-        return res.status(404).json({ message: "Order not found" });
-      }
-
-      const currentBalance = order.balanceAmount ? parseFloat(order.balanceAmount) : 0;
-      const currentDeposit = order.depositAmount ? parseFloat(order.depositAmount) : 0;
-      const payment = parseFloat(paymentAmount);
-      
-      const newDepositAmount = currentDeposit + payment;
-      const newBalanceAmount = Math.max(0, currentBalance - payment);
-      
-      await storage.updateOrder(orderId, {
-        depositAmount: newDepositAmount.toFixed(2),
-        balanceAmount: newBalanceAmount.toFixed(2),
-        status: newBalanceAmount === 0 ? 'ready' : order.status
-      });
-
-      console.log(`CRITICAL PAYMENT RECORDED: Order ${order.orderNumber}, Payment: $${payment}, Remaining: $${newBalanceAmount}`);
-
-      res.json({ 
-        success: true, 
-        newBalance: newBalanceAmount,
-        newDepositTotal: newDepositAmount,
-        message: `Payment of $${payment} recorded successfully`
-      });
-    } catch (error) {
-      console.error("Error recording critical payment:", error);
-      res.status(500).json({ message: "Failed to record payment" });
-    }
-  });
-
-  app.post('/api/receivables/send-reminder', isAuthenticated, async (req, res) => {
-    try {
-      const { orderId, method } = req.body;
-      
-      const order = await storage.getOrder(orderId);
-      if (!order) {
-        return res.status(404).json({ message: "Order not found" });
-      }
-
-      const customer = await storage.getCustomer(order.customerId);
-      if (!customer) {
-        return res.status(404).json({ message: "Customer not found" });
-      }
-
-      console.log(`RECEIVABLES REMINDER: ${method} reminder sent to ${customer.firstName} ${customer.lastName} for order ${order.orderNumber} owing $${order.balanceAmount}`);
-      
-      res.json({ 
-        success: true, 
-        message: `Reminder sent via ${method} to ${customer.firstName} ${customer.lastName}`
-      });
-    } catch (error) {
-      console.error("Error sending reminder:", error);
-      res.status(500).json({ message: "Failed to send reminder" });
-    }
-  });
-
-  // Routes are already registered above through the new registration system
+  app.use("/api/giclee", giclee);
+  app.use("/api/communication", communication);
+  app.use("/api/inventory", inventoryRoutes);
 
   const httpServer = createServer(app);
   return httpServer;
