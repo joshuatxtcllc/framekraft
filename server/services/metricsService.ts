@@ -1,5 +1,6 @@
 
 import { storage } from '../storage';
+import { metricsAuditService } from './metricsAuditService';
 
 class MetricsService {
   private metricsCache: any = null;
@@ -20,11 +21,31 @@ class MetricsService {
       // Calculate fresh metrics
       const metrics = await this.calculateMetrics();
       
+      // Validate metrics for business logic errors
+      const validation = metricsAuditService.validateMetrics(metrics);
+      if (!validation.valid) {
+        console.error('METRIC VALIDATION FAILED:', validation.errors);
+        // Log errors but continue with corrected metrics
+      }
+      
+      // Record snapshot for trend analysis
+      metricsAuditService.recordSnapshot(metrics);
+      
+      // Cross-validate with database for data integrity
+      const crossValidation = await metricsAuditService.crossValidateWithDatabase();
+      if (!crossValidation.valid) {
+        console.warn('DATABASE CROSS-VALIDATION FAILED:', crossValidation.discrepancies);
+      }
+      
       // Compare with stored metrics for consistency check
       if (storedMetrics && this.areMetricsConsistent(storedMetrics, metrics)) {
         console.log('Metrics consistent with stored values');
       } else {
         console.log('Metrics inconsistency detected, using calculated values');
+        if (storedMetrics) {
+          console.log('Previous:', storedMetrics);
+          console.log('Current:', metrics);
+        }
       }
       
       // Store in database for persistence
@@ -252,13 +273,18 @@ class MetricsService {
 
   private async storeMetrics(metrics: any) {
     try {
-      // Store key metrics in database for persistence
+      // Store critical business metrics for consistency checking
       const metricsToStore = [
         { type: 'monthly_revenue', value: metrics.monthlyRevenue },
         { type: 'active_orders', value: metrics.activeOrders },
         { type: 'total_customers', value: metrics.totalCustomers },
         { type: 'completion_rate', value: metrics.completionRate },
-        { type: 'average_order_value', value: metrics.averageOrderValue }
+        { type: 'average_order_value', value: metrics.averageOrderValue },
+        { type: 'total_outstanding', value: metrics.totalOutstanding },
+        { type: 'paid_revenue', value: metrics.paidRevenue },
+        { type: 'payment_rate', value: metrics.paymentRate },
+        { type: 'critical_receivables_count', value: metrics.criticalReceivablesCount },
+        { type: 'last_calculated', value: Date.now() }
       ];
 
       for (const metric of metricsToStore) {
@@ -305,22 +331,40 @@ class MetricsService {
   private areMetricsConsistent(stored: any, calculated: any): boolean {
     const tolerance = 0.01; // Allow 1% difference for floating point
     
-    const keys = ['monthlyRevenue', 'activeOrders', 'totalCustomers', 'completionRate', 'averageOrderValue'];
+    // Critical business metrics that must be consistent
+    const criticalKeys = ['monthlyRevenue', 'activeOrders', 'totalCustomers', 'totalOutstanding', 'paidRevenue'];
     
-    return keys.every(key => {
+    const inconsistencies: string[] = [];
+    
+    const isConsistent = criticalKeys.every(key => {
       const storedVal = stored[key] || 0;
       const calcVal = calculated[key] || 0;
       
       // For integer values, check exact match
       if (key === 'activeOrders' || key === 'totalCustomers') {
-        return storedVal === calcVal;
+        const consistent = storedVal === calcVal;
+        if (!consistent) {
+          inconsistencies.push(`${key}: stored=${storedVal}, calculated=${calcVal}`);
+        }
+        return consistent;
       }
       
-      // For floating point values, allow small tolerance
+      // For financial values, use absolute tolerance (not percentage)
       const diff = Math.abs(storedVal - calcVal);
-      const avg = (storedVal + calcVal) / 2;
-      return diff <= (avg * tolerance);
+      const consistent = diff <= tolerance;
+      
+      if (!consistent) {
+        inconsistencies.push(`${key}: stored=$${storedVal}, calculated=$${calcVal}, diff=$${diff.toFixed(2)}`);
+      }
+      
+      return consistent;
     });
+    
+    if (!isConsistent) {
+      console.warn('BUSINESS CRITICAL METRICS INCONSISTENT:', inconsistencies);
+    }
+    
+    return isConsistent;
   }
 
   private getDefaultMetrics() {

@@ -19,6 +19,8 @@ import giclee from "./routes/giclee.js";
 import communication from "./routes/communication.js";
 import { rateLimit } from "./middleware/rateLimiting";
 import { requestLogger } from "./middleware/logging";
+import { metricsService } from "./services/metricsService";
+import { metricsAuditService } from "./services/metricsAuditService";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
@@ -62,7 +64,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Dashboard metrics
   app.get('/api/dashboard/metrics', isAuthenticated, async (req, res) => {
     try {
-      const { metricsService } = await import('./services/metricsService');
       const metrics = await metricsService.getDashboardMetrics();
       res.json(metrics);
     } catch (error) {
@@ -74,12 +75,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Force refresh metrics endpoint
   app.post('/api/dashboard/metrics/refresh', isAuthenticated, async (req, res) => {
     try {
-      const { metricsService } = await import('./services/metricsService');
       const metrics = await metricsService.refreshMetrics();
       res.json({ message: "Metrics refreshed successfully", metrics });
     } catch (error) {
       console.error("Error refreshing dashboard metrics:", error);
       res.status(500).json({ message: "Failed to refresh dashboard metrics" });
+    }
+  });
+
+  // Metrics audit and consistency monitoring
+  app.get('/api/dashboard/metrics/audit', isAuthenticated, async (req, res) => {
+    try {
+      const hours = parseInt(req.query.hours as string) || 6;
+      const history = metricsAuditService.getRecentHistory(hours);
+      const crossValidation = await metricsAuditService.crossValidateWithDatabase();
+      
+      res.json({
+        message: "Metrics audit completed",
+        recentHistory: history,
+        databaseConsistency: crossValidation,
+        auditTimestamp: new Date().toISOString(),
+        hoursChecked: hours
+      });
+    } catch (error) {
+      console.error("Error performing metrics audit:", error);
+      res.status(500).json({ message: "Failed to perform metrics audit" });
+    }
+  });
+
+  // Validate current metrics for business logic errors
+  app.get('/api/dashboard/metrics/validate', isAuthenticated, async (req, res) => {
+    try {
+      const currentMetrics = await metricsService.getDashboardMetrics();
+      const validation = metricsAuditService.validateMetrics(currentMetrics);
+      
+      res.json({
+        message: "Metrics validation completed",
+        validation,
+        metrics: currentMetrics,
+        validationTimestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error("Error validating metrics:", error);
+      res.status(500).json({ message: "Failed to validate metrics" });
     }
   });
 
