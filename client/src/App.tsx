@@ -19,6 +19,7 @@ import APIExplorer from "@/pages/api-explorer";
 import IntegrationSettings from "@/pages/integration-settings";
 import StripeTestPage from "./pages/stripe-test";
 import VirtualFrameDesigner from "./pages/virtual-frame-designer";
+import AIAssistant from "./pages/ai-assistant";
 
 
 function Router() {
@@ -39,6 +40,7 @@ function Router() {
           <Route path="/wholesalers" component={Wholesalers} />
           <Route path="/communication" component={Communication} />
           <Route path="/api-explorer" component={APIExplorer} />
+          <Route path="/ai-assistant" component={AIAssistant} />
           <Route path="/integration-settings" component={IntegrationSettings} />
           <Route path="/vendor-catalog" component={VendorCatalog} />
           <Route path="/virtual-frame-designer" component={VirtualFrameDesigner} />
