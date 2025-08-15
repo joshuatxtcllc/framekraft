@@ -20,21 +20,6 @@ import communication from "./routes/communication.js";
 import { rateLimit } from "./middleware/rateLimiting";
 import { requestLogger } from "./middleware/logging";
 
-// Import all route modules
-import authRoutes from './routes/auth.js';
-import orderRoutes from './routes/orders.js';
-import customerRoutes from './routes/customers.js';
-import inventoryRoutes from './routes/inventory.js';
-import pricingRoutes from './routes/pricing.js';
-import vendorCatalogRoutes from './routes/vendorCatalog.js';
-import wholesalersRoutes from './routes/wholesalers.js';
-import invoicesRoutes from './routes/invoices.js';
-import settingsRoutes from './routes/settings.js';
-import giclee from './routes/giclee.js';
-import fileUploadRoutes from './routes/fileUpload.js';
-import communicationRoutes from './routes/communication.js';
-import aiRoutes from './routes/ai.js';
-
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
   await setupAuth(app);
@@ -483,20 +468,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use("/api/settings", settingsRoutes);
   app.use("/api/vendor-catalog", vendorCatalogRoutes);
 
-  // Register routes
-  app.use('/api/auth', authRoutes);
-  app.use('/api/orders', orderRoutes);
-  app.use('/api/customers', customerRoutes);
-  app.use('/api/inventory', inventoryRoutes);
-  app.use('/api/pricing', pricingRoutes);
-  app.use('/api/vendor-catalog', vendorCatalogRoutes);
-  app.use('/api/wholesalers', wholesalersRoutes);
-  app.use('/api/invoices', invoicesRoutes);
-  app.use('/api/settings', settingsRoutes);
-  app.use('/api/giclee', giclee);
-  app.use('/api/upload', fileUploadRoutes);
-  app.use('/api/communication', communicationRoutes);
-  app.use('/api/ai', aiRoutes);
+  // Routes are already registered above through the new registration system
 
   const httpServer = createServer(app);
   return httpServer;
