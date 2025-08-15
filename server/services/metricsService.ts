@@ -8,11 +8,11 @@ class MetricsService {
 
   async getDashboardMetrics() {
     try {
-      // Check if cache is still valid
-      if (this.metricsCache && this.lastCalculated && 
-          (Date.now() - this.lastCalculated.getTime()) < this.cacheValidityMs) {
-        return this.metricsCache;
-      }
+      // Force cache refresh for receivables update
+      // if (this.metricsCache && this.lastCalculated && 
+      //     (Date.now() - this.lastCalculated.getTime()) < this.cacheValidityMs) {
+      //   return this.metricsCache;
+      // }
 
       // Try to get stored metrics first
       const storedMetrics = await this.getStoredMetrics();
@@ -123,9 +123,9 @@ class MetricsService {
         return acc;
       }, {} as Record<string, number>);
 
-      // Calculate receivables - total outstanding balances
+      // Calculate receivables - total outstanding balances INCLUDING completed orders with unpaid balances
       const receivablesData = orders
-        .filter(order => !['completed', 'cancelled'].includes(order.status))
+        .filter(order => order.status !== 'cancelled') // Only exclude cancelled orders
         .map(order => {
           const totalAmount = parseFloat(order.totalAmount);
           const depositAmount = order.depositAmount ? parseFloat(order.depositAmount) : 0;
@@ -135,10 +135,10 @@ class MetricsService {
       
       const totalOutstanding = receivablesData.reduce((sum, balance) => sum + balance, 0);
       
-      // Calculate overdue amounts based on due dates
+      // Calculate overdue amounts based on due dates (including completed orders with unpaid balances)
       const overdueAmount = orders
         .filter(order => {
-          if (['completed', 'cancelled'].includes(order.status)) return false;
+          if (order.status === 'cancelled') return false;
           if (!order.dueDate) return false;
           
           const dueDate = new Date(order.dueDate);
