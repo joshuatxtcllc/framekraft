@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from "@tanstack/react-query";
-import Sidebar from "@/components/layout/Sidebar";
-import Header from "@/components/layout/Header";
+import { PageLayout } from "@/components/navigation/PageLayout";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Plus, Printer, BarChart3, Table } from "lucide-react";
@@ -106,41 +105,31 @@ const KanbanBoard = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex bg-background">
-        <Sidebar />
-        <div className="lg:pl-64 flex flex-col flex-1">
-          <Header />
-          <main className="flex-1 p-6">
-            <div className="animate-pulse">
-              <div className="h-8 bg-muted rounded w-64 mb-4"></div>
-              <div className="flex gap-4">
-                {[...Array(7)].map((_, i) => (
-                  <div key={i} className="w-80 h-96 bg-muted rounded-lg"></div>
-                ))}
-              </div>
+      <PageLayout>
+        <div className="p-6">
+          <div className="animate-pulse">
+            <div className="h-8 bg-muted rounded w-64 mb-4"></div>
+            <div className="flex gap-4">
+              {[...Array(7)].map((_, i) => (
+                <div key={i} className="w-80 h-96 bg-muted rounded-lg"></div>
+              ))}
             </div>
-          </main>
+          </div>
         </div>
-      </div>
+      </PageLayout>
     );
   }
 
   return (
-    <div className="min-h-screen flex bg-background">
-      <Sidebar />
-      
-      <div className="lg:pl-64 flex flex-col flex-1">
-        <Header />
-        
-        <main className="flex-1">
-          <div className="p-6">
-            <div className="mb-6">
-              <h1 className="text-3xl font-bold text-primary mb-2">Production Board</h1>
-              <p className="text-muted-foreground">Drag orders between stages to update their status</p>
-            </div>
+    <PageLayout>
+      <div className="p-6">
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold text-primary mb-2">Production Board</h1>
+          <p className="text-muted-foreground">Drag orders between stages to update their status</p>
+        </div>
 
-            <div className="overflow-x-auto pb-4">
-              <div className="flex gap-4 min-w-max">
+        <div className="overflow-x-auto pb-4">
+          <div className="flex gap-4 min-w-max">
                 {stages.map((stage) => (
                   <div
                     key={stage.id}
@@ -239,69 +228,67 @@ const KanbanBoard = () => {
                     </div>
                   </div>
                 ))}
+          </div>
+        </div>
+
+        {/* Quick Actions */}
+        <div className="mt-6 flex gap-4 flex-wrap">
+          <Link href="/orders">
+            <Button className="bg-primary text-primary-foreground" data-testid="button-new-order">
+              <Plus className="w-4 h-4 mr-2" />
+              New Order
+            </Button>
+          </Link>
+          <Button variant="outline" data-testid="button-print-orders">
+            <Printer className="w-4 h-4 mr-2" />
+            Print Work Orders
+          </Button>
+          <Link href="/analytics">
+            <Button variant="outline" data-testid="button-analytics">
+              <BarChart3 className="w-4 h-4 mr-2" />
+              View Analytics
+            </Button>
+          </Link>
+          <Link href="/orders">
+            <Button variant="outline" data-testid="button-table-view">
+              <Table className="w-4 h-4 mr-2" />
+              Table View
+            </Button>
+          </Link>
+        </div>
+
+        {/* Quick Reference Legend */}
+        <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <Card className="p-4">
+            <h3 className="font-semibold mb-3">Priority Levels</h3>
+            <div className="space-y-2">
+              <div className="flex items-center gap-3">
+                <div className="w-4 h-4 bg-red-500 rounded"></div>
+                <span className="text-sm">High Priority - Rush orders, special clients</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="w-4 h-4 bg-yellow-500 rounded"></div>
+                <span className="text-sm">Medium Priority - Standard turnaround</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="w-4 h-4 bg-gray-500 rounded"></div>
+                <span className="text-sm">Low Priority - No rush, flexible timeline</span>
               </div>
             </div>
+          </Card>
 
-            {/* Quick Actions */}
-            <div className="mt-6 flex gap-4 flex-wrap">
-              <Link href="/orders">
-                <Button className="bg-primary text-primary-foreground" data-testid="button-new-order">
-                  <Plus className="w-4 h-4 mr-2" />
-                  New Order
-                </Button>
-              </Link>
-              <Button variant="outline" data-testid="button-print-orders">
-                <Printer className="w-4 h-4 mr-2" />
-                Print Work Orders
-              </Button>
-              <Link href="/analytics">
-                <Button variant="outline" data-testid="button-analytics">
-                  <BarChart3 className="w-4 h-4 mr-2" />
-                  View Analytics
-                </Button>
-              </Link>
-              <Link href="/orders">
-                <Button variant="outline" data-testid="button-table-view">
-                  <Table className="w-4 h-4 mr-2" />
-                  Table View
-                </Button>
-              </Link>
+          <Card className="p-4">
+            <h3 className="font-semibold mb-3">Card Information</h3>
+            <div className="space-y-1 text-sm text-muted-foreground">
+              <p><span className="text-primary">Customer Name & Phone</span> - Contact information</p>
+              <p><span className="text-secondary">Frame Details</span> - Specifications and materials</p>
+              <p><span className="text-muted-foreground">Description</span> - Order details</p>
+              <p><span className="text-muted-foreground">Due Date</span> - Customer pickup date</p>
             </div>
-
-            {/* Quick Reference Legend */}
-            <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <Card className="p-4">
-                <h3 className="font-semibold mb-3">Priority Levels</h3>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-3">
-                    <div className="w-4 h-4 bg-red-500 rounded"></div>
-                    <span className="text-sm">High Priority - Rush orders, special clients</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="w-4 h-4 bg-yellow-500 rounded"></div>
-                    <span className="text-sm">Medium Priority - Standard turnaround</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="w-4 h-4 bg-gray-500 rounded"></div>
-                    <span className="text-sm">Low Priority - No rush, flexible timeline</span>
-                  </div>
-                </div>
-              </Card>
-
-              <Card className="p-4">
-                <h3 className="font-semibold mb-3">Card Information</h3>
-                <div className="space-y-1 text-sm text-muted-foreground">
-                  <p><span className="text-primary">Customer Name & Phone</span> - Contact information</p>
-                  <p><span className="text-secondary">Frame Details</span> - Specifications and materials</p>
-                  <p><span className="text-muted-foreground">Description</span> - Order details</p>
-                  <p><span className="text-muted-foreground">Due Date</span> - Customer pickup date</p>
-                </div>
-              </Card>
-            </div>
-          </div>
-        </main>
+          </Card>
+        </div>
       </div>
-    </div>
+    </PageLayout>
   );
 };
 
