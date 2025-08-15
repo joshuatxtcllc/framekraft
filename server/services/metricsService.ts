@@ -77,30 +77,19 @@ class MetricsService {
       const totalRevenue = orders.reduce((sum, order) => sum + parseFloat(order.totalAmount), 0);
       const averageOrderValue = orders.length > 0 ? totalRevenue / orders.length : 0;
 
-      // Calculate paid revenue (deposits + balance payments)
-      // Note: balanceAmount represents remaining balance DUE, not balance PAID
-      // So we calculate paid amount as: totalAmount - balanceAmount (if positive)
+      // Calculate paid revenue - balanceAmount represents amount still OWED
+      // Paid amount = deposit amount (what's already been received)
       const paidRevenue = orders.reduce((sum, order) => {
         const totalAmount = parseFloat(order.totalAmount);
         const deposit = order.depositAmount ? parseFloat(order.depositAmount) : 0;
         const balanceDue = order.balanceAmount ? parseFloat(order.balanceAmount) : 0;
         
-        // For completed orders, assume full payment
+        // For completed orders, assume full payment received
         if (order.status === 'completed') {
           return sum + totalAmount;
         }
         
-        // If there's a balance due, paid amount = total - balance due
-        if (balanceDue > 0) {
-          return sum + Math.max(0, totalAmount - balanceDue);
-        }
-        
-        // If balance is negative (overpayment), paid amount = total + abs(negative balance)
-        if (balanceDue < 0) {
-          return sum + totalAmount + Math.abs(balanceDue);
-        }
-        
-        // Otherwise, use deposit amount
+        // For other orders, only count what's actually been paid (deposits)
         return sum + deposit;
       }, 0);
 
@@ -111,23 +100,28 @@ class MetricsService {
           const deposit = order.depositAmount ? parseFloat(order.depositAmount) : 0;
           const balanceDue = order.balanceAmount ? parseFloat(order.balanceAmount) : 0;
           
-          // For completed orders, assume full payment
+          // For completed orders, assume full payment received
           if (order.status === 'completed') {
             return sum + totalAmount;
           }
           
-          // If there's a balance due, paid amount = total - balance due
-          if (balanceDue > 0) {
-            return sum + Math.max(0, totalAmount - balanceDue);
-          }
-          
-          // If balance is negative (overpayment), paid amount = total + abs(negative balance)
-          if (balanceDue < 0) {
-            return sum + totalAmount + Math.abs(balanceDue);
-          }
-          
-          // Otherwise, use deposit amount
+          // For other orders, only count what's actually been paid (deposits)
           return sum + deposit;
+        }, 0);
+
+      // Calculate total outstanding balances (what customers still owe)
+      const totalOutstanding = orders
+        .filter(order => order.status !== 'completed' && order.status !== 'cancelled')
+        .reduce((sum, order) => {
+          const balanceDue = order.balanceAmount ? parseFloat(order.balanceAmount) : 0;
+          return sum + balanceDue;
+        }, 0);
+
+      const monthlyOutstanding = orders
+        .filter(order => new Date(order.createdAt!) >= currentMonth && order.status !== 'completed' && order.status !== 'cancelled')
+        .reduce((sum, order) => {
+          const balanceDue = order.balanceAmount ? parseFloat(order.balanceAmount) : 0;
+          return sum + balanceDue;
         }, 0);
 
       const paymentRate = monthlyRevenue > 0 ? (monthlyPaidRevenue / monthlyRevenue) * 100 : 0;
@@ -204,7 +198,8 @@ class MetricsService {
         paidRevenue: Number(paidRevenue.toFixed(2)),
         monthlyPaidRevenue: Number(monthlyPaidRevenue.toFixed(2)),
         paymentRate: Number(paymentRate.toFixed(1)),
-        outstandingAmount: Number((monthlyRevenue - monthlyPaidRevenue).toFixed(2))
+        outstandingAmount: Number(monthlyOutstanding.toFixed(2)),
+        totalOutstanding: Number(totalOutstanding.toFixed(2))
       };
     } catch (error) {
       console.error('Error calculating metrics:', error);
@@ -309,7 +304,8 @@ class MetricsService {
       paidRevenue: 0,
       monthlyPaidRevenue: 0,
       paymentRate: 0,
-      outstandingAmount: 0
+      outstandingAmount: 0,
+      totalOutstanding: 0
     };
   }
 }
