@@ -119,7 +119,9 @@ export default function Receivables() {
 
   const handleRecordPayment = (order: any) => {
     setSelectedOrder(order);
-    setPaymentAmount(order.balanceAmount.toString());
+    // Use the corrected balance amount for payment
+    const actualBalance = order.totalAmount - (order.depositAmount || 0);
+    setPaymentAmount(actualBalance.toString());
     setIsPaymentDialogOpen(true);
   };
 
@@ -149,8 +151,11 @@ export default function Receivables() {
       const totalAmount = parseFloat(order.totalAmount);
       const depositAmount = order.depositAmount ? parseFloat(order.depositAmount) : 0;
       
+      // Calculate CORRECT balance: total - deposit = what customer owes
+      const actualBalance = totalAmount - depositAmount;
+      
       // Only include orders with outstanding balances
-      if (balanceAmount <= 0 || order.status === 'completed' || order.status === 'cancelled') {
+      if (actualBalance <= 0 || order.status === 'completed' || order.status === 'cancelled') {
         return null;
       }
 
@@ -163,7 +168,7 @@ export default function Receivables() {
       return {
         ...order,
         customer,
-        balanceAmount,
+        balanceAmount: actualBalance, // Use corrected balance
         totalAmount,
         depositAmount,
         daysPastDue,

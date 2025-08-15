@@ -109,19 +109,24 @@ class MetricsService {
           return sum + deposit;
         }, 0);
 
-      // Calculate total outstanding balances (what customers still owe)
+      // Calculate total outstanding balances - CORRECT CALCULATION
+      // Use actual math: total_amount - deposit_amount = what customer owes
       const totalOutstanding = orders
         .filter(order => order.status !== 'completed' && order.status !== 'cancelled')
         .reduce((sum, order) => {
-          const balanceDue = order.balanceAmount ? parseFloat(order.balanceAmount) : 0;
-          return sum + balanceDue;
+          const totalAmount = parseFloat(order.totalAmount);
+          const deposit = order.depositAmount ? parseFloat(order.depositAmount) : 0;
+          const actualBalance = totalAmount - deposit;
+          return sum + Math.max(0, actualBalance); // Only positive balances owed
         }, 0);
 
       const monthlyOutstanding = orders
         .filter(order => new Date(order.createdAt!) >= currentMonth && order.status !== 'completed' && order.status !== 'cancelled')
         .reduce((sum, order) => {
-          const balanceDue = order.balanceAmount ? parseFloat(order.balanceAmount) : 0;
-          return sum + balanceDue;
+          const totalAmount = parseFloat(order.totalAmount);
+          const deposit = order.depositAmount ? parseFloat(order.depositAmount) : 0;
+          const actualBalance = totalAmount - deposit;
+          return sum + Math.max(0, actualBalance); // Only positive balances owed
         }, 0);
 
       const paymentRate = monthlyRevenue > 0 ? (monthlyPaidRevenue / monthlyRevenue) * 100 : 0;
@@ -131,8 +136,10 @@ class MetricsService {
       const receivablesAging = orders
         .filter(order => order.status !== 'completed' && order.status !== 'cancelled')
         .map(order => {
-          const balanceDue = order.balanceAmount ? parseFloat(order.balanceAmount) : 0;
-          if (balanceDue <= 0) return null;
+          const totalAmount = parseFloat(order.totalAmount);
+          const deposit = order.depositAmount ? parseFloat(order.depositAmount) : 0;
+          const actualBalance = totalAmount - deposit;
+          if (actualBalance <= 0) return null;
           
           const daysPastDue = order.dueDate 
             ? Math.floor((currentDate.getTime() - new Date(order.dueDate).getTime()) / (1000 * 60 * 60 * 24))
@@ -142,7 +149,7 @@ class MetricsService {
             orderId: order.id,
             orderNumber: order.orderNumber,
             customerId: order.customerId,
-            balanceAmount: balanceDue,
+            balanceAmount: actualBalance,
             daysPastDue,
             urgencyLevel: daysPastDue > 30 ? 'critical' : daysPastDue > 14 ? 'high' : daysPastDue > 7 ? 'medium' : 'normal'
           };
