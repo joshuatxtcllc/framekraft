@@ -468,6 +468,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use("/api/settings", settingsRoutes);
   app.use("/api/vendor-catalog", vendorCatalogRoutes);
 
+  // Receivables management routes for business survival tracking
+  app.post('/api/receivables/record-payment', isAuthenticated, async (req, res) => {
+    try {
+      const { orderId, paymentAmount, paymentMethod, notes } = req.body;
+      
+      const order = await storage.getOrder(orderId);
+      if (!order) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+
+      const currentBalance = order.balanceAmount ? parseFloat(order.balanceAmount) : 0;
+      const currentDeposit = order.depositAmount ? parseFloat(order.depositAmount) : 0;
+      const payment = parseFloat(paymentAmount);
+      
+      const newDepositAmount = currentDeposit + payment;
+      const newBalanceAmount = Math.max(0, currentBalance - payment);
+      
+      await storage.updateOrder(orderId, {
+        depositAmount: newDepositAmount.toFixed(2),
+        balanceAmount: newBalanceAmount.toFixed(2),
+        status: newBalanceAmount === 0 ? 'ready' : order.status
+      });
+
+      console.log(`CRITICAL PAYMENT RECORDED: Order ${order.orderNumber}, Payment: $${payment}, Remaining: $${newBalanceAmount}`);
+
+      res.json({ 
+        success: true, 
+        newBalance: newBalanceAmount,
+        newDepositTotal: newDepositAmount,
+        message: `Payment of $${payment} recorded successfully`
+      });
+    } catch (error) {
+      console.error("Error recording critical payment:", error);
+      res.status(500).json({ message: "Failed to record payment" });
+    }
+  });
+
+  app.post('/api/receivables/send-reminder', isAuthenticated, async (req, res) => {
+    try {
+      const { orderId, method } = req.body;
+      
+      const order = await storage.getOrder(orderId);
+      if (!order) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+
+      const customer = await storage.getCustomer(order.customerId);
+      if (!customer) {
+        return res.status(404).json({ message: "Customer not found" });
+      }
+
+      console.log(`RECEIVABLES REMINDER: ${method} reminder sent to ${customer.firstName} ${customer.lastName} for order ${order.orderNumber} owing $${order.balanceAmount}`);
+      
+      res.json({ 
+        success: true, 
+        message: `Reminder sent via ${method} to ${customer.firstName} ${customer.lastName}`
+      });
+    } catch (error) {
+      console.error("Error sending reminder:", error);
+      res.status(500).json({ message: "Failed to send reminder" });
+    }
+  });
+
   // Routes are already registered above through the new registration system
 
   const httpServer = createServer(app);

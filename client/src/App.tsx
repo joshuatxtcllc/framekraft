@@ -20,6 +20,7 @@ import IntegrationSettings from "@/pages/integration-settings";
 import StripeTestPage from "./pages/stripe-test";
 import VirtualFrameDesigner from "./pages/virtual-frame-designer";
 import AIAssistant from "./pages/ai-assistant";
+import Receivables from "./pages/receivables";
 
 
 function Router() {
@@ -44,6 +45,7 @@ function Router() {
           <Route path="/integration-settings" component={IntegrationSettings} />
           <Route path="/vendor-catalog" component={VendorCatalog} />
           <Route path="/virtual-frame-designer" component={VirtualFrameDesigner} />
+          <Route path="/receivables" component={Receivables} />
           <Route path="/settings" component={Settings} />
           <Route path="/stripe-test" component={StripeTestPage} />
         </>

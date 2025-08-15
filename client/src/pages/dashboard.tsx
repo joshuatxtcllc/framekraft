@@ -5,6 +5,7 @@ import MetricsCards from "@/components/dashboard/MetricsCards";
 import RecentOrders from "@/components/dashboard/RecentOrders";
 import AIRecommendations from "@/components/dashboard/AIRecommendations";
 import ProjectTracking from "@/components/dashboard/ProjectTracking";
+import ReceivablesAlert from "@/components/dashboard/ReceivablesAlert";
 import { useAuth } from "@/hooks/useAuth";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
@@ -103,6 +104,11 @@ export default function Dashboard() {
               ) : (
                 <MetricsCards metrics={metrics} />
               )}
+
+              {/* Critical Receivables Alert - Business Survival */}
+              <div className="mb-8">
+                <ReceivablesAlert />
+              </div>
 
               {/* Content Grid */}
               <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 mb-8">

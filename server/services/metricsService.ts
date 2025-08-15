@@ -126,6 +126,34 @@ class MetricsService {
 
       const paymentRate = monthlyRevenue > 0 ? (monthlyPaidRevenue / monthlyRevenue) * 100 : 0;
 
+      // Calculate aging of receivables for better tracking
+      const currentDate = new Date();
+      const receivablesAging = orders
+        .filter(order => order.status !== 'completed' && order.status !== 'cancelled')
+        .map(order => {
+          const balanceDue = order.balanceAmount ? parseFloat(order.balanceAmount) : 0;
+          if (balanceDue <= 0) return null;
+          
+          const daysPastDue = order.dueDate 
+            ? Math.floor((currentDate.getTime() - new Date(order.dueDate).getTime()) / (1000 * 60 * 60 * 24))
+            : 0;
+          
+          return {
+            orderId: order.id,
+            orderNumber: order.orderNumber,
+            customerId: order.customerId,
+            balanceAmount: balanceDue,
+            daysPastDue,
+            urgencyLevel: daysPastDue > 30 ? 'critical' : daysPastDue > 14 ? 'high' : daysPastDue > 7 ? 'medium' : 'normal'
+          };
+        })
+        .filter(Boolean);
+
+      const criticalReceivables = receivablesAging.filter((r: any) => r.urgencyLevel === 'critical');
+      const highPriorityReceivables = receivablesAging.filter((r: any) => r.urgencyLevel === 'high');
+      const totalCriticalAmount = criticalReceivables.reduce((sum: number, r: any) => sum + r.balanceAmount, 0);
+      const totalHighPriorityAmount = highPriorityReceivables.reduce((sum: number, r: any) => sum + r.balanceAmount, 0);
+
       // Additional sales metrics
       const previousMonth = new Date();
       previousMonth.setMonth(previousMonth.getMonth() - 1);
@@ -199,7 +227,15 @@ class MetricsService {
         monthlyPaidRevenue: Number(monthlyPaidRevenue.toFixed(2)),
         paymentRate: Number(paymentRate.toFixed(1)),
         outstandingAmount: Number(monthlyOutstanding.toFixed(2)),
-        totalOutstanding: Number(totalOutstanding.toFixed(2))
+        totalOutstanding: Number(totalOutstanding.toFixed(2)),
+        
+        // Receivables analytics for business survival
+        receivablesAging,
+        criticalReceivablesCount: criticalReceivables.length,
+        highPriorityReceivablesCount: highPriorityReceivables.length,
+        totalCriticalAmount: Number(totalCriticalAmount.toFixed(2)),
+        totalHighPriorityAmount: Number(totalHighPriorityAmount.toFixed(2)),
+        totalReceivablesCount: receivablesAging.length
       };
     } catch (error) {
       console.error('Error calculating metrics:', error);
@@ -305,7 +341,15 @@ class MetricsService {
       monthlyPaidRevenue: 0,
       paymentRate: 0,
       outstandingAmount: 0,
-      totalOutstanding: 0
+      totalOutstanding: 0,
+      
+      // Receivables defaults
+      receivablesAging: [],
+      criticalReceivablesCount: 0,
+      highPriorityReceivablesCount: 0,
+      totalCriticalAmount: 0,
+      totalHighPriorityAmount: 0,
+      totalReceivablesCount: 0
     };
   }
 }

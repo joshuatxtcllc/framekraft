@@ -54,6 +54,12 @@ export default function Sidebar() {
 
   const businessTools = [
     {
+      name: 'Receivables',
+      href: '/receivables',
+      icon: DollarSign,
+      current: location === '/receivables',
+    },
+    {
       name: 'Price Structure',
       href: '/pricing',
       icon: DollarSign,
