@@ -123,6 +123,35 @@ class MetricsService {
         return acc;
       }, {} as Record<string, number>);
 
+      // Calculate receivables - total outstanding balances
+      const receivablesData = orders
+        .filter(order => !['completed', 'cancelled'].includes(order.status))
+        .map(order => {
+          const totalAmount = parseFloat(order.totalAmount);
+          const depositAmount = order.depositAmount ? parseFloat(order.depositAmount) : 0;
+          const actualBalance = totalAmount - depositAmount;
+          return actualBalance > 0 ? actualBalance : 0;
+        });
+      
+      const totalOutstanding = receivablesData.reduce((sum, balance) => sum + balance, 0);
+      
+      // Calculate overdue amounts based on due dates
+      const overdueAmount = orders
+        .filter(order => {
+          if (['completed', 'cancelled'].includes(order.status)) return false;
+          if (!order.dueDate) return false;
+          
+          const dueDate = new Date(order.dueDate);
+          const now = new Date();
+          return now > dueDate;
+        })
+        .reduce((sum, order) => {
+          const totalAmount = parseFloat(order.totalAmount);
+          const depositAmount = order.depositAmount ? parseFloat(order.depositAmount) : 0;
+          const actualBalance = totalAmount - depositAmount;
+          return sum + (actualBalance > 0 ? actualBalance : 0);
+        }, 0);
+
       return {
         monthlyRevenue: Number(monthlyRevenue.toFixed(2)),
         activeOrders,
@@ -144,7 +173,11 @@ class MetricsService {
         topCustomers: customers
           .filter(c => c.totalSpent && parseFloat(c.totalSpent) > 0)
           .sort((a, b) => parseFloat(b.totalSpent || "0") - parseFloat(a.totalSpent || "0"))
-          .slice(0, 5)
+          .slice(0, 5),
+        // Financial metrics for receivables tracking
+        totalOutstanding: Number(totalOutstanding.toFixed(2)),
+        overdueAmount: Number(overdueAmount.toFixed(2)),
+        receivablesCount: receivablesData.filter(balance => balance > 0).length
       };
     } catch (error) {
       console.error('Error calculating metrics:', error);
@@ -160,7 +193,9 @@ class MetricsService {
         { type: 'active_orders', value: metrics.activeOrders },
         { type: 'total_customers', value: metrics.totalCustomers },
         { type: 'completion_rate', value: metrics.completionRate },
-        { type: 'average_order_value', value: metrics.averageOrderValue }
+        { type: 'average_order_value', value: metrics.averageOrderValue },
+        { type: 'total_outstanding', value: metrics.totalOutstanding },
+        { type: 'overdue_amount', value: metrics.overdueAmount }
       ];
 
       for (const metric of metricsToStore) {

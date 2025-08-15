@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -54,7 +55,7 @@ const navigationSections = [
   {
     title: "Financial Management",
     items: [
-      { label: "Receivables", href: "/receivables", icon: CreditCard, badge: "Critical", urgency: 'critical', description: "Track outstanding payments" },
+      { label: "Receivables", href: "/receivables", icon: CreditCard, description: "Track outstanding payments" },
       { label: "Invoices", href: "/invoices", icon: FileText, description: "Generate and manage invoices" },
       { label: "Pricing", href: "/pricing", icon: Calculator, description: "Frame pricing calculator" }
     ] as NavigationItem[]
@@ -93,12 +94,29 @@ export function MainNavigation({ className }: MainNavigationProps) {
   const [location] = useLocation();
   const [isCollapsed, setIsCollapsed] = useState(false);
 
+  // Fetch metrics to get receivables data
+  const { data: metrics } = useQuery({
+    queryKey: ['/api/dashboard/metrics'],
+    refetchInterval: 30000, // Refresh every 30 seconds
+  });
+
   const getBadgeVariant = (urgency?: string) => {
     switch (urgency) {
       case 'critical': return 'destructive';
       case 'high': return 'default';
       default: return 'secondary';
     }
+  };
+
+  // Update receivables badge based on actual data
+  const getReceivablesBadge = () => {
+    if (!metrics?.totalOutstanding) return null;
+    
+    const amount = metrics.totalOutstanding;
+    if (amount > 3000) return { text: `$${(amount/1000).toFixed(1)}k`, urgency: 'critical' as const };
+    if (amount > 1000) return { text: `$${(amount/1000).toFixed(1)}k`, urgency: 'high' as const };
+    if (amount > 0) return { text: `$${amount.toFixed(0)}`, urgency: 'normal' as const };
+    return null;
   };
 
   return (
@@ -135,6 +153,10 @@ export function MainNavigation({ className }: MainNavigationProps) {
                 {section.items.map((item) => {
                   const isActive = location === item.href;
                   const Icon = item.icon;
+                  
+                  // Dynamic badge for receivables
+                  const receivablesBadge = item.label === "Receivables" ? getReceivablesBadge() : null;
+                  const displayBadge = receivablesBadge || (item.badge ? { text: item.badge, urgency: item.urgency } : null);
 
                   return (
                     <Link key={item.href} href={item.href}>
@@ -152,9 +174,9 @@ export function MainNavigation({ className }: MainNavigationProps) {
                             <div className="flex-1">
                               <div className="flex items-center gap-2">
                                 <span>{item.label}</span>
-                                {item.badge && (
-                                  <Badge variant={getBadgeVariant(item.urgency)} className="text-xs">
-                                    {item.badge}
+                                {displayBadge && (
+                                  <Badge variant={getBadgeVariant(displayBadge.urgency)} className="text-xs">
+                                    {displayBadge.text}
                                   </Badge>
                                 )}
                               </div>
