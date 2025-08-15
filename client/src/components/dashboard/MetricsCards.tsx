@@ -1,4 +1,4 @@
-import { DollarSign, ShoppingBag, Users, CheckCircle, TrendingUp, TrendingDown } from "lucide-react";
+import { DollarSign, ShoppingBag, Users, CheckCircle, TrendingUp, TrendingDown, CreditCard } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 
 interface MetricsCardsProps {
@@ -8,6 +8,15 @@ interface MetricsCardsProps {
     totalCustomers: number;
     completionRate: number;
     newCustomersThisMonth?: number;
+    revenueGrowth?: number;
+    customerGrowth?: number;
+    weeklyOrders?: number;
+    weeklyRevenue?: number;
+    averageOrderValue?: number;
+    totalOrders?: number;
+    monthlyPaidRevenue?: number;
+    paymentRate?: number;
+    outstandingAmount?: number;
   } | undefined;
 }
 
@@ -84,6 +93,24 @@ export default function MetricsCards({ metrics }: MetricsCardsProps) {
       subtitle: "last 7 days",
     },
     {
+      title: "Paid Revenue",
+      value: formatCurrency(metrics.monthlyPaidRevenue || 0),
+      icon: CreditCard,
+      iconColor: "text-green-600",
+      change: `${metrics.paymentRate?.toFixed(1) || 0}% collected`,
+      changeType: "neutral",
+      subtitle: "of monthly revenue",
+    },
+    {
+      title: "Outstanding",
+      value: formatCurrency(metrics.outstandingAmount || 0),
+      icon: DollarSign,
+      iconColor: "text-orange-600",
+      change: `${((metrics.outstandingAmount || 0) / (metrics.monthlyRevenue || 1) * 100).toFixed(1)}%`,
+      changeType: (metrics.outstandingAmount || 0) > 0 ? "decrease" : "neutral",
+      subtitle: "unpaid balance",
+    },
+    {
       title: "Completion Rate",
       value: `${metrics.completionRate}%`,
       icon: CheckCircle,
@@ -95,7 +122,7 @@ export default function MetricsCards({ metrics }: MetricsCardsProps) {
   ];
 
   return (
-    <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 mb-8">
+    <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8 mb-8">
       {metricCards.map((metric) => (
         <Card key={metric.title} className="metric-card">
           <CardContent className="metric-card-content">

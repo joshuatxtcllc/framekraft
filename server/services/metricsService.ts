@@ -77,6 +77,31 @@ class MetricsService {
       const totalRevenue = orders.reduce((sum, order) => sum + parseFloat(order.totalAmount), 0);
       const averageOrderValue = orders.length > 0 ? totalRevenue / orders.length : 0;
 
+      // Calculate paid revenue (deposits + balance payments)
+      const paidRevenue = orders.reduce((sum, order) => {
+        const deposit = order.depositAmount ? parseFloat(order.depositAmount) : 0;
+        const balance = order.balanceAmount ? parseFloat(order.balanceAmount) : 0;
+        // For completed orders, assume full payment if no balance is specified
+        if (order.status === 'completed' && balance === 0 && deposit === 0) {
+          return sum + parseFloat(order.totalAmount);
+        }
+        return sum + deposit + balance;
+      }, 0);
+
+      const monthlyPaidRevenue = orders
+        .filter(order => new Date(order.createdAt!) >= currentMonth)
+        .reduce((sum, order) => {
+          const deposit = order.depositAmount ? parseFloat(order.depositAmount) : 0;
+          const balance = order.balanceAmount ? parseFloat(order.balanceAmount) : 0;
+          // For completed orders, assume full payment if no balance is specified
+          if (order.status === 'completed' && balance === 0 && deposit === 0) {
+            return sum + parseFloat(order.totalAmount);
+          }
+          return sum + deposit + balance;
+        }, 0);
+
+      const paymentRate = monthlyRevenue > 0 ? (monthlyPaidRevenue / monthlyRevenue) * 100 : 0;
+
       // Additional sales metrics
       const previousMonth = new Date();
       previousMonth.setMonth(previousMonth.getMonth() - 1);
@@ -144,7 +169,12 @@ class MetricsService {
         topCustomers: customers
           .filter(c => c.totalSpent && parseFloat(c.totalSpent) > 0)
           .sort((a, b) => parseFloat(b.totalSpent || "0") - parseFloat(a.totalSpent || "0"))
-          .slice(0, 5)
+          .slice(0, 5),
+        // Payment tracking metrics
+        paidRevenue: Number(paidRevenue.toFixed(2)),
+        monthlyPaidRevenue: Number(monthlyPaidRevenue.toFixed(2)),
+        paymentRate: Number(paymentRate.toFixed(1)),
+        outstandingAmount: Number((monthlyRevenue - monthlyPaidRevenue).toFixed(2))
       };
     } catch (error) {
       console.error('Error calculating metrics:', error);
@@ -244,7 +274,12 @@ class MetricsService {
       weeklyOrders: 0,
       weeklyRevenue: 0,
       ordersByStatus: {},
-      topCustomers: []
+      topCustomers: [],
+      // Payment tracking defaults
+      paidRevenue: 0,
+      monthlyPaidRevenue: 0,
+      paymentRate: 0,
+      outstandingAmount: 0
     };
   }
 }
