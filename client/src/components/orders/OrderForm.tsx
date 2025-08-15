@@ -104,7 +104,7 @@ export default function OrderForm({
   const [manualItemType, setManualItemType] = useState('');
   const [manualItemName, setManualItemName] = useState('');
   const [manualItemPrice, setManualItemPrice] = useState('');
-  const [manualItems, setManualItems] = useState<any[]>([]);
+  const [manualItems, setManualItems] = useState<any[]>(initialData?.manualItems || []);
   const { toast } = useToast();
   const [, setLocation] = useLocation();
 
@@ -383,10 +383,10 @@ export default function OrderForm({
   const statusOptions = [
     { value: "pending", label: "Pending" },
     { value: "measuring", label: "Measuring" },
-    { value: "production", label: "Production" },
-    { value: "ready", label: "Ready" },
+    { value: "designing", label: "Designing" },
+    { value: "cutting", label: "Cutting" },
+    { value: "assembly", label: "Assembly" },
     { value: "completed", label: "Completed" },
-    { value: "cancelled", label: "Cancelled" },
   ];
 
   const priorityOptions = [
@@ -461,6 +461,7 @@ export default function OrderForm({
       taxAmount: taxAmount.toFixed(2),
       discountAmount: discountAmount.toFixed(2),
       specialServices: specialServices,
+      manualItems: manualItems, // Include manual items in submission
     };
     onSubmit(submitData);
   };

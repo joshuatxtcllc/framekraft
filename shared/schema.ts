@@ -79,7 +79,7 @@ export const orders = pgTable("orders", {
   discountAmount: decimal("discount_amount", { precision: 10, scale: 2 }).default("0"),
   laborCost: decimal("labor_cost", { precision: 10, scale: 2 }),
   materialsCost: decimal("materials_cost", { precision: 10, scale: 2 }),
-  status: varchar("status").default("pending").notNull(), // pending, measuring, production, ready, completed, cancelled
+  status: varchar("status").default("pending").notNull(), // pending, measuring, designing, cutting, assembly, completed
   priority: varchar("priority").default("normal").notNull(), // low, normal, high, rush
   dueDate: timestamp("due_date"),
   completedAt: timestamp("completed_at"),
@@ -422,6 +422,14 @@ export const insertOrderSchema = createInsertSchema(orders).omit({
   customerId: z.number(),
   // Allow orderNumber to be optional - it will be generated if not provided
   orderNumber: z.string().optional(),
+  // Manual items for custom pricing entries
+  manualItems: z.array(z.object({
+    id: z.string(),
+    type: z.string(),
+    name: z.string(),
+    wholesalePrice: z.number(),
+    retailPrice: z.number()
+  })).optional(),
   // Accept date strings in YYYY-MM-DD format or Date objects, or null
   dueDate: z.union([z.string().regex(/^\d{4}-\d{2}-\d{2}$/), z.date()]).optional().nullable(),
   completedAt: z.union([z.string().datetime(), z.date()]).optional().nullable(),

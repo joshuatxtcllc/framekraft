@@ -128,9 +128,11 @@ export async function setupAuth(app: Express) {
         req.session.save((saveErr) => {
           if (saveErr) {
             console.error("Session save error:", saveErr);
+            return res.redirect("/api/login?error=session_save_failed");
           }
-          // Successful authentication, redirect with explicit success
-          return res.redirect("/?auth=success");
+          // Successful authentication, redirect to home
+          console.log("Authentication successful, redirecting to home");
+          return res.redirect("/");
         });
       });
     })(req, res, next);
@@ -149,30 +151,41 @@ export async function setupAuth(app: Express) {
 }
 
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
-  const user = req.user as any;
+  // Check if user is authenticated first
+  if (!req.isAuthenticated()) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
 
-  if (!req.isAuthenticated() || !user.expires_at) {
+  const user = req.user as any;
+  
+  // If no user object or missing expires_at, treat as unauthorized
+  if (!user || !user.expires_at) {
     return res.status(401).json({ message: "Unauthorized" });
   }
 
   const now = Math.floor(Date.now() / 1000);
-  if (now <= user.expires_at) {
+  
+  // If token is still valid, proceed
+  if (now < user.expires_at) {
     return next();
   }
 
+  // Token expired, try to refresh
   const refreshToken = user.refresh_token;
   if (!refreshToken) {
-    res.status(401).json({ message: "Unauthorized" });
-    return;
+    console.log("No refresh token available, redirecting to login");
+    return res.status(401).json({ message: "Unauthorized" });
   }
 
   try {
+    console.log("Attempting to refresh expired token");
     const config = await getOidcConfig();
     const tokenResponse = await client.refreshTokenGrant(config, refreshToken);
     updateUserSession(user, tokenResponse);
+    console.log("Token refreshed successfully");
     return next();
   } catch (error) {
-    res.status(401).json({ message: "Unauthorized" });
-    return;
+    console.error("Token refresh failed:", error);
+    return res.status(401).json({ message: "Unauthorized" });
   }
 };
