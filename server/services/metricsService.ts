@@ -186,7 +186,7 @@ class MetricsService {
       
       // Convert stored metrics back to dashboard format
       const metricsMap = storedMetrics.reduce((acc, metric) => {
-        acc[metric.metricType] = typeof metric.value === 'number' ? metric.value : parseFloat(metric.value);
+        acc[metric.metricType] = parseFloat(metric.value);
         return acc;
       }, {} as Record<string, number>);
       

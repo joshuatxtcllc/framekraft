@@ -449,39 +449,49 @@ export class DatabaseStorage implements IStorage {
     return metric;
   }
 
-  // The following method was updated to use raw SQL for upserting metrics
+  // Simplified metrics storage - storing as business metrics entries
   async storeBusinessMetric(metricType: string, value: number): Promise<void> {
     try {
-      // Create a simple key-value table for storing metrics if it doesn't exist
-      // For now, we'll store in a JSON format in a simple table
-      await db.raw(`
-        CREATE TABLE IF NOT EXISTS business_metrics (
-          id SERIAL PRIMARY KEY,
-          metric_type VARCHAR(255) NOT NULL UNIQUE,
-          metric_value DECIMAL(10,2) NOT NULL,
-          updated_at TIMESTAMP DEFAULT NOW()
-        )
-      `);
+      // Use the existing businessMetrics table for storage
+      const metricData = {
+        metricType,
+        value: value.toString(),
+        date: new Date()
+      };
 
-      await db.raw(`
-        INSERT INTO business_metrics (metric_type, metric_value, updated_at)
-        VALUES (?, ?, NOW())
-        ON CONFLICT (metric_type) 
-        DO UPDATE SET metric_value = EXCLUDED.metric_value, updated_at = NOW()
-      `, [metricType, value]);
+      // Check if metric exists and update or create
+      const existing = await db
+        .select()
+        .from(businessMetrics)
+        .where(eq(businessMetrics.metricType, metricType))
+        .limit(1);
+
+      if (existing.length > 0) {
+        await db
+          .update(businessMetrics)
+          .set({ value: value.toString(), date: new Date() })
+          .where(eq(businessMetrics.metricType, metricType));
+      } else {
+        await db.insert(businessMetrics).values(metricData);
+      }
     } catch (error) {
       console.error('Error storing business metric:', error);
     }
   }
 
-  // The following method was added to retrieve business metrics using raw SQL
-  async getBusinessMetrics(): Promise<Array<{metricType: string, value: number, updatedAt: Date}>> {
+  // Retrieve business metrics using Drizzle ORM
+  async getBusinessMetrics(): Promise<Array<{metricType: string, value: string, updatedAt: Date}>> {
     try {
-      const result = await db.raw(`
-        SELECT metric_type as "metricType", metric_value as value, updated_at as "updatedAt"
-        FROM business_metrics
-      `);
-      return result.rows || [];
+      const metrics = await db
+        .select({
+          metricType: businessMetrics.metricType,
+          value: businessMetrics.value,
+          updatedAt: businessMetrics.date
+        })
+        .from(businessMetrics)
+        .orderBy(desc(businessMetrics.date));
+        
+      return metrics;
     } catch (error) {
       console.error('Error retrieving business metrics:', error);
       return [];
