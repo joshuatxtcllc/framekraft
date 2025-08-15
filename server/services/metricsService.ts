@@ -78,26 +78,56 @@ class MetricsService {
       const averageOrderValue = orders.length > 0 ? totalRevenue / orders.length : 0;
 
       // Calculate paid revenue (deposits + balance payments)
+      // Note: balanceAmount represents remaining balance DUE, not balance PAID
+      // So we calculate paid amount as: totalAmount - balanceAmount (if positive)
       const paidRevenue = orders.reduce((sum, order) => {
+        const totalAmount = parseFloat(order.totalAmount);
         const deposit = order.depositAmount ? parseFloat(order.depositAmount) : 0;
-        const balance = order.balanceAmount ? parseFloat(order.balanceAmount) : 0;
-        // For completed orders, assume full payment if no balance is specified
-        if (order.status === 'completed' && balance === 0 && deposit === 0) {
-          return sum + parseFloat(order.totalAmount);
+        const balanceDue = order.balanceAmount ? parseFloat(order.balanceAmount) : 0;
+        
+        // For completed orders, assume full payment
+        if (order.status === 'completed') {
+          return sum + totalAmount;
         }
-        return sum + deposit + balance;
+        
+        // If there's a balance due, paid amount = total - balance due
+        if (balanceDue > 0) {
+          return sum + Math.max(0, totalAmount - balanceDue);
+        }
+        
+        // If balance is negative (overpayment), paid amount = total + abs(negative balance)
+        if (balanceDue < 0) {
+          return sum + totalAmount + Math.abs(balanceDue);
+        }
+        
+        // Otherwise, use deposit amount
+        return sum + deposit;
       }, 0);
 
       const monthlyPaidRevenue = orders
         .filter(order => new Date(order.createdAt!) >= currentMonth)
         .reduce((sum, order) => {
+          const totalAmount = parseFloat(order.totalAmount);
           const deposit = order.depositAmount ? parseFloat(order.depositAmount) : 0;
-          const balance = order.balanceAmount ? parseFloat(order.balanceAmount) : 0;
-          // For completed orders, assume full payment if no balance is specified
-          if (order.status === 'completed' && balance === 0 && deposit === 0) {
-            return sum + parseFloat(order.totalAmount);
+          const balanceDue = order.balanceAmount ? parseFloat(order.balanceAmount) : 0;
+          
+          // For completed orders, assume full payment
+          if (order.status === 'completed') {
+            return sum + totalAmount;
           }
-          return sum + deposit + balance;
+          
+          // If there's a balance due, paid amount = total - balance due
+          if (balanceDue > 0) {
+            return sum + Math.max(0, totalAmount - balanceDue);
+          }
+          
+          // If balance is negative (overpayment), paid amount = total + abs(negative balance)
+          if (balanceDue < 0) {
+            return sum + totalAmount + Math.abs(balanceDue);
+          }
+          
+          // Otherwise, use deposit amount
+          return sum + deposit;
         }, 0);
 
       const paymentRate = monthlyRevenue > 0 ? (monthlyPaidRevenue / monthlyRevenue) * 100 : 0;
