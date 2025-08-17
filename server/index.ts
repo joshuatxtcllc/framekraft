@@ -3,15 +3,7 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { securityHeaders, sanitizeRequest, apiSecurity } from "./middleware/security";
 import { rateLimit } from "./middleware/rateLimiting";
-
-// Validate required environment variables
-const requiredEnvVars = ['DATABASE_URL'];
-for (const envVar of requiredEnvVars) {
-  if (!process.env[envVar]) {
-    console.error(`Missing required environment variable: ${envVar}`);
-    process.exit(1);
-  }
-}
+import { env } from "./config/environment";
 
 const app = express();
 
@@ -117,7 +109,7 @@ app.use((req, res, next) => {
   // Other ports are firewalled. Default to 80 if not specified.
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
-  const port = parseInt(process.env.PORT || '80', 10);
+  const port = env.PORT;
   server.listen({
     port,
     host: "0.0.0.0",
