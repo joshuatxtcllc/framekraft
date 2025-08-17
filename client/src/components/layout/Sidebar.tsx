@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { Frame, LayoutDashboard, ShoppingBag, Users, Brain, Sparkles, Package, DollarSign, Settings, BarChart3, Building2, FileText, Database, Plus, Palette, ShoppingCart, TrendingUp } from "lucide-react";
+import { Frame, LayoutDashboard, ShoppingBag, Users, Brain, Sparkles, Package, DollarSign, Settings, BarChart3, Building2, FileText, Database, Plus, Palette, ShoppingCart, TrendingUp, CheckCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
@@ -193,6 +193,18 @@ export default function Sidebar() {
                   {item.name}
                 </Link>
               ))}
+              <Link
+                href="/system-validation"
+                className={cn(
+                  "sidebar-nav-item",
+                  location === "/system-validation"
+                    ? "sidebar-nav-item-active"
+                    : "sidebar-nav-item-inactive"
+                )}
+              >
+                <CheckCircle className="text-wood-200 mr-3 h-6 w-6" />
+                System Validation
+              </Link>
             </div>
           </div>
         </nav>

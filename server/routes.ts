@@ -486,6 +486,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use("/api/communication", communication);
   app.use("/api/inventory", inventoryRoutes);
 
+  // Add system routes for validation
+  const systemRoutes = await import('./routes/system');
+  app.use('/api/system', systemRoutes.default);
+
   const httpServer = createServer(app);
   return httpServer;
 }

@@ -25,6 +25,7 @@ import Receivables from "./pages/receivables";
 import KanbanBoard from "./pages/kanban";
 import CustomerPortal from "./pages/customer-portal";
 import OrderTracking from "./pages/order-tracking";
+import SystemValidation from "@/pages/system-validation";
 
 
 function Router() {
@@ -35,7 +36,7 @@ function Router() {
       {/* Public routes - accessible without authentication */}
       <Route path="/customer-portal" component={CustomerPortal} />
       <Route path="/order-tracking" component={OrderTracking} />
-      
+
       {isLoading || !isAuthenticated ? (
         <Route path="/" component={Landing} />
       ) : (
@@ -58,6 +59,7 @@ function Router() {
           <Route path="/kanban" component={KanbanBoard} />
           <Route path="/settings" component={Settings} />
           <Route path="/stripe-test" component={StripeTestPage} />
+          <Route path="/system-validation" component={SystemValidation} />
         </>
       )}
       <Route component={NotFound} />
