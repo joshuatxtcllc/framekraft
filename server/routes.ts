@@ -486,8 +486,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use("/api/communication", communication);
   app.use("/api/inventory", inventoryRoutes);
 
+  // Add receivables routes for payment management
+  const receivablesRoutes = await import('./routes/receivables.js');
+  app.use('/api/receivables', receivablesRoutes.default);
+  
   // Add system routes for validation
-  const systemRoutes = await import('./routes/system');
+  const systemRoutes = await import('./routes/system.js');
   app.use('/api/system', systemRoutes.default);
 
   const httpServer = createServer(app);

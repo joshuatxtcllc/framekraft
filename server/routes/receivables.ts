@@ -15,9 +15,13 @@ router.post("/record-payment", isAuthenticated, async (req, res) => {
       return res.status(404).json({ message: "Order not found" });
     }
 
-    const currentBalance = order.balanceAmount ? parseFloat(order.balanceAmount) : 0;
+    // Calculate correct balance from total and current deposit
+    const totalAmount = parseFloat(order.totalAmount);
     const currentDeposit = order.depositAmount ? parseFloat(order.depositAmount) : 0;
+    const currentBalance = totalAmount - currentDeposit;
     const payment = parseFloat(paymentAmount);
+    
+    console.log(`Payment calculation: Total: $${totalAmount}, Current Deposit: $${currentDeposit}, Current Balance: $${currentBalance}, Payment: $${payment}`);
     
     // Calculate new amounts
     const newDepositAmount = currentDeposit + payment;
@@ -41,8 +45,15 @@ router.post("/record-payment", isAuthenticated, async (req, res) => {
       message: `Payment of $${payment} recorded successfully`
     });
   } catch (error) {
-    console.error("Error recording payment:", error);
-    res.status(500).json({ message: "Failed to record payment" });
+    console.error("Error recording payment:", {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      requestData: { orderId, paymentAmount, paymentMethod, notes }
+    });
+    res.status(500).json({ 
+      message: "Failed to record payment",
+      error: error instanceof Error ? error.message : String(error)
+    });
   }
 });
 
