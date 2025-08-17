@@ -1,4 +1,3 @@
-
 import { Request, Response, Router } from 'express';
 import { isAuthenticated } from '../middleware/auth';
 import { storage } from '../storage';
@@ -25,7 +24,7 @@ router.post('/validate', isAuthenticated, async (req: Request, res: Response) =>
 
     // Database Validation
     const databaseTests: ValidationTest[] = [];
-    
+
     try {
       // Test database connectivity
       const orders = await storage.getOrders();
@@ -39,7 +38,7 @@ router.post('/validate', isAuthenticated, async (req: Request, res: Response) =>
       // Test data integrity
       const customers = await storage.getCustomers();
       const totalRevenue = orders.reduce((sum, order) => sum + parseFloat(order.totalAmount), 0);
-      
+
       databaseTests.push({
         name: 'Data Integrity',
         status: totalRevenue > 0 ? 'pass' : 'warning',
@@ -78,7 +77,7 @@ router.post('/validate', isAuthenticated, async (req: Request, res: Response) =>
       // Validate revenue calculations
       const monthlyOrders = orders.filter(order => new Date(order.createdAt!) >= currentMonth);
       const monthlyRevenue = monthlyOrders.reduce((sum, order) => sum + parseFloat(order.totalAmount), 0);
-      
+
       businessTests.push({
         name: 'Revenue Calculation',
         status: monthlyRevenue >= 0 ? 'pass' : 'fail',
@@ -95,7 +94,7 @@ router.post('/validate', isAuthenticated, async (req: Request, res: Response) =>
         const totalAmount = parseFloat(order.totalAmount);
         const deposit = order.depositAmount ? parseFloat(order.depositAmount) : 0;
         const balance = totalAmount - deposit;
-        
+
         if (balance < 0) negativeBalances++;
         totalOutstanding += Math.max(0, balance);
       }
@@ -110,7 +109,7 @@ router.post('/validate', isAuthenticated, async (req: Request, res: Response) =>
       // Validate pricing logic
       const frameStyles = await storage.getFrameStyles();
       const matColors = await storage.getMatColors();
-      
+
       businessTests.push({
         name: 'Pricing Data Integrity',
         status: frameStyles.length > 0 && matColors.length > 0 ? 'pass' : 'warning',
@@ -135,7 +134,7 @@ router.post('/validate', isAuthenticated, async (req: Request, res: Response) =>
     // Check environment variables
     const requiredEnvVars = ['DATABASE_URL', 'SESSION_SECRET'];
     const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
-    
+
     securityTests.push({
       name: 'Environment Configuration',
       status: missingVars.length === 0 ? 'pass' : 'fail',
@@ -160,7 +159,7 @@ router.post('/validate', isAuthenticated, async (req: Request, res: Response) =>
     // Check memory usage
     const memUsage = process.memoryUsage();
     const heapUsedMB = Math.round(memUsage.heapUsed / 1024 / 1024);
-    
+
     performanceTests.push({
       name: 'Memory Usage',
       status: heapUsedMB < 400 ? 'pass' : heapUsedMB < 800 ? 'warning' : 'fail',
@@ -172,7 +171,7 @@ router.post('/validate', isAuthenticated, async (req: Request, res: Response) =>
     const startTime = Date.now();
     await storage.getOrders();
     const queryTime = Date.now() - startTime;
-    
+
     performanceTests.push({
       name: 'Database Query Performance',
       status: queryTime < 1000 ? 'pass' : queryTime < 3000 ? 'warning' : 'fail',
@@ -217,7 +216,7 @@ router.post('/test-features', isAuthenticated, async (req: Request, res: Respons
         totalAmount: '150.00',
         status: 'pending'
       };
-      
+
       // Don't actually create the order, just validate the structure
       featureTests.push({
         feature: 'Order Creation',
@@ -240,7 +239,7 @@ router.post('/test-features', isAuthenticated, async (req: Request, res: Respons
       const glassPrice = 25.00;
       const labor = 65.00;
       const total = framePrice + matPrice + glassPrice + labor;
-      
+
       featureTests.push({
         feature: 'Pricing Engine',
         status: total > 0 ? 'pass' : 'fail',
