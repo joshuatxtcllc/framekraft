@@ -144,19 +144,18 @@ export default function Receivables() {
     });
   };
 
-  // Calculate receivables data
+  // Calculate receivables data - match metrics service logic
   const receivablesData = orders
     .map((order: Order) => {
       const customer = customers.find((c: any) => c.id === order.customerId);
-      const balanceAmount = order.balanceAmount ? parseFloat(order.balanceAmount) : 0;
       const totalAmount = parseFloat(order.totalAmount);
       const depositAmount = order.depositAmount ? parseFloat(order.depositAmount) : 0;
       
       // Calculate CORRECT balance: total - deposit = what customer owes
       const actualBalance = totalAmount - depositAmount;
       
-      // Only include orders with outstanding balances
-      if (actualBalance <= 0 || order.status === 'completed' || order.status === 'cancelled') {
+      // Only include orders with outstanding balances (exclude completed/cancelled)
+      if (actualBalance <= 0 || ['completed', 'cancelled'].includes(order.status)) {
         return null;
       }
 

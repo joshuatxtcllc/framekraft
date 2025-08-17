@@ -123,34 +123,74 @@ class MetricsService {
         return acc;
       }, {} as Record<string, number>);
 
-      // Calculate receivables - total outstanding balances INCLUDING completed orders with unpaid balances
+      // Calculate receivables - ONLY orders with outstanding balances (excluding completed/cancelled)
       const receivablesData = orders
-        .filter(order => order.status !== 'cancelled') // Only exclude cancelled orders
+        .filter(order => !['completed', 'cancelled'].includes(order.status)) // Exclude completed and cancelled orders
         .map(order => {
           const totalAmount = parseFloat(order.totalAmount);
           const depositAmount = order.depositAmount ? parseFloat(order.depositAmount) : 0;
           const actualBalance = totalAmount - depositAmount;
           return actualBalance > 0 ? actualBalance : 0;
-        });
+        })
+        .filter(balance => balance > 0); // Only include orders with actual outstanding balance
       
       const totalOutstanding = receivablesData.reduce((sum, balance) => sum + balance, 0);
       
-      // Calculate overdue amounts based on due dates (including completed orders with unpaid balances)
+      // Calculate overdue amounts - only for orders with outstanding balances
       const overdueAmount = orders
         .filter(order => {
-          if (order.status === 'cancelled') return false;
+          if (['completed', 'cancelled'].includes(order.status)) return false;
           if (!order.dueDate) return false;
           
           const dueDate = new Date(order.dueDate);
           const now = new Date();
-          return now > dueDate;
+          const totalAmount = parseFloat(order.totalAmount);
+          const depositAmount = order.depositAmount ? parseFloat(order.depositAmount) : 0;
+          const actualBalance = totalAmount - depositAmount;
+          
+          return now > dueDate && actualBalance > 0;
         })
         .reduce((sum, order) => {
           const totalAmount = parseFloat(order.totalAmount);
           const depositAmount = order.depositAmount ? parseFloat(order.depositAmount) : 0;
           const actualBalance = totalAmount - depositAmount;
-          return sum + (actualBalance > 0 ? actualBalance : 0);
+          return sum + actualBalance;
         }, 0);
+      
+      // Calculate critical and high priority receivables counts
+      const criticalReceivables = orders.filter(order => {
+        if (['completed', 'cancelled'].includes(order.status)) return false;
+        
+        const totalAmount = parseFloat(order.totalAmount);
+        const depositAmount = order.depositAmount ? parseFloat(order.depositAmount) : 0;
+        const actualBalance = totalAmount - depositAmount;
+        
+        if (actualBalance <= 0) return false;
+        
+        if (!order.dueDate) return false;
+        const daysPastDue = Math.floor((new Date().getTime() - new Date(order.dueDate).getTime()) / (1000 * 60 * 60 * 24));
+        return daysPastDue > 30;
+      });
+      
+      const highPriorityReceivables = orders.filter(order => {
+        if (['completed', 'cancelled'].includes(order.status)) return false;
+        
+        const totalAmount = parseFloat(order.totalAmount);
+        const depositAmount = order.depositAmount ? parseFloat(order.depositAmount) : 0;
+        const actualBalance = totalAmount - depositAmount;
+        
+        if (actualBalance <= 0) return false;
+        
+        if (!order.dueDate) return false;
+        const daysPastDue = Math.floor((new Date().getTime() - new Date(order.dueDate).getTime()) / (1000 * 60 * 60 * 24));
+        return daysPastDue > 14 && daysPastDue <= 30;
+      });
+      
+      const totalCriticalAmount = criticalReceivables.reduce((sum, order) => {
+        const totalAmount = parseFloat(order.totalAmount);
+        const depositAmount = order.depositAmount ? parseFloat(order.depositAmount) : 0;
+        return sum + (totalAmount - depositAmount);
+      }, 0);
 
       return {
         monthlyRevenue: Number(monthlyRevenue.toFixed(2)),
@@ -177,7 +217,11 @@ class MetricsService {
         // Financial metrics for receivables tracking
         totalOutstanding: Number(totalOutstanding.toFixed(2)),
         overdueAmount: Number(overdueAmount.toFixed(2)),
-        receivablesCount: receivablesData.filter(balance => balance > 0).length
+        receivablesCount: receivablesData.length,
+        criticalReceivablesCount: criticalReceivables.length,
+        highPriorityReceivablesCount: highPriorityReceivables.length,
+        totalCriticalAmount: Number(totalCriticalAmount.toFixed(2)),
+        totalReceivablesCount: receivablesData.length
       };
     } catch (error) {
       console.error('Error calculating metrics:', error);
