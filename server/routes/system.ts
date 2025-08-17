@@ -1,6 +1,6 @@
 
 import { Request, Response, Router } from 'express';
-import { requireAuth } from '../middleware/auth';
+import { isAuthenticated } from '../middleware/auth';
 import { storage } from '../storage';
 import { metricsAuditService } from '../services/metricsAuditService';
 
@@ -19,7 +19,7 @@ interface ValidationResult {
 }
 
 // Comprehensive system validation endpoint
-router.post('/validate', requireAuth, async (req: Request, res: Response) => {
+router.post('/validate', isAuthenticated, async (req: Request, res: Response) => {
   try {
     const results: ValidationResult[] = [];
 
@@ -202,7 +202,7 @@ router.post('/validate', requireAuth, async (req: Request, res: Response) => {
 });
 
 // Feature functionality test endpoint
-router.post('/test-features', requireAuth, async (req: Request, res: Response) => {
+router.post('/test-features', isAuthenticated, async (req: Request, res: Response) => {
   try {
     const featureTests = [];
 

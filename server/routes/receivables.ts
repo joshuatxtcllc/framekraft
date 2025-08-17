@@ -1,11 +1,11 @@
 import { Router } from "express";
 import { storage } from "../storage";
-import { requireAuth } from "../middleware/auth";
+import { isAuthenticated } from "../middleware/auth";
 
 const router = Router();
 
 // Get payment record for order
-router.post("/record-payment", requireAuth, async (req, res) => {
+router.post("/record-payment", isAuthenticated, async (req, res) => {
   try {
     const { orderId, paymentAmount, paymentMethod, notes } = req.body;
     
@@ -47,7 +47,7 @@ router.post("/record-payment", requireAuth, async (req, res) => {
 });
 
 // Send payment reminder (placeholder for future integration with Twilio/email)
-router.post("/send-reminder", requireAuth, async (req, res) => {
+router.post("/send-reminder", isAuthenticated, async (req, res) => {
   try {
     const { orderId, method } = req.body; // method: 'sms', 'email', 'call'
     
