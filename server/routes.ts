@@ -475,6 +475,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const aiRoutes = await import('./routes/ai.js');
   app.use('/api/ai', aiRoutes.default);
 
+  // Public routes (no authentication required)
+  const { publicRoutes } = await import("./routes/public.js");
+  app.use("/api/public", publicRoutes);
+
   // Register other routes that were not covered by the new registration system
   app.use("/api/settings", settingsRoutes);
   app.use("/api/vendor-catalog", vendorCatalogRoutes);

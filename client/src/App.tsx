@@ -23,6 +23,8 @@ import AIAssistant from "./pages/ai-assistant";
 import Cart from "./pages/cart";
 import Receivables from "./pages/receivables";
 import KanbanBoard from "./pages/kanban";
+import CustomerPortal from "./pages/customer-portal";
+import OrderTracking from "./pages/order-tracking";
 
 
 function Router() {
@@ -30,6 +32,10 @@ function Router() {
 
   return (
     <Switch>
+      {/* Public routes - accessible without authentication */}
+      <Route path="/customer-portal" component={CustomerPortal} />
+      <Route path="/order-tracking" component={OrderTracking} />
+      
       {isLoading || !isAuthenticated ? (
         <Route path="/" component={Landing} />
       ) : (

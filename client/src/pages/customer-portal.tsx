@@ -63,10 +63,13 @@ export default function CustomerPortal() {
                   type="text"
                   placeholder="Order #FC2401"
                   className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  data-testid="input-track-order"
                 />
-                <Button className="bg-emerald-600 hover:bg-emerald-700">
-                  Track
-                </Button>
+                <Link href="/order-tracking">
+                  <Button className="bg-emerald-600 hover:bg-emerald-700" data-testid="button-track-order">
+                    Track
+                  </Button>
+                </Link>
               </div>
             </CardContent>
           </Card>
