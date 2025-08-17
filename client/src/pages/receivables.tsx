@@ -69,8 +69,14 @@ export default function Receivables() {
         credentials: 'include',
         body: JSON.stringify(paymentData)
       });
-      if (!response.ok) throw new Error('Failed to record payment');
-      return response.json();
+      
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.message || 'Failed to record payment');
+      }
+      
+      return result;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
@@ -81,12 +87,14 @@ export default function Receivables() {
       toast({
         title: "Payment Recorded",
         description: data.message,
+        variant: data.paidInFull ? "default" : "default",
       });
     },
-    onError: (error) => {
+    onError: (error: any) => {
+      console.error("Payment recording error:", error);
       toast({
-        title: "Error",
-        description: "Failed to record payment",
+        title: "Payment Failed",
+        description: error.message || "Failed to record payment. Please try again.",
         variant: "destructive",
       });
     }
@@ -121,13 +129,20 @@ export default function Receivables() {
   const handleRecordPayment = (order: any) => {
     setSelectedOrder(order);
     // Use the corrected balance amount for payment
-    const actualBalance = order.totalAmount - (order.depositAmount || 0);
+    const actualBalance = parseFloat(order.totalAmount) - (parseFloat(order.depositAmount) || 0);
     setPaymentAmount(actualBalance.toString());
     setIsPaymentDialogOpen(true);
   };
 
   const handleSubmitPayment = () => {
-    if (!selectedOrder || !paymentAmount) return;
+    if (!selectedOrder || !paymentAmount || parseFloat(paymentAmount) <= 0) {
+      toast({
+        title: "Invalid Payment",
+        description: "Please enter a valid payment amount greater than $0.",
+        variant: "destructive",
+      });
+      return;
+    }
     
     recordPaymentMutation.mutate({
       orderId: selectedOrder.id,
