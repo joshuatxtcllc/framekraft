@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { Frame, LayoutDashboard, ShoppingBag, Users, Brain, Sparkles, Package, DollarSign, Settings, BarChart3, Building2, FileText, Database, Plus } from "lucide-react";
+import { Frame, LayoutDashboard, ShoppingBag, Users, Brain, Sparkles, Package, DollarSign, Settings, BarChart3, Building2, FileText, Database, Plus, Palette, ShoppingCart, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
@@ -14,7 +14,7 @@ export default function Sidebar() {
     queryKey: ["/api/orders"],
   });
 
-  const activeOrdersCount = (orders as any[])?.filter((order: any) => 
+  const activeOrdersCount = (orders as any[])?.filter((order: any) =>
     !['completed', 'cancelled'].includes(order.status)
   ).length || 0;
 

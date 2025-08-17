@@ -20,6 +20,7 @@ import IntegrationSettings from "@/pages/integration-settings";
 import StripeTestPage from "./pages/stripe-test";
 import VirtualFrameDesigner from "./pages/virtual-frame-designer";
 import AIAssistant from "./pages/ai-assistant";
+import Cart from "./pages/cart";
 import Receivables from "./pages/receivables";
 import KanbanBoard from "./pages/kanban";
 
@@ -43,6 +44,7 @@ function Router() {
           <Route path="/communication" component={Communication} />
           <Route path="/api-explorer" component={APIExplorer} />
           <Route path="/ai-assistant" component={AIAssistant} />
+          <Route path="/cart" component={Cart} />
           <Route path="/integration-settings" component={IntegrationSettings} />
           <Route path="/vendor-catalog" component={VendorCatalog} />
           <Route path="/virtual-frame-designer" component={VirtualFrameDesigner} />

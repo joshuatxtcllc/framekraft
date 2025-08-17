@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { 
   Eye, 
@@ -35,6 +34,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useToast } from "@/hooks/use-toast";
 
 // Frame color definitions with realistic finishes
 const FRAME_COLORS = {
@@ -180,7 +180,7 @@ const FRAME_STYLES = [
 
 export default function VirtualFrameDesigner() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  
+
   // State management
   const [artworkImage, setArtworkImage] = useState<string>('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjEzMyIgdmlld0JveD0iMCAwIDIwMCAxMzMiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMTMzIiBmaWxsPSIjNEY4NEY4Ii8+Cjx0ZXh0IHg9IjEwMCIgeT0iNzAiIGZpbGw9IndoaXRlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCI+U2FtcGxlIEFydHdvcms8L3RleHQ+Cgo8L3N2Zz4K');
   const [artworkDimensions, setArtworkDimensions] = useState({ width: 24, height: 16, unit: 'inches' });
@@ -200,8 +200,19 @@ export default function VirtualFrameDesigner() {
       'brushed-metal': `linear-gradient(90deg, ${color} 48%, rgba(255,255,255,0.2) 50%, ${color} 52%)`,
       'smooth': color
     };
-    
+
     return patterns[texture as keyof typeof patterns] || color;
+  };
+
+  // Handle toast notification for adding to cart
+  const { toast } = useToast();
+
+  const handleAddToCart = () => {
+    toast({
+      title: "Item Added to Cart",
+      description: "Your custom frame has been added to your cart.",
+      variant: "success",
+    });
   };
 
   // Calculate pricing
@@ -211,7 +222,7 @@ export default function VirtualFrameDesigner() {
 
     const perimeter = (artworkDimensions.width + artworkDimensions.height) * 2;
     const basePrice = perimeter * frameStyle.price;
-    
+
     let matPrice = 0;
     if (selectedMatOption === 'single') matPrice = 20;
     if (selectedMatOption === 'double') matPrice = 35;
@@ -226,13 +237,13 @@ export default function VirtualFrameDesigner() {
       reader.onload = (e) => {
         const result = e.target?.result as string;
         setArtworkImage(result);
-        
+
         // Create image to get dimensions
         const img = new window.Image();
         img.onload = () => {
           const aspectRatio = img.width / img.height;
           let width, height;
-          
+
           // Standard sizes based on aspect ratio
           if (aspectRatio > 1.5) {
             // Landscape
@@ -247,7 +258,7 @@ export default function VirtualFrameDesigner() {
             width = 20;
             height = 20;
           }
-          
+
           setArtworkDimensions({ width, height, unit: 'inches' });
         };
         img.src = result;
@@ -309,22 +320,22 @@ export default function VirtualFrameDesigner() {
     const centerY = canvas.height / 2;
     const frameStyle = FRAME_STYLES.find(s => s.id === selectedFrameStyle);
     const frameColor = frameStyle?.colors.find(c => c.id === selectedFrameColor);
-    
+
     if (!frameStyle || !frameColor) return;
 
     const frameWidth = frameStyle.width * 20; // Scale frame width
     const matWidth = selectedMatOption !== 'none' ? 40 : 0;
-    
+
     const displayWidth = 300;
     const displayHeight = (displayWidth * artworkDimensions.height) / artworkDimensions.width;
 
     // Calculate absolute positions
     const totalWidth = displayWidth + (matWidth * 2) + (frameWidth * 2);
     const totalHeight = displayHeight + (matWidth * 2) + (frameWidth * 2);
-    
+
     const frameX = centerX - totalWidth / 2;
     const frameY = centerY - totalHeight / 2;
-    
+
     const artworkX = centerX - displayWidth / 2;
     const artworkY = centerY - displayHeight / 2;
 
@@ -340,7 +351,7 @@ export default function VirtualFrameDesigner() {
         const matTotalHeight = displayHeight + (matWidth * 2);
         const matX = centerX - matTotalWidth / 2;
         const matY = centerY - matTotalHeight / 2;
-        
+
         ctx.fillStyle = matColor1.hex;
         ctx.fillRect(matX, matY, matTotalWidth, matTotalHeight);
 
@@ -352,7 +363,7 @@ export default function VirtualFrameDesigner() {
             const innerTotalHeight = displayHeight + (innerMatWidth * 2);
             const innerMatX = centerX - innerTotalWidth / 2;
             const innerMatY = centerY - innerTotalHeight / 2;
-            
+
             ctx.fillStyle = matColor2.hex;
             ctx.fillRect(innerMatX, innerMatY, innerTotalWidth, innerTotalHeight);
           }
@@ -371,9 +382,9 @@ export default function VirtualFrameDesigner() {
         // Calculate aspect ratio to maintain image proportions
         const imgAspectRatio = img.naturalWidth / img.naturalHeight;
         const displayAspectRatio = displayWidth / displayHeight;
-        
+
         let drawWidth, drawHeight;
-        
+
         // Scale image to fit within display area while maintaining aspect ratio
         if (imgAspectRatio > displayAspectRatio) {
           // Image is wider - fit to width
@@ -384,11 +395,11 @@ export default function VirtualFrameDesigner() {
           drawHeight = displayHeight;
           drawWidth = displayHeight * imgAspectRatio;
         }
-        
+
         // Center the scaled image in the display area using absolute coordinates
         const imageX = centerX - drawWidth / 2;
         const imageY = centerY - drawHeight / 2;
-        
+
         ctx.drawImage(img, imageX, imageY, drawWidth, drawHeight);
       };
       img.onerror = () => {
@@ -459,10 +470,10 @@ export default function VirtualFrameDesigner() {
   return (
     <div className="min-h-screen flex bg-background">
       <Sidebar />
-      
+
       <div className="lg:pl-64 flex flex-col flex-1">
         <Header />
-        
+
         <main className="flex-1">
           <div className="py-6">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
@@ -481,7 +492,7 @@ export default function VirtualFrameDesigner() {
                     <RotateCcw className="w-4 h-4 mr-2" />
                     Reset Design
                   </Button>
-                  <Button>
+                  <Button onClick={handleAddToCart}>
                     <ShoppingCart className="w-4 h-4 mr-2" />
                     Add to Cart - ${calculatePrice()}.00
                   </Button>
@@ -517,7 +528,7 @@ export default function VirtualFrameDesigner() {
                               className="border border-gray-300 rounded shadow-sm bg-white max-w-full h-auto"
                             />
                           </div>
-                          
+
                           <div className="mt-4 space-y-2">
                             <div className="flex justify-between text-sm">
                               <span>Frame: {FRAME_STYLES.find(s => s.id === selectedFrameStyle)?.name || 'None'}</span>
@@ -571,7 +582,7 @@ export default function VirtualFrameDesigner() {
                                 onChange={handleFileInput}
                                 className="hidden"
                               />
-                              
+
                               <Upload className="h-12 w-12 text-gray-400 mx-auto mb-3" />
                               <h4 className="font-medium mb-2">Upload Your Image</h4>
                               <p className="text-gray-600 text-sm mb-3">

@@ -193,7 +193,15 @@ export default function AIRecommendations() {
                 <Badge variant="outline" className="text-xs">
                   Impact: {insight.impact_score}/10
                 </Badge>
-                <Button size="sm" variant="outline" className="text-xs h-7">
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  className="text-xs h-7"
+                  onClick={() => {
+                    // Navigate to AI assistant with context
+                    window.location.href = `/ai-assistant?insight=${encodeURIComponent(insight.title)}`;
+                  }}
+                >
                   Learn More
                 </Button>
               </div>
