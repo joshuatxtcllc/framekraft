@@ -123,9 +123,9 @@ class MetricsService {
         return acc;
       }, {} as Record<string, number>);
 
-      // Calculate receivables - ONLY orders with outstanding balances (excluding completed/cancelled)
+      // Calculate receivables - ALL orders with outstanding balances (only exclude cancelled orders)
       const receivablesData = orders
-        .filter(order => !['completed', 'cancelled'].includes(order.status)) // Exclude completed and cancelled orders
+        .filter(order => order.status !== 'cancelled') // Only exclude cancelled orders
         .map(order => {
           const totalAmount = parseFloat(order.totalAmount);
           const depositAmount = order.depositAmount ? parseFloat(order.depositAmount) : 0;
@@ -139,7 +139,7 @@ class MetricsService {
       // Calculate overdue amounts - only for orders with outstanding balances
       const overdueAmount = orders
         .filter(order => {
-          if (['completed', 'cancelled'].includes(order.status)) return false;
+          if (order.status === 'cancelled') return false; // Only exclude cancelled orders
           if (!order.dueDate) return false;
           
           const dueDate = new Date(order.dueDate);
@@ -159,7 +159,7 @@ class MetricsService {
       
       // Calculate critical and high priority receivables counts
       const criticalReceivables = orders.filter(order => {
-        if (['completed', 'cancelled'].includes(order.status)) return false;
+        if (order.status === 'cancelled') return false; // Only exclude cancelled orders
         
         const totalAmount = parseFloat(order.totalAmount);
         const depositAmount = order.depositAmount ? parseFloat(order.depositAmount) : 0;
@@ -173,7 +173,7 @@ class MetricsService {
       });
       
       const highPriorityReceivables = orders.filter(order => {
-        if (['completed', 'cancelled'].includes(order.status)) return false;
+        if (order.status === 'cancelled') return false; // Only exclude cancelled orders
         
         const totalAmount = parseFloat(order.totalAmount);
         const depositAmount = order.depositAmount ? parseFloat(order.depositAmount) : 0;

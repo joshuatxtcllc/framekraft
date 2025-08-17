@@ -154,8 +154,8 @@ export default function Receivables() {
       // Calculate CORRECT balance: total - deposit = what customer owes
       const actualBalance = totalAmount - depositAmount;
       
-      // Only include orders with outstanding balances (exclude completed/cancelled)
-      if (actualBalance <= 0 || ['completed', 'cancelled'].includes(order.status)) {
+      // Only include orders with outstanding balances (exclude cancelled only)
+      if (actualBalance <= 0 || order.status === 'cancelled') {
         return null;
       }
 
