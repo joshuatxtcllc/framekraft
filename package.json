@@ -5,13 +5,14 @@
   "license": "MIT",
   "engines": { "node": "20.x" },
   "scripts": {
-    "build": "npm run build:frontend && npm run build:backend",
-    "build:frontend": "cd frontend && npm ci && npm run build",
-    "build:backend": "cd backend && npm ci && tsc",
-    "start": "node backend/dist/server.js",
-    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
-    "dev:backend": "cd backend && npm run dev",
-    "dev:frontend": "cd frontend && npm run dev",
+    "postinstall": "(cd client && npm ci) && (cd server && npm ci)",
+    "build": "npm run build:client && npm run build:server",
+    "build:client": "cd client && npm run build",
+    "build:server": "cd server && npm run build",
+    "start": "node server/dist/server.js",
+    "dev": "concurrently -k -n server,client -c auto \"npm:dev:server\" \"npm:dev:client\"",
+    "dev:server": "cd server && npm run dev",
+    "dev:client": "cd client && npm run dev",
     "test": "vitest"
   },
   "dependencies": {
