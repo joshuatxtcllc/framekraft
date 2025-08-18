@@ -1,5 +1,4 @@
-{
-  "name": "server",
+name": "server",
   "version": "1.0.0",
   "private": true,
   "type": "module",
@@ -8,8 +7,7 @@
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
-    "test": "vitest"
-  },
+    "test": "vitest",
   "dependencies": {
     "@anthropic-ai/sdk": "^0.37.0",
     "@neondatabase/serverless": "^0.10.4",
