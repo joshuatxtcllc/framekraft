@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { Frame, LayoutDashboard, ShoppingBag, Users, Brain, Sparkles, Package, DollarSign, Settings, BarChart3, Building2, FileText, Database, Plus, Palette, ShoppingCart, TrendingUp, CheckCircle } from "lucide-react";
+import { Frame, LayoutDashboard, ShoppingBag, Users, Brain, Sparkles, Package, DollarSign, Settings, BarChart3, Building2, FileText, Database, Plus, Palette, ShoppingCart, TrendingUp, CheckCircle, Kanban } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
@@ -31,6 +31,12 @@ export default function Sidebar() {
       icon: ShoppingBag,
       current: location === '/orders',
       badge: activeOrdersCount > 0 ? activeOrdersCount : null,
+    },
+    {
+      name: 'Production Board',
+      href: '/kanban',
+      icon: Kanban,
+      current: location === '/kanban',
     },
     {
       name: 'Customers',

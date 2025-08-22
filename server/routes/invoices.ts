@@ -1,17 +1,12 @@
 import type { Express } from "express";
 import Stripe from "stripe";
-import { storage } from "../storage";
+import * as storage from "../mongoStorage";
 import { insertInvoiceSchema, insertInvoiceItemSchema, insertPaymentSchema } from "@shared/schema";
-import { isAuthenticated } from "../middleware/auth";
 import { emailService } from "../services/emailService";
 
-if (!process.env.STRIPE_SECRET_KEY) {
-  throw new Error('Missing required Stripe secret: STRIPE_SECRET_KEY');
-}
+const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SECRET_KEY) : null;
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-
-export function registerInvoiceRoutes(app: Express) {
+export function registerInvoiceRoutes(app: Express, isAuthenticated: any) {
   // Get all invoices
   app.get("/api/invoices", isAuthenticated, async (req, res) => {
     try {
@@ -107,6 +102,10 @@ export function registerInvoiceRoutes(app: Express) {
   // Create Stripe payment intent for invoice
   app.post("/api/invoices/:id/create-payment-intent", isAuthenticated, async (req, res) => {
     try {
+      if (!stripe) {
+        return res.status(503).json({ message: "Stripe is not configured" });
+      }
+
       const invoiceId = parseInt(req.params.id);
       const invoice = await storage.getInvoice(invoiceId);
 
@@ -208,6 +207,10 @@ export function registerInvoiceRoutes(app: Express) {
   // Handle Stripe webhook for successful payments
   app.post("/api/invoices/stripe-webhook", async (req, res) => {
     try {
+      if (!stripe) {
+        return res.status(503).json({ message: "Stripe is not configured" });
+      }
+
       const sig = req.headers['stripe-signature'];
       let event;
 

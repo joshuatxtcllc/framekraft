@@ -1,9 +1,8 @@
 import type { Express } from "express";
-import { storage } from "../storage";
+import * as storage from "../mongoStorage";
 import { insertWholesalerSchema } from "@shared/schema";
-import { isAuthenticated } from "../middleware/auth";
 
-export function registerWholesalerRoutes(app: Express) {
+export function registerWholesalerRoutes(app: Express, isAuthenticated: any) {
   // Get all wholesalers
   app.get("/api/wholesalers", isAuthenticated, async (req, res) => {
     try {

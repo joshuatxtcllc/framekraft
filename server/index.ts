@@ -1,9 +1,12 @@
+import 'dotenv/config';
 import express, { type Request, Response, NextFunction } from "express";
+import cookieParser from "cookie-parser";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { securityHeaders, sanitizeRequest, apiSecurity } from "./middleware/security";
 import { rateLimit } from "./middleware/rateLimiting";
 import { env } from "./config/environment";
+import { connectDB } from "./mongodb";
 
 const app = express();
 
@@ -21,12 +24,22 @@ app.use('/api', rateLimit({
   message: "Too many API requests, please try again later."
 }));
 
-// Stricter rate limiting for auth endpoints
-app.use('/api/auth', rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10, // limit each IP to 10 auth requests per windowMs
-  message: "Too many authentication attempts, please try again later."
-}));
+// Stricter rate limiting for auth endpoints (except user check)
+app.use('/api/auth', (req, res, next) => {
+  // Skip rate limiting for user check endpoint in development
+  if (process.env.NODE_ENV === 'development' && req.path === '/user' && req.method === 'GET') {
+    return next();
+  }
+  
+  rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: process.env.NODE_ENV === 'development' ? 50 : 10, // More lenient in dev
+    message: "Too many authentication attempts, please try again later."
+  })(req, res, next);
+});
+
+// Cookie parser for auth tokens
+app.use(cookieParser());
 
 // Body parsing with size limits
 app.use(express.json({ limit: '10mb' }));
@@ -74,6 +87,9 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Connect to MongoDB
+  await connectDB();
+  
   const server = await registerRoutes(app);
 
   // Error logging middleware
@@ -110,11 +126,7 @@ app.use((req, res, next) => {
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
   const port = env.PORT;
-  server.listen({
-    port,
-    host: "0.0.0.0",
-    reusePort: true,
-  }, () => {
+  server.listen(port, process.env.NODE_ENV === 'development' ? "127.0.0.1" : "0.0.0.0", () => {
     log(`serving on port ${port}`);
   });
 })();

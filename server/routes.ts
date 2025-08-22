@@ -1,7 +1,8 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { storage } from "./storage";
-import { setupAuth, isAuthenticated } from "./replitAuth";
+import * as storage from "./mongoStorage";
+import { setupAuthenticationSystem, authenticate, migrateAuthentication } from "./auth";
+import { demoAuthService } from "./auth/services/demoAuthService";
 import { aiService } from "./services/aiService";
 import { emailService } from './services/emailService';
 import { searchService } from './services/searchService';
@@ -17,42 +18,127 @@ import inventoryRoutes from "./routes/inventory.js";
 import ai from "./routes/ai.js";
 import giclee from "./routes/giclee.js";
 import communication from "./routes/communication.js";
+import authRoutes from "./routes/authMongoDB";
 import { rateLimit } from "./middleware/rateLimiting";
 import { requestLogger } from "./middleware/logging";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Auth middleware
-  await setupAuth(app);
-
-  // Auth routes
-  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
+  // Register MongoDB auth routes
+  app.use('/api/auth', authRoutes);
+  
+  // Keep the original demo login for backward compatibility
+  app.post('/api/auth/login-demo', async (req, res) => {
     try {
-      if (!req.user || !req.user.claims || !req.user.claims.sub) {
-        console.error("Invalid user session data:", req.user);
-        return res.status(401).json({ message: "Invalid session", isAuthenticated: false });
+      const { email, password } = req.body;
+      
+      // Check demo credentials
+      if (email === 'demo@framecraft.com' && password === 'demo123456') {
+        const user = {
+          id: '1',
+          email: 'demo@framecraft.com',
+          firstName: 'Demo',
+          lastName: 'User',
+          businessName: 'Demo Framing Co.',
+          role: 'owner',
+          emailVerified: true,
+        };
+        
+        // Set a simple cookie
+        res.cookie('accessToken', 'demo-token', {
+          httpOnly: true,
+          maxAge: 24 * 60 * 60 * 1000, // 24 hours
+        });
+        
+        return res.json({
+          success: true,
+          user,
+          message: 'Login successful',
+        });
+      } else {
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid email or password',
+        });
       }
+    } catch (error) {
+      console.error('Login error:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+      });
+    }
+  });
+  
+  // Simple logout endpoint  
+  app.get('/api/logout', (req, res) => {
+    // Clear the authentication cookie
+    res.clearCookie('accessToken');
+    // Redirect to login page
+    res.redirect('/login');
+  });
 
-      const userId = req.user.claims.sub;
-      console.log("Fetching user for ID:", userId);
+  // Registration is now handled by MongoDB auth routes at /api/auth/signup
+  // Skip migration in development if database is not available
+  try {
+    await migrateAuthentication();
+  } catch (error: any) {
+    if (error.message?.includes('DATABASE_URL') || error.code === 'ECONNREFUSED') {
+      console.log('⚠️ Skipping database migration - using in-memory auth');
+    } else {
+      throw error;
+    }
+  }
+  
+  // Setup new authentication system
+  try {
+    await setupAuthenticationSystem(app);
+  } catch (error: any) {
+    console.log('⚠️ Using simplified auth setup due to:', error.message);
+  }
+  
+  // Use new authentication middleware
+  const isAuthenticated = authenticate;
 
-      const user = await storage.getUser(userId);
-
-      if (!user) {
-        console.error("User not found in database:", userId);
-        return res.status(404).json({ message: "User not found", isAuthenticated: false });
+  // Auth user endpoint
+  app.get('/api/auth/user', async (req: any, res) => {
+    try {
+      // For local development, return a mock user
+      if (process.env.NODE_ENV === 'development' && !process.env.REPL_ID?.startsWith('repl-')) {
+        const mockUser = {
+          user: {
+            id: 'local-dev-user',
+            email: 'dev@localhost',
+            firstName: 'Local',
+            lastName: 'Developer',
+            profileImageUrl: null,
+            role: 'owner',
+            businessName: 'Dev Framing Co.',
+            emailVerified: true,
+            isAuthenticated: true
+          }
+        };
+        return res.json(mockUser);
       }
-
-      const userResponse = {
-        id: user.id,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        profileImageUrl: user.profileImageUrl,
-        isAuthenticated: true
-      };
-
-      console.log("Successfully fetched user:", userResponse.email);
-      res.json(userResponse);
+      
+      // Check for Replit authentication
+      if (req.user && req.user.claims) {
+        const userResponse = {
+          user: {
+            id: req.user.claims.sub,
+            email: req.user.claims.email || req.user.claims.name || 'user@replit.com',
+            firstName: req.user.claims.first_name || req.user.claims.name?.split(' ')[0] || 'User',
+            lastName: req.user.claims.last_name || req.user.claims.name?.split(' ')[1] || '',
+            profileImageUrl: req.user.claims.profile_image_url || null,
+            role: 'owner',
+            businessName: 'Replit Framing Co.',
+            emailVerified: true,
+            isAuthenticated: true
+          }
+        };
+        return res.json(userResponse);
+      }
+      
+      return res.status(401).json({ message: "Not authenticated", isAuthenticated: false });
     } catch (error) {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user", isAuthenticated: false });
@@ -99,7 +185,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/customers', isAuthenticated, async (req, res) => {
     try {
       const customers = await storage.getCustomers();
-      res.json(customers);
+      // Transform MongoDB documents to match frontend expectations
+      const formattedCustomers = customers.map((customer: any) => ({
+        id: customer._id?.toString() || customer.id,
+        firstName: customer.firstName,
+        lastName: customer.lastName,
+        email: customer.email,
+        phone: customer.phone,
+        address: customer.address,
+        notes: customer.notes,
+        totalSpent: customer.totalSpent,
+        orderCount: customer.orderCount,
+        createdAt: customer.createdAt,
+        updatedAt: customer.updatedAt
+      }));
+      res.json(formattedCustomers);
     } catch (error) {
       console.error("Error fetching customers:", error);
       res.status(500).json({ message: "Failed to fetch customers" });
@@ -109,7 +209,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/customers', isAuthenticated, async (req, res) => {
     try {
       const customerData = insertCustomerSchema.parse(req.body);
-      const customer = await storage.createCustomer(customerData);
+      // Filter out null values for MongoDB
+      const cleanedData: any = {};
+      Object.keys(customerData).forEach(key => {
+        const value = (customerData as any)[key];
+        if (value !== null) {
+          cleanedData[key] = value;
+        }
+      });
+      const customer = await storage.createCustomer(cleanedData);
       res.status(201).json(customer);
     } catch (error) {
       console.error("Error creating customer:", error);
@@ -119,13 +227,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/customers/:id', isAuthenticated, async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = req.params.id;
       const customer = await storage.getCustomer(id);
       if (!customer) {
         return res.status(404).json({ message: "Customer not found" });
       }
       const orders = await storage.getOrdersByCustomer(id);
-      res.json({ ...customer, orders });
+      
+      // Format customer data properly
+      const formattedCustomer = {
+        id: customer._id?.toString() || customer.id,
+        firstName: customer.firstName,
+        lastName: customer.lastName,
+        email: customer.email,
+        phone: customer.phone,
+        address: customer.address,
+        notes: customer.notes,
+        totalSpent: customer.totalSpent,
+        orderCount: customer.orderCount,
+        createdAt: customer.createdAt,
+        updatedAt: customer.updatedAt,
+        orders
+      };
+      
+      res.json(formattedCustomer);
     } catch (error) {
       console.error("Error fetching customer:", error);
       res.status(500).json({ message: "Failed to fetch customer" });
@@ -134,7 +259,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put('/api/customers/:id', isAuthenticated, async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = req.params.id;
       const customerData = insertCustomerSchema.partial().parse(req.body);
       const customer = await storage.updateCustomer(id, customerData);
       res.json(customer);
@@ -156,7 +281,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         orders = await storage.getOrders();
       }
 
-      res.json(orders);
+      // The mongoStorage.getOrders already populates customer data
+      // Just ensure the response format matches frontend expectations
+      const formattedOrders = orders.map((order: any) => ({
+        ...order,
+        id: order.id || order._id?.toString(),
+        customer: order.customerId || order.customer,
+      }));
+
+      res.json(formattedOrders);
     } catch (error) {
       console.error("Error fetching orders:", error);
       res.status(500).json({ message: "Failed to fetch orders" });
@@ -167,53 +300,90 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       console.log("Raw order data received:", JSON.stringify(req.body, null, 2));
 
-      // Parse and validate the request body with the updated schema
-      const orderData = insertOrderSchema.parse(req.body);
-      console.log("Parsed order data:", JSON.stringify(orderData, null, 2));
+      // Don't use the PostgreSQL schema validation for MongoDB
+      const orderData = req.body;
+      console.log("Order data:", JSON.stringify(orderData, null, 2));
 
       // Handle temporary customer creation if customerId is negative
       let finalCustomerId = orderData.customerId;
-      if (orderData.customerId < 0) {
+      
+      // Check if we're creating a new customer (negative ID from frontend)
+      if (parseInt(orderData.customerId) < 0) {
         console.log("Creating new customer for temporary ID:", orderData.customerId);
-
-        // Find the temporary customer in the customers array (added by the frontend)
+        
+        // Extract customer name from the order form
+        // The frontend sends the customer data when creating a new customer inline
+        const nameParts = (orderData.customerName || '').split(' ');
+        const firstName = nameParts[0] || 'New';
+        const lastName = nameParts.slice(1).join(' ') || 'Customer';
+        
+        // Create a real customer
+        const newCustomer = await storage.createCustomer({
+          firstName,
+          lastName,
+          email: orderData.customerEmail || undefined,
+          phone: orderData.customerPhone || undefined,
+        });
+        
+        finalCustomerId = (newCustomer as any)._id.toString();
+        console.log("Created new customer with ID:", finalCustomerId);
+      } else {
+        // For existing customers, we need to find them by their numeric ID
+        // and get their MongoDB ObjectId
         const customers = await storage.getCustomers();
-        const tempCustomer = customers.find(c => c.id === orderData.customerId);
-
-        if (tempCustomer) {
-          // Create a real customer
-          const newCustomer = await storage.createCustomer({
-            firstName: tempCustomer.firstName,
-            lastName: tempCustomer.lastName,
-            email: tempCustomer.email || undefined,
-            phone: tempCustomer.phone || undefined,
-            address: tempCustomer.address || undefined,
-            notes: tempCustomer.notes || undefined,
-          });
-          finalCustomerId = newCustomer.id;
-          console.log("Created new customer with ID:", finalCustomerId);
+        const customer = customers.find(c => c.id?.toString() === orderData.customerId?.toString());
+        
+        if (customer) {
+          finalCustomerId = customer._id ? customer._id.toString() : customer.id;
         } else {
-          throw new Error("Temporary customer not found");
+          // If not found by id field, try to find by _id directly
+          const directCustomer = await storage.getCustomer(orderData.customerId);
+          if (directCustomer) {
+            finalCustomerId = (directCustomer as any)._id.toString();
+          } else {
+            throw new Error(`Customer not found with ID: ${orderData.customerId}`);
+          }
         }
       }
 
       // Generate order number using current orders count for unique ID
       const existingOrders = await storage.getOrders();
       const nextOrderId = existingOrders.length + 1;
-      const orderNumber = `FC${new Date().getFullYear().toString().slice(-2)}${String(nextOrderId).padStart(2, '0')}`;
+      const orderNumber = `FC${new Date().getFullYear().toString().slice(-2)}${String(nextOrderId).padStart(4, '0')}`;
       console.log("Generated order number:", orderNumber);
 
       // Create the order with validated data
       const order = await storage.createOrder({
-        ...orderData,
         customerId: finalCustomerId,
         orderNumber,
-        // Convert date strings to Date objects if provided
+        description: orderData.description,
+        artworkDescription: orderData.artworkDescription || undefined,
+        dimensions: orderData.dimensions || undefined,
+        frameStyle: orderData.frameStyle || undefined,
+        matColor: orderData.matColor || undefined,
+        glazing: orderData.glazing || undefined,
+        totalAmount: parseFloat(orderData.totalAmount),
+        depositAmount: orderData.depositAmount ? parseFloat(orderData.depositAmount) : 0,
+        discountPercentage: orderData.discountPercentage ? parseFloat(orderData.discountPercentage) : 0,
+        taxAmount: orderData.taxAmount ? parseFloat(orderData.taxAmount) : 0,
+        discountAmount: orderData.discountAmount ? parseFloat(orderData.discountAmount) : 0,
+        taxExempt: orderData.taxExempt || false,
+        status: orderData.status || 'pending',
+        priority: orderData.priority || 'normal',
+        notes: orderData.notes || undefined,
         dueDate: orderData.dueDate ? new Date(orderData.dueDate) : undefined,
-        completedAt: orderData.completedAt ? new Date(orderData.completedAt) : undefined,
       });
-      console.log("Order created successfully:", order.id);
-      res.status(201).json(order);
+      
+      console.log("Order created successfully:", (order as any)._id);
+      
+      // Transform the response to match frontend expectations
+      const responseOrder = {
+        ...(order as any).toObject(),
+        id: (order as any)._id.toString(),
+        customer: await storage.getCustomer(finalCustomerId),
+      };
+      
+      res.status(201).json(responseOrder);
     } catch (error: any) {
       console.error("Error creating order:", error);
       console.error("Error details:", error?.message);
@@ -252,7 +422,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/orders/:id', isAuthenticated, async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = req.params.id;
       const order = await storage.getOrder(id);
       if (!order) {
         return res.status(404).json({ message: "Order not found" });
@@ -466,10 +636,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Register new feature routes
-  registerPricingRoutes(app);
-  registerWholesalerRoutes(app);
-  registerInvoiceRoutes(app);
-  registerFileUploadRoutes(app);
+  registerPricingRoutes(app, isAuthenticated);
+  registerWholesalerRoutes(app, isAuthenticated);
+  registerInvoiceRoutes(app, isAuthenticated);
+  registerFileUploadRoutes(app, isAuthenticated);
 
   // Register AI routes
   const aiRoutes = await import('./routes/ai.js');

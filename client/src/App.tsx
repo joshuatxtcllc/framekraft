@@ -1,13 +1,18 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
+import { useEffect } from "react";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
+import Login from "@/pages/login";
+import SignUp from "@/pages/signup";
 import Dashboard from "@/pages/dashboard";
 import Orders from "@/pages/orders";
+import NewOrder from "@/pages/order-new";
+import EditOrder from "@/pages/order-edit";
 import Customers from "@/pages/customers";
 import Pricing from "@/pages/pricing";
 import Invoices from "@/pages/invoices";
@@ -26,24 +31,56 @@ import KanbanBoard from "./pages/kanban";
 import CustomerPortal from "./pages/customer-portal";
 import OrderTracking from "./pages/order-tracking";
 import SystemValidation from "@/pages/system-validation";
-
-
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
+  const [location, setLocation] = useLocation();
+
+  // Protected routes that require authentication
+  const protectedPaths = [
+    '/dashboard', '/orders', '/orders/new', '/orders/edit', '/customers', '/pricing', '/invoices', 
+    '/wholesalers', '/communication', '/api-explorer', '/ai-assistant',
+    '/cart', '/integration-settings', '/vendor-catalog', '/virtual-frame-designer',
+    '/receivables', '/kanban', '/settings', '/stripe-test', '/system-validation'
+  ];
+
+  // Check if current path is protected and user is not authenticated
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      const isProtectedPath = protectedPaths.some(path => location === path);
+      if (isProtectedPath) {
+        setLocation('/login');
+      }
+    }
+  }, [location, isAuthenticated, isLoading]);
+
+  // Show loading only on initial load
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <Switch>
-      {/* Public routes - accessible without authentication */}
+      {/* Public routes - always accessible */}
       <Route path="/customer-portal" component={CustomerPortal} />
       <Route path="/order-tracking" component={OrderTracking} />
-
-      {isLoading || !isAuthenticated ? (
-        <Route path="/" component={Landing} />
-      ) : (
+      <Route path="/login" component={Login} />
+      <Route path="/signup" component={SignUp} />
+      
+      {/* Protected routes */}
+      {isAuthenticated ? (
         <>
           <Route path="/" component={Dashboard} />
           <Route path="/dashboard" component={Dashboard} />
           <Route path="/orders" component={Orders} />
+          <Route path="/orders/new" component={NewOrder} />
+          <Route path="/orders/edit/:id" component={EditOrder} />
           <Route path="/customers" component={Customers} />
           <Route path="/pricing" component={Pricing} />
           <Route path="/invoices" component={Invoices} />
@@ -61,7 +98,11 @@ function Router() {
           <Route path="/stripe-test" component={StripeTestPage} />
           <Route path="/system-validation" component={SystemValidation} />
         </>
+      ) : (
+        /* Show landing page for non-authenticated users */
+        <Route path="/" component={Landing} />
       )}
+      
       <Route component={NotFound} />
     </Switch>
   );

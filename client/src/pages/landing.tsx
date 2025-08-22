@@ -18,7 +18,7 @@ export default function Landing() {
             </div>
           </div>
           <Button 
-            onClick={() => window.location.href = '/api/login'}
+            onClick={() => window.location.href = '/login'}
             className="btn-primary"
           >
             Sign In
@@ -39,7 +39,7 @@ export default function Landing() {
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button 
               size="lg" 
-              onClick={() => window.location.href = '/api/login'}
+              onClick={() => window.location.href = '/signup'}
               className="btn-primary text-lg px-8 py-4"
             >
               Get Started Today

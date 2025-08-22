@@ -1,161 +1,27 @@
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { PageLayout } from "@/components/navigation/PageLayout";
+import { useQuery } from "@tanstack/react-query";
+import { useLocation } from "wouter";
+import Sidebar from "@/components/layout/Sidebar";
+import Header from "@/components/layout/Header";
 import OrderList from "@/components/orders/OrderList";
 import SimpleKanbanView from "@/components/orders/SimpleKanbanView";
-import OrderForm from "@/components/orders/OrderForm";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Plus, Table, Kanban, Printer } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
 import { printOrderInvoice } from "@/lib/printUtils";
 
 export default function Orders() {
-  const [isFormOpen, setIsFormOpen] = useState(false);
-  const [editingOrder, setEditingOrder] = useState(null);
   const [viewMode, setViewMode] = useState<'table' | 'kanban'>('table');
   const { toast } = useToast();
-  const queryClient = useQueryClient();
+  const [, setLocation] = useLocation();
 
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ["/api/orders"],
   });
 
-  const { data: customers = [] } = useQuery({
-    queryKey: ["/api/customers"],
-  });
-
-  const createOrderMutation = useMutation({
-    mutationFn: async (data: any) => {
-      // Clean and format the data properly
-      const orderData = {
-        customerId: parseInt(data.customerId),
-        description: data.description,
-        artworkDescription: data.artworkDescription || null,
-        dimensions: data.dimensions || null,
-        frameStyle: data.frameStyle || null,
-        matColor: data.matColor || null,
-        glazing: data.glazing || null,
-        totalAmount: parseFloat(data.totalAmount),
-        depositAmount: data.depositAmount ? parseFloat(data.depositAmount) : 0,
-        discountPercentage: data.discountPercentage ? parseFloat(data.discountPercentage) : 0,
-        status: data.status || 'pending',
-        priority: data.priority || 'normal',
-        dueDate: data.dueDate || null,
-        notes: data.notes || null,
-      };
-
-      const response = await apiRequest("POST", "/api/orders", orderData);
-      return response.json();
-    },
-    onSuccess: (newOrder) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/customers"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/metrics"] });
-      setIsFormOpen(false);
-      setEditingOrder(null);
-      toast({
-        title: "Success",
-        description: `Order #${newOrder.orderNumber} created successfully!`,
-      });
-    },
-    onError: (error: any) => {
-      console.error("Order creation error:", error);
-      console.error("Error details:", {
-        message: error?.message,
-        stack: error?.stack,
-        response: error?.response,
-        status: error?.status
-      });
-
-      let errorMessage = "Failed to create order. Please try again.";
-
-      // Parse API error response if available
-      if (error?.response) {
-        try {
-          const errorData = error.response;
-          console.log("API error response:", errorData);
-
-          if (errorData?.details?.type === 'validation') {
-            errorMessage = `Validation failed: ${errorData.details.issues?.map((i: any) => i.message).join(', ') || 'Invalid data provided'}`;
-          } else if (errorData?.details?.type === 'foreign_key') {
-            errorMessage = "Invalid customer selected. Please choose a valid customer.";
-          } else if (errorData?.details?.type === 'duplicate_key') {
-            errorMessage = "Order number already exists. Please try again.";
-          } else if (errorData?.message) {
-            errorMessage = errorData.message;
-          }
-        } catch (parseError) {
-          console.error("Error parsing API response:", parseError);
-        }
-      } else if (error?.message) {
-        errorMessage = error.message;
-      }
-
-      toast({
-        title: "Error Creating Order",
-        description: errorMessage,
-        variant: "destructive",
-      });
-    },
-  });
-
-  const updateOrderMutation = useMutation({
-    mutationFn: async ({ id, ...data }: any) => {
-      // Clean and format the data properly
-      const orderData = {
-        customerId: parseInt(data.customerId),
-        description: data.description,
-        artworkDescription: data.artworkDescription || null,
-        dimensions: data.dimensions || null,
-        frameStyle: data.frameStyle || null,
-        matColor: data.matColor || null,
-        glazing: data.glazing || null,
-        totalAmount: parseFloat(data.totalAmount),
-        depositAmount: data.depositAmount ? parseFloat(data.depositAmount) : 0,
-        discountPercentage: data.discountPercentage ? parseFloat(data.discountPercentage) : 0,
-        status: data.status,
-        priority: data.priority,
-        dueDate: data.dueDate || null,
-        notes: data.notes || null,
-      };
-
-      const response = await apiRequest("PUT", `/api/orders/${id}`, orderData);
-      return response.json();
-    },
-    onSuccess: (updatedOrder) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/customers"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/metrics"] });
-      setIsFormOpen(false);
-      setEditingOrder(null);
-      toast({
-        title: "Success",
-        description: `Order #${updatedOrder.orderNumber} updated successfully!`,
-      });
-    },
-    onError: (error: any) => {
-      console.error("Order update error:", error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to update order. Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const handleSubmit = (data: any) => {
-    if (editingOrder) {
-      updateOrderMutation.mutate({ id: (editingOrder as any).id, ...data });
-    } else {
-      createOrderMutation.mutate(data);
-    }
-  };
-
   const handleEdit = (order: any) => {
-    setEditingOrder(order);
-    setIsFormOpen(true);
+    // Navigate to edit page
+    setLocation(`/orders/edit/${order.id}`);
   };
 
   const handleGenerateInvoice = async (order: any) => {
@@ -316,9 +182,15 @@ FrameCraft`;
     };
 
   return (
-    <PageLayout>
-      <div className="py-6">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
+    <div className="min-h-screen flex bg-background">
+      <Sidebar />
+      
+      <div className="lg:pl-64 flex flex-col flex-1">
+        <Header />
+        
+        <main className="flex-1">
+          <div className="py-6">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
               
 
 
@@ -376,31 +248,14 @@ FrameCraft`;
                   </div>
 
                   {/* New Order Button */}
-                  <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-                    <DialogTrigger asChild>
-                      <Button className="btn-primary h-10 px-6 font-semibold bg-green-600 hover:bg-green-700 text-white" data-testid="button-new-order">
-                        <Plus className="w-4 h-4 mr-2" />
-                        New Order
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                      <DialogHeader>
-                        <DialogTitle>
-                          {editingOrder ? 'Edit Order' : 'Create New Order'}
-                        </DialogTitle>
-                      </DialogHeader>
-                      <OrderForm
-                        customers={Array.isArray(customers) ? customers : []}
-                        initialData={editingOrder}
-                        onSubmit={handleSubmit}
-                        isLoading={createOrderMutation.isPending || updateOrderMutation.isPending}
-                        onCancel={() => {
-                          setIsFormOpen(false);
-                          setEditingOrder(null);
-                        }}
-                      />
-                    </DialogContent>
-                  </Dialog>
+                  <Button 
+                    className="btn-primary h-10 px-6 font-semibold bg-green-600 hover:bg-green-700 text-white" 
+                    data-testid="button-new-order"
+                    onClick={() => setLocation('/orders/new')}
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    New Order
+                  </Button>
                 </div>
               </div>
 
@@ -426,6 +281,8 @@ FrameCraft`;
               )}
             </div>
           </div>
-    </PageLayout>
+        </main>
+      </div>
+    </div>
   );
 }

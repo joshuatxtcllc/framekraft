@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import Sidebar from '@/components/layout/Sidebar';
+import Header from '@/components/layout/Header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -216,7 +218,14 @@ export default function VendorCatalog() {
   );
 
   return (
-    <div className="p-6 space-y-6" data-testid="vendor-catalog-page">
+    <div className="min-h-screen flex bg-background">
+      <Sidebar />
+      
+      <div className="lg:pl-64 flex flex-col flex-1">
+        <Header />
+        
+        <main className="flex-1">
+          <div className="p-6 space-y-6" data-testid="vendor-catalog-page">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
@@ -396,6 +405,9 @@ export default function VendorCatalog() {
           </div>
         </TabsContent>
       </Tabs>
+          </div>
+        </main>
+      </div>
     </div>
   );
 }

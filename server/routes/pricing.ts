@@ -1,13 +1,12 @@
 import type { Express } from "express";
-import { storage } from "../storage";
+import * as storage from "../mongoStorage";
 import { insertPriceStructureSchema } from "@shared/schema";
-import { isAuthenticated } from "../middleware/auth";
 
-export function registerPricingRoutes(app: Express) {
+export function registerPricingRoutes(app: Express, isAuthenticated: any) {
   // Get all price structure items
   app.get("/api/pricing/structure", isAuthenticated, async (req, res) => {
     try {
-      const prices = await storage.getPriceStructure();
+      const prices = await storage.getPriceStructures();
       res.json(prices);
     } catch (error) {
       console.error("Error fetching price structure:", error);
@@ -30,7 +29,7 @@ export function registerPricingRoutes(app: Express) {
   // Update price structure item
   app.put("/api/pricing/structure/:id", isAuthenticated, async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = req.params.id;
       const validatedData = insertPriceStructureSchema.partial().parse(req.body);
       const price = await storage.updatePriceStructure(id, validatedData);
       res.json(price);
@@ -43,7 +42,7 @@ export function registerPricingRoutes(app: Express) {
   // Delete price structure item
   app.delete("/api/pricing/structure/:id", isAuthenticated, async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = req.params.id;
       await storage.deletePriceStructure(id);
       res.json({ message: "Price structure item deleted successfully" });
     } catch (error) {

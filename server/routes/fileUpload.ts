@@ -2,8 +2,7 @@ import type { Express } from "express";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
-import { storage } from "../storage";
-import { isAuthenticated } from "../middleware/auth";
+import * as storage from "../mongoStorage";
 
 // Configure multer for file uploads
 const uploadDir = path.join(process.cwd(), 'uploads', 'catalogs');
@@ -47,7 +46,7 @@ const upload = multer({
   }
 });
 
-export function registerFileUploadRoutes(app: Express) {
+export function registerFileUploadRoutes(app: Express, isAuthenticated: any) {
   // Upload wholesaler catalog
   app.post('/api/wholesalers/:id/upload-catalog', 
     isAuthenticated, 

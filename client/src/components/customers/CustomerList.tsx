@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Edit, Search, Mail, Phone, MapPin, Eye } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import CustomerDetails from "./CustomerDetails";
 
 interface Customer {
   id: number;
@@ -14,10 +15,14 @@ interface Customer {
   email?: string;
   phone?: string;
   address?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
   notes?: string;
   totalSpent: string;
   orderCount: number;
   createdAt: string;
+  updatedAt?: string;
 }
 
 interface CustomerListProps {
@@ -28,6 +33,8 @@ interface CustomerListProps {
 
 export default function CustomerList({ customers, isLoading, onEdit }: CustomerListProps) {
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
 
   const formatCurrency = (amount: string) => {
     return new Intl.NumberFormat('en-US', {
@@ -193,7 +200,14 @@ export default function CustomerList({ customers, isLoading, onEdit }: CustomerL
                           >
                             <Edit className="w-4 h-4" />
                           </Button>
-                          <Button variant="ghost" size="sm">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedCustomer(customer);
+                              setIsDetailsOpen(true);
+                            }}
+                          >
                             <Eye className="w-4 h-4" />
                           </Button>
                         </div>
@@ -206,6 +220,16 @@ export default function CustomerList({ customers, isLoading, onEdit }: CustomerL
           </div>
         )}
       </CardContent>
+      
+      {/* Customer Details Modal */}
+      <CustomerDetails
+        customer={selectedCustomer}
+        isOpen={isDetailsOpen}
+        onClose={() => {
+          setIsDetailsOpen(false);
+          setSelectedCustomer(null);
+        }}
+      />
     </Card>
   );
 }

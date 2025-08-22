@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from "@tanstack/react-query";
-import { PageLayout } from "@/components/navigation/PageLayout";
+import Sidebar from "@/components/layout/Sidebar";
+import Header from "@/components/layout/Header";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Plus, Printer, BarChart3, Table } from "lucide-react";
@@ -105,8 +106,14 @@ const KanbanBoard = () => {
 
   if (isLoading) {
     return (
-      <PageLayout>
-        <div className="p-6">
+      <div className="min-h-screen flex bg-background">
+        <Sidebar />
+        
+        <div className="lg:pl-64 flex flex-col flex-1">
+          <Header />
+          
+          <main className="flex-1">
+            <div className="p-6">
           <div className="animate-pulse">
             <div className="h-8 bg-muted rounded w-64 mb-4"></div>
             <div className="flex gap-4">
@@ -115,14 +122,22 @@ const KanbanBoard = () => {
               ))}
             </div>
           </div>
+            </div>
+          </main>
         </div>
-      </PageLayout>
+      </div>
     );
   }
 
   return (
-    <PageLayout>
-      <div className="p-6">
+    <div className="min-h-screen flex bg-background">
+      <Sidebar />
+      
+      <div className="lg:pl-64 flex flex-col flex-1">
+        <Header />
+        
+        <main className="flex-1">
+          <div className="p-6">
         <div className="mb-6">
           <h1 className="text-3xl font-bold text-primary mb-2">Production Board</h1>
           <p className="text-muted-foreground">Drag orders between stages to update their status</p>
@@ -287,8 +302,10 @@ const KanbanBoard = () => {
             </div>
           </Card>
         </div>
+          </div>
+        </main>
       </div>
-    </PageLayout>
+    </div>
   );
 };
 

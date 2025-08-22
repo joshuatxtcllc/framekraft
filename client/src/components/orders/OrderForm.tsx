@@ -63,8 +63,7 @@ const orderSchema = z.object({
 
 type OrderFormData = z.infer<typeof orderSchema>;
 
-type OrderSubmitData = Omit<OrderFormData, 'customerId' | 'dueDate'> & {
-  customerId: number;
+type OrderSubmitData = Omit<OrderFormData, 'dueDate'> & {
   dueDate?: string | null;
   taxExempt?: boolean;
   totalAmount: string;
@@ -397,9 +396,13 @@ export default function OrderForm({
   ];
 
   // Filter customers based on search
-  const filteredCustomers = customers.filter(customer =>
-    `${customer.firstName} ${customer.lastName}`.toLowerCase().includes(customerSearch.toLowerCase())
-  );
+  const filteredCustomers = customers.filter(customer => {
+    if (!customer) return false;
+    const firstName = customer.firstName || '';
+    const lastName = customer.lastName || '';
+    const fullName = `${firstName} ${lastName}`.trim();
+    return fullName.toLowerCase().includes(customerSearch.toLowerCase());
+  });
 
   // Filter frames based on search
   const filteredFrames = frameOptions.filter(option =>
@@ -412,7 +415,11 @@ export default function OrderForm({
   );
 
   // Get selected customer for display
-  const selectedCustomer = customers.find(c => c.id.toString() === form.watch("customerId"));
+  const selectedCustomer = customers.find(c => {
+    if (!c) return false;
+    const customerId = form.watch("customerId");
+    return c.id?.toString() === customerId;
+  });
 
   // Get selected frame for display
   const selectedFrame = frameOptions.find(f => f.value === form.watch("frameStyle"));
@@ -454,7 +461,7 @@ export default function OrderForm({
 
     const submitData: OrderSubmitData = {
       ...data,
-      customerId: parseInt(data.customerId),
+      customerId: data.customerId, // Keep as string for MongoDB ObjectId
       dueDate: data.dueDate ? data.dueDate.toISOString().split('T')[0] : null,
       taxExempt: data.taxExempt,
       totalAmount: finalTotal.toFixed(2),
@@ -592,16 +599,16 @@ export default function OrderForm({
                         variant="outline"
                         role="combobox"
                         aria-expanded={customerOpen}
-                        className="justify-between"
+                        className="w-full justify-between"
                       >
                         {selectedCustomer
-                          ? `${selectedCustomer.firstName} ${selectedCustomer.lastName}`
+                          ? `${selectedCustomer.firstName || ''} ${selectedCustomer.lastName || ''}`.trim() || 'Selected Customer'
                           : "Select or type customer name..."}
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                       </Button>
                     </FormControl>
                   </PopoverTrigger>
-                  <PopoverContent className="w-[400px] p-0">
+                  <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start" sideOffset={4}>
                     <Command>
                       <CommandInput
                         placeholder="Search customers or type new name..."
@@ -641,7 +648,7 @@ export default function OrderForm({
                         {filteredCustomers.map((customer) => (
                           <CommandItem
                             key={customer.id}
-                            value={`${customer.firstName} ${customer.lastName}`}
+                            value={`${customer.firstName || ''} ${customer.lastName || ''}`.trim()}
                             onSelect={() => {
                               field.onChange(customer.id.toString());
                               setCustomerOpen(false);
@@ -654,7 +661,7 @@ export default function OrderForm({
                                 selectedCustomer?.id === customer.id ? "opacity-100" : "opacity-0"
                               )}
                             />
-                            {customer.firstName} {customer.lastName}
+                            {customer.firstName || ''} {customer.lastName || ''}
                             {customer.email && (
                               <span className="ml-auto text-sm text-muted-foreground">
                                 {customer.email}
@@ -676,7 +683,7 @@ export default function OrderForm({
             control={form.control}
             name="status"
             render={({ field }) => (
-              <FormItem>
+              <FormItem className="flex flex-col">
                 <FormLabel>Status</FormLabel>
                 <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl>
@@ -740,7 +747,7 @@ export default function OrderForm({
             control={form.control}
             name="dimensions"
             render={({ field }) => (
-              <FormItem>
+              <FormItem className="flex flex-col">
                 <FormLabel>Dimensions</FormLabel>
                 <FormControl>
                   <Input placeholder='e.g., 16"x20"' {...field} />
@@ -755,7 +762,7 @@ export default function OrderForm({
             control={form.control}
             name="quantity"
             render={({ field }) => (
-              <FormItem>
+              <FormItem className="flex flex-col">
                 <FormLabel>Quantity *</FormLabel>
                 <FormControl>
                   <Input
@@ -776,7 +783,7 @@ export default function OrderForm({
             control={form.control}
             name="priority"
             render={({ field }) => (
-              <FormItem>
+              <FormItem className="flex flex-col">
                 <FormLabel>Priority</FormLabel>
                 <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl>
@@ -813,7 +820,7 @@ export default function OrderForm({
                         variant="outline"
                         role="combobox"
                         aria-expanded={frameOpen}
-                        className="justify-between"
+                        className="w-full justify-between"
                         data-testid="button-frame-select"
                       >
                         {selectedFrame
@@ -823,7 +830,7 @@ export default function OrderForm({
                       </Button>
                     </FormControl>
                   </PopoverTrigger>
-                  <PopoverContent className="w-[400px] p-0">
+                  <PopoverContent className="w-full p-0" align="start">
                     <Command>
                       <CommandInput
                         placeholder="Search frame styles..."
@@ -883,7 +890,7 @@ export default function OrderForm({
                         variant="outline"
                         role="combobox"
                         aria-expanded={matOpen}
-                        className="justify-between"
+                        className="w-full justify-between"
                         data-testid="button-mat-select"
                       >
                         {selectedMat
@@ -893,7 +900,7 @@ export default function OrderForm({
                       </Button>
                     </FormControl>
                   </PopoverTrigger>
-                  <PopoverContent className="w-[400px] p-0">
+                  <PopoverContent className="w-full p-0" align="start">
                     <Command>
                       <CommandInput
                         placeholder="Search mat colors..."
@@ -944,7 +951,7 @@ export default function OrderForm({
             control={form.control}
             name="glazing"
             render={({ field }) => (
-              <FormItem>
+              <FormItem className="flex flex-col">
                 <FormLabel>Glazing</FormLabel>
                 <Select onValueChange={field.onChange} value={field.value || ""}>
                   <FormControl>
@@ -1225,6 +1232,35 @@ export default function OrderForm({
                         <span>Total:</span>
                         <span>${pricing.total.toFixed(2)}</span>
                       </div>
+                      {(() => {
+                        const depositAmount = parseFloat(form.watch("depositAmount") || "0");
+                        if (depositAmount > 0) {
+                          const remaining = Math.max(0, pricing.total - depositAmount);
+                          const isPaidInFull = depositAmount >= pricing.total;
+                          return (
+                            <>
+                              <div className="border-t pt-1 mt-1 space-y-1">
+                                <div className="flex justify-between text-blue-600">
+                                  <span>Deposit ({((depositAmount / pricing.total) * 100).toFixed(0)}%):</span>
+                                  <span>${depositAmount.toFixed(2)}</span>
+                                </div>
+                                {isPaidInFull ? (
+                                  <div className="flex justify-between font-semibold text-green-600">
+                                    <span>✓ Paid in Full</span>
+                                    <span>$0.00</span>
+                                  </div>
+                                ) : (
+                                  <div className="flex justify-between font-semibold">
+                                    <span>Balance Due:</span>
+                                    <span>${remaining.toFixed(2)}</span>
+                                  </div>
+                                )}
+                              </div>
+                            </>
+                          );
+                        }
+                        return null;
+                      })()}
                       <div className="text-xs text-green-600 mt-1">
                         <span>Industry-standard united inch pricing methodology</span>
                       </div>
@@ -1258,7 +1294,7 @@ export default function OrderForm({
             control={form.control}
             name="discountPercentage"
             render={({ field }) => (
-              <FormItem>
+              <FormItem className="flex flex-col">
                 <FormLabel>Discount %</FormLabel>
                 <FormControl>
                   <Input
@@ -1280,7 +1316,7 @@ export default function OrderForm({
             control={form.control}
             name="taxExempt"
             render={({ field }) => (
-              <FormItem className="flex flex-col justify-end">
+              <FormItem className="flex flex-col">
                 <FormLabel>Tax Status</FormLabel>
                 <div className="flex items-center space-x-2">
                   <input
@@ -1304,7 +1340,7 @@ export default function OrderForm({
             control={form.control}
             name="totalAmount"
             render={({ field }) => (
-              <FormItem>
+              <FormItem className="flex flex-col">
                 <FormLabel className="flex items-center gap-2">
                   Total Amount *
                   {useCalculatedPrice && calculatedPrice > 0 && (
@@ -1338,32 +1374,86 @@ export default function OrderForm({
             control={form.control}
             name="depositAmount"
             render={({ field }) => (
-              <FormItem>
-                <FormLabel className="flex items-center gap-2">
-                  Deposit Amount
-                  {form.watch("totalAmount") && parseFloat(form.watch("totalAmount")) > 0 && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="h-6 text-xs"
-                      onClick={() => {
-                        const total = parseFloat(form.watch("totalAmount"));
-                        form.setValue("depositAmount", (total * 0.5).toFixed(2));
-                      }}
-                    >
-                      50%
-                    </Button>
+              <FormItem className="flex flex-col">
+                <FormLabel>Deposit Amount</FormLabel>
+                <div className="space-y-2">
+                  <FormControl>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      placeholder="0.00"
+                      {...field}
+                      onChange={(e) => field.onChange(e.target.value)}
+                    />
+                  </FormControl>
+                  {form.watch("totalAmount") && parseFloat(form.watch("totalAmount") || "0") > 0 && (
+                    <div className="flex gap-1">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-7 px-2 text-xs"
+                        onClick={() => {
+                          const total = parseFloat(form.watch("totalAmount") || "0");
+                          if (total > 0) {
+                            const deposit = (total * 0.25).toFixed(2);
+                            form.setValue("depositAmount", deposit);
+                            field.onChange(deposit);
+                          }
+                        }}
+                      >
+                        25%
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-7 px-2 text-xs"
+                        onClick={() => {
+                          const total = parseFloat(form.watch("totalAmount") || "0");
+                          if (total > 0) {
+                            const deposit = (total * 0.5).toFixed(2);
+                            form.setValue("depositAmount", deposit);
+                            field.onChange(deposit);
+                          }
+                        }}
+                      >
+                        50%
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-7 px-2 text-xs"
+                        onClick={() => {
+                          const total = parseFloat(form.watch("totalAmount") || "0");
+                          if (total > 0) {
+                            const deposit = (total * 0.75).toFixed(2);
+                            form.setValue("depositAmount", deposit);
+                            field.onChange(deposit);
+                          }
+                        }}
+                      >
+                        75%
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-7 px-2 text-xs"
+                        onClick={() => {
+                          const total = parseFloat(form.watch("totalAmount") || "0");
+                          if (total > 0) {
+                            form.setValue("depositAmount", total.toFixed(2));
+                            field.onChange(total.toFixed(2));
+                          }
+                        }}
+                      >
+                        100%
+                      </Button>
+                    </div>
                   )}
-                </FormLabel>
-                <FormControl>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    placeholder="0.00"
-                    {...field}
-                  />
-                </FormControl>
+                </div>
                 <FormMessage />
               </FormItem>
             )}
@@ -1374,7 +1464,7 @@ export default function OrderForm({
             control={form.control}
             name="dueDate"
             render={({ field }) => (
-              <FormItem>
+              <FormItem className="flex flex-col">
                 <FormLabel>Due Date</FormLabel>
                 <Popover>
                   <PopoverTrigger asChild>

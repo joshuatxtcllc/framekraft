@@ -122,33 +122,31 @@ export default function MetricsCards({ metrics }: MetricsCardsProps) {
   ];
 
   return (
-    <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8 mb-8">
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-8">
       {metricCards.map((metric) => (
-        <Card key={metric.title} className="metric-card">
-          <CardContent className="metric-card-content">
-            <div className="flex items-center">
+        <Card key={metric.title} className="overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+          <CardContent className="p-4">
+            <div className="flex items-start space-x-3">
               <div className="flex-shrink-0">
-                <metric.icon className={`h-6 w-6 ${metric.iconColor}`} />
+                <metric.icon className={`h-5 w-5 ${metric.iconColor}`} />
               </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-muted-foreground truncate">
-                    {metric.title}
-                  </dt>
-                  <dd className="text-lg font-semibold text-foreground">
-                    {metric.value}
-                  </dd>
-                </dl>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-muted-foreground truncate">
+                  {metric.title}
+                </p>
+                <p className="mt-1 text-xl font-semibold text-foreground">
+                  {metric.value}
+                </p>
               </div>
             </div>
           </CardContent>
-          <div className="metric-card-footer">
-            <div className="text-sm flex items-center">
+          <div className="bg-muted/30 px-4 py-2 border-t border-border/50">
+            <div className="flex items-center text-xs">
               {metric.changeType === "increase" && (
-                <TrendingUp className="w-4 h-4 text-green-600 mr-1" />
+                <TrendingUp className="w-3 h-3 text-green-600 mr-1 flex-shrink-0" />
               )}
               {metric.changeType === "decrease" && (
-                <TrendingDown className="w-4 h-4 text-red-600 mr-1" />
+                <TrendingDown className="w-3 h-3 text-red-600 mr-1 flex-shrink-0" />
               )}
               <span className={`font-medium ${
                 metric.changeType === "increase" ? "text-green-600" : 
@@ -156,7 +154,7 @@ export default function MetricsCards({ metrics }: MetricsCardsProps) {
               }`}>
                 {metric.change}
               </span>
-              <span className="text-muted-foreground ml-1">{metric.subtitle}</span>
+              <span className="text-muted-foreground ml-1 truncate">{metric.subtitle}</span>
             </div>
           </div>
         </Card>

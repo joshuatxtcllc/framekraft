@@ -1,9 +1,26 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useEffect } from "react";
+import { useLocation } from "wouter";
+import { queryClient } from "@/lib/queryClient";
 
 export function useAuth() {
-  const { data: user, isLoading, error, refetch } = useQuery({
+  const [, setLocation] = useLocation();
+  const { data: authData, isLoading, error, refetch } = useQuery({
     queryKey: ["/api/auth/user"],
+    queryFn: async () => {
+      const response = await fetch("/api/auth/user", {
+        credentials: "include",
+      });
+      if (!response.ok) {
+        if (response.status === 401) {
+          return null;
+        }
+        throw new Error("Failed to fetch user");
+      }
+      const data = await response.json();
+      // Extract user from the response
+      return data.user || data;
+    },
     retry: (failureCount, error: any) => {
       // Don't retry on 401s, but retry other errors up to 2 times
       if (error?.status === 401) return false;
@@ -26,21 +43,35 @@ export function useAuth() {
     }
   }, [refetch]);
 
-  // If we get a 401, redirect to login but not in a loop
-  useEffect(() => {
-    if (error && (error as any)?.status === 401 && !isLoading) {
-      // Only redirect if we're not already on login page and no auth in progress
-      const currentPath = window.location.pathname;
-      if (!currentPath.includes('/api/') && !window.location.search.includes('auth=')) {
-        window.location.href = '/api/login';
+  // Don't redirect on 401 errors - let the router handle it
+
+  const logoutMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch('/api/logout', {
+        credentials: 'include'
+      });
+      if (!response.ok && response.status !== 302) {
+        throw new Error('Logout failed');
       }
+    },
+    onSuccess: () => {
+      // Clear the user query cache
+      queryClient.setQueryData(['/api/auth/user'], null);
+      queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
+      // Redirect to login page
+      setLocation('/login');
     }
-  }, [error, isLoading]);
+  });
+
+  const logout = () => {
+    logoutMutation.mutate();
+  };
 
   return {
-    user,
+    user: authData,
     isLoading,
-    isAuthenticated: !!user?.isAuthenticated,
+    isAuthenticated: !!authData && authData.id !== undefined,
     refetch,
+    logout,
   };
 }
