@@ -6,7 +6,7 @@ import { setupVite, serveStatic, log } from "./vite";
 import { securityHeaders, sanitizeRequest, apiSecurity } from "./middleware/security";
 import { rateLimit } from "./middleware/rateLimiting";
 import { env } from "./config/environment";
-import { registerDevelopmentCleanup, registerProductionCleanup } from "./utils/processCleanup";
+import { registerDevelopmentCleanup, registerProductionCleanup, setupExceptionHandlers } from "./utils/processCleanup";
 import { connectDB } from "./mongodb";
 
 const app = express();
@@ -128,12 +128,17 @@ app.use((req, res, next) => {
   // It is the only port that is not firewalled.
   const port = env.PORT;
   server.listen(port, process.env.NODE_ENV === 'development' ? "127.0.0.1" : "0.0.0.0", () => {
-    log(`serving on port ${port}`);
+    log(`✨ serving on port ${port}`);
     
-    // Register appropriate cleanup handlers based on environment
+    // In development, just exit immediately on any signal - no cleanup
     if (process.env.NODE_ENV === 'development') {
-      registerDevelopmentCleanup(server);
+      ['SIGINT', 'SIGTERM', 'SIGUSR2'].forEach(sig => {
+        process.removeAllListeners(sig);
+        process.on(sig, () => process.exit(0));
+      });
     } else {
+      // Production cleanup only
+      setupExceptionHandlers(server);
       registerProductionCleanup(server);
     }
   });

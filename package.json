@@ -3,7 +3,9 @@
   "version": "1.0.0",
   "type": "module",
   "license": "MIT",
-  "engines": { "node": "20.x" },
+  "engines": {
+    "node": "20.x"
+  },
   "scripts": {
     "postinstall": "(cd client && npm ci) && (cd server && npm ci)",
     "build": "npm run build:client && npm run build:server",
@@ -55,6 +57,8 @@
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "connect-pg-simple": "^10.0.0",
+    "csv-parse": "^6.1.0",
+    "csv-stringify": "^6.6.0",
     "date-fns": "^3.6.0",
     "drizzle-orm": "^0.39.1",
     "drizzle-zod": "^0.7.0",
@@ -94,6 +98,7 @@
     "zod-validation-error": "^3.4.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.54.2",
     "@replit/vite-plugin-cartographer": "^0.2.7",
     "@replit/vite-plugin-runtime-error-modal": "^0.0.3",
     "@tailwindcss/typography": "^0.5.15",
@@ -118,7 +123,6 @@
     "esbuild": "^0.25.0",
     "jsdom": "^26.1.0",
     "playwright": "^1.54.2",
-    "@playwright/test": "^1.54.2",
     "postcss": "^8.4.47",
     "supertest": "^7.1.4",
     "tailwindcss": "^3.4.17",

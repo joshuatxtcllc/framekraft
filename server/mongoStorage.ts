@@ -363,6 +363,27 @@ export async function deleteWholesalerProduct(id: string): Promise<boolean> {
   return !!result;
 }
 
+// Search wholesaler products by query
+export async function searchWholesalerProducts(query: string): Promise<IWholesalerProduct[]> {
+  if (!query) {
+    return await getWholesalerProducts();
+  }
+  
+  const searchRegex = new RegExp(query, 'i');
+  return await WholesalerProduct.find({
+    isActive: true,
+    $or: [
+      { productCode: searchRegex },
+      { productName: searchRegex },
+      { category: searchRegex },
+      { description: searchRegex }
+    ]
+  })
+  .populate('wholesalerId')
+  .sort({ productName: 1 })
+  .limit(100);
+}
+
 // Price Structure operations
 export async function getPriceStructures(): Promise<IPriceStructure[]> {
   return await PriceStructure.find({ isActive: true }).sort({ category: 1, itemName: 1 });
