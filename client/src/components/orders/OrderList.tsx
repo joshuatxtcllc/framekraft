@@ -6,7 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Edit, Search, Filter, Eye, FileText, Printer, Mail, X, CreditCard, DollarSign } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import { Edit, Search, Filter, Eye, FileText, Printer, Mail, X, CreditCard, DollarSign, MoreVertical } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { exportToPDF } from "@/lib/pdfExport";
@@ -424,31 +425,33 @@ FrameCraft`;
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="w-full">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Order #</TableHead>
-                  <TableHead>Customer</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Priority</TableHead>
-                  <TableHead>Due Date</TableHead>
-                  <TableHead>Amount</TableHead>
-                  <TableHead>Actions</TableHead>
+                  <TableHead className="min-w-[100px]">Order #</TableHead>
+                  <TableHead className="min-w-[150px]">Customer</TableHead>
+                  <TableHead className="min-w-[200px]">Description</TableHead>
+                  <TableHead className="min-w-[100px]">Status</TableHead>
+                  <TableHead className="min-w-[100px]">Priority</TableHead>
+                  <TableHead className="min-w-[120px]">Due Date</TableHead>
+                  <TableHead className="min-w-[120px]">Amount</TableHead>
+                  <TableHead className="min-w-[100px]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredOrders.map((order) => (
                   <TableRow key={order.id}>
-                    <TableCell className="font-medium">
+                    <TableCell className="font-medium whitespace-nowrap">
                       {order.orderNumber}
                     </TableCell>
-                    <TableCell>
-                      {order.customer.firstName} {order.customer.lastName}
+                    <TableCell className="whitespace-nowrap">
+                      <div className="max-w-[150px] truncate" title={`${order.customer.firstName} ${order.customer.lastName}`}>
+                        {order.customer.firstName} {order.customer.lastName}
+                      </div>
                     </TableCell>
-                    <TableCell className="max-w-xs">
-                      <div className="truncate" title={order.description}>
+                    <TableCell>
+                      <div className="max-w-[200px] truncate" title={order.description}>
                         {order.description}
                       </div>
                     </TableCell>
@@ -458,7 +461,7 @@ FrameCraft`;
                     <TableCell>
                       {getPriorityBadge(order.priority)}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="whitespace-nowrap">
                       {order.dueDate ? (
                         <span className={new Date(order.dueDate) < new Date() ? 'text-red-600 font-medium' : ''}>
                           {new Date(order.dueDate).toLocaleDateString()}
@@ -469,104 +472,100 @@ FrameCraft`;
                     </TableCell>
                     <TableCell>
                       <div>
-                        <div className="font-medium">
+                        <div className="font-medium whitespace-nowrap">
                           {formatCurrency(order.totalAmount)}
                         </div>
                         {order.depositAmount && parseFloat(order.depositAmount) > 0 && (
                           <div className="text-xs space-y-1">
-                            <div className="text-muted-foreground">
-                              Deposit: {formatCurrency(order.depositAmount)}
+                            <div className="text-muted-foreground whitespace-nowrap">
+                              Dep: {formatCurrency(order.depositAmount)}
                             </div>
-                            <div className="text-red-600 font-medium">
-                              Balance: {formatCurrency((parseFloat(order.totalAmount) - parseFloat(order.depositAmount)).toString())}
+                            <div className="text-red-600 font-medium whitespace-nowrap">
+                              Bal: {formatCurrency((parseFloat(order.totalAmount) - parseFloat(order.depositAmount)).toString())}
                             </div>
                           </div>
                         )}
                       </div>
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center space-x-1">
+                      <div className="flex items-center gap-1">
                         <Button
                           variant="ghost"
-                          size="sm"
-                          onClick={() => onEdit(order)}
-                          title="Edit Order"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
+                          size="icon"
                           onClick={() => handleViewOrder(order)}
                           title="View Details"
+                          className="h-8 w-8"
                         >
                           <Eye className="w-4 h-4" />
                         </Button>
                         <Button
                           variant="ghost"
-                          size="sm"
-                          onClick={() => handleGenerateInvoice(order)}
-                          title="Generate Invoice"
+                          size="icon"
+                          onClick={() => onEdit(order)}
+                          title="Edit Order"
+                          className="h-8 w-8"
                         >
-                          <FileText className="w-4 h-4" />
+                          <Edit className="w-4 h-4" />
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleGenerateWorkOrder(order)}
-                          title="Generate Work Order"
-                        >
-                          <FileText className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handlePrintInvoice(order)}
-                          title="Print Invoice"
-                        >
-                          <Printer className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleEmailInvoice(order)}
-                          title="Email Invoice"
-                        >
-                          <Mail className="w-4 h-4" />
-                        </Button>
-                         {order.status !== 'completed' && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => onProcessPayment?.(order)}
-                            title="Process Payment"
-                            className="text-green-600 hover:text-green-700"
-                          >
-                            <CreditCard className="w-4 h-4" />
-                          </Button>
-                        )}
-                        {order.status !== 'completed' && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handlePaidInFull(order)}
-                            title="Mark Paid in Full"
-                            className="text-green-600 hover:text-green-700"
-                          >
-                            <CreditCard className="w-4 h-4" />
-                          </Button>
-                        )}
-                        {order.depositAmount && parseFloat(order.depositAmount) > 0 && parseFloat(order.depositAmount) < parseFloat(order.totalAmount) && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handlePayBalance(order)}
-                            title="Pay Remaining Balance"
-                            className="text-blue-600 hover:text-blue-700"
-                          >
-                            <DollarSign className="w-4 h-4" />
-                          </Button>
-                        )}
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                            >
+                              <MoreVertical className="w-4 h-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleGenerateInvoice(order)}>
+                              <FileText className="w-4 h-4 mr-2" />
+                              Generate Invoice
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleGenerateWorkOrder(order)}>
+                              <FileText className="w-4 h-4 mr-2" />
+                              Generate Work Order
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handlePrintInvoice(order)}>
+                              <Printer className="w-4 h-4 mr-2" />
+                              Print Invoice
+                            </DropdownMenuItem>
+                            {order.customer.email && (
+                              <DropdownMenuItem onClick={() => handleEmailInvoice(order)}>
+                                <Mail className="w-4 h-4 mr-2" />
+                                Email Invoice
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuSeparator />
+                            {order.status !== 'completed' && (
+                              <>
+                                <DropdownMenuItem 
+                                  onClick={() => onProcessPayment?.(order)}
+                                  className="text-green-600"
+                                >
+                                  <CreditCard className="w-4 h-4 mr-2" />
+                                  Process Payment
+                                </DropdownMenuItem>
+                                <DropdownMenuItem 
+                                  onClick={() => handlePaidInFull(order)}
+                                  className="text-green-600"
+                                >
+                                  <CreditCard className="w-4 h-4 mr-2" />
+                                  Mark Paid in Full
+                                </DropdownMenuItem>
+                              </>
+                            )}
+                            {order.depositAmount && parseFloat(order.depositAmount) > 0 && parseFloat(order.depositAmount) < parseFloat(order.totalAmount) && (
+                              <DropdownMenuItem 
+                                onClick={() => handlePayBalance(order)}
+                                className="text-blue-600"
+                              >
+                                <DollarSign className="w-4 h-4 mr-2" />
+                                Pay Balance (${(parseFloat(order.totalAmount) - parseFloat(order.depositAmount)).toFixed(2)})
+                              </DropdownMenuItem>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </TableCell>
                   </TableRow>

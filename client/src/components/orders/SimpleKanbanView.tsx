@@ -141,22 +141,22 @@ export default function SimpleKanbanView({
         </p>
       </div>
 
-      <div className="kanban-container overflow-x-auto">
-        <div className="grid grid-cols-6 gap-4 min-w-[1200px] md:min-w-0 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+      <div className="kanban-container h-[calc(100vh-300px)]">
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 h-full">
           {stages.map((stage) => {
             const stageOrders = getOrdersByStatus(stage.id);
             return (
-              <div key={stage.id} className="flex flex-col">
+              <div key={stage.id} className="flex flex-col h-full max-h-[600px]">
                 {/* Stage Header */}
-                <div className={`${stage.color} text-white p-3 rounded-t-lg flex items-center justify-between`}>
+                <div className={`${stage.color} text-white p-3 rounded-t-lg flex items-center justify-between flex-shrink-0`}>
                   <h3 className="font-semibold text-sm">{stage.title}</h3>
                   <Badge variant="secondary" className="bg-white/20 text-white">
                     {stageOrders.length}
                   </Badge>
                 </div>
 
-                {/* Orders Column */}
-                <div className="flex-1 p-2 bg-muted/30 rounded-b-lg min-h-[400px] space-y-2">
+                {/* Orders Column - Scrollable */}
+                <div className="flex-1 p-2 bg-muted/30 rounded-b-lg overflow-y-auto space-y-2 kanban-column-scroll">
                   {stageOrders.map((order) => (
                     <Card key={order.id} className="cursor-pointer hover:shadow-md transition-shadow">
                       <CardContent className="p-3">

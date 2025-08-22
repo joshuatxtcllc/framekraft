@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Edit, Search, Mail, Phone, MapPin, Eye } from "lucide-react";
+import { Edit, Search, Mail, Phone, MapPin, Eye, Trash2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import CustomerDetails from "./CustomerDetails";
 
@@ -29,9 +29,10 @@ interface CustomerListProps {
   customers: Customer[];
   isLoading: boolean;
   onEdit: (customer: Customer) => void;
+  onDelete?: (customer: Customer) => void;
 }
 
-export default function CustomerList({ customers, isLoading, onEdit }: CustomerListProps) {
+export default function CustomerList({ customers, isLoading, onEdit, onDelete }: CustomerListProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
@@ -197,6 +198,7 @@ export default function CustomerList({ customers, isLoading, onEdit }: CustomerL
                             variant="ghost"
                             size="sm"
                             onClick={() => onEdit(customer)}
+                            title="Edit"
                           >
                             <Edit className="w-4 h-4" />
                           </Button>
@@ -207,9 +209,21 @@ export default function CustomerList({ customers, isLoading, onEdit }: CustomerL
                               setSelectedCustomer(customer);
                               setIsDetailsOpen(true);
                             }}
+                            title="View Details"
                           >
                             <Eye className="w-4 h-4" />
                           </Button>
+                          {onDelete && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => onDelete(customer)}
+                              className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                              title="Delete"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
