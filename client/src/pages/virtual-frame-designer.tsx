@@ -23,7 +23,16 @@ import {
   Plus,
   ClipboardList,
   ArrowDownToLine,
-  Edit
+  Edit,
+  ZoomIn,
+  ZoomOut,
+  Move,
+  PackagePlus,
+  User,
+  Calendar,
+  DollarSign,
+  Maximize2,
+  Hand
 } from 'lucide-react';
 import Sidebar from "@/components/layout/Sidebar";
 import Header from "@/components/layout/Header";
@@ -35,6 +44,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Separator } from "@/components/ui/separator";
+import { format } from 'date-fns';
+import { useLocation } from 'wouter';
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { queryClient } from "@/lib/queryClient";
 
 // Frame color definitions with realistic finishes
 const FRAME_COLORS = {
@@ -180,10 +197,13 @@ const FRAME_STYLES = [
 
 export default function VirtualFrameDesigner() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [, setLocation] = useLocation();
 
   // State management
   const [artworkImage, setArtworkImage] = useState<string>('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjEzMyIgdmlld0JveD0iMCAwIDIwMCAxMzMiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMTMzIiBmaWxsPSIjNEY4NEY4Ii8+Cjx0ZXh0IHg9IjEwMCIgeT0iNzAiIGZpbGw9IndoaXRlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCI+U2FtcGxlIEFydHdvcms8L3RleHQ+Cgo8L3N2Zz4K');
   const [artworkDimensions, setArtworkDimensions] = useState({ width: 24, height: 16, unit: 'inches' });
+  const [originalImageAspectRatio, setOriginalImageAspectRatio] = useState<number | null>(null);
+  const [loadedImage, setLoadedImage] = useState<HTMLImageElement | null>(null);
   const [selectedFrameStyle, setSelectedFrameStyle] = useState<string>('standard-wood');
   const [selectedFrameColor, setSelectedFrameColor] = useState<string>('natural-oak');
   const [selectedMatOption, setSelectedMatOption] = useState<'none' | 'single' | 'double'>('none');
@@ -192,6 +212,21 @@ export default function VirtualFrameDesigner() {
   const [showInfo, setShowInfo] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
   const [activeTab, setActiveTab] = useState<string>('designer');
+  const [zoom, setZoom] = useState(1);
+  const [showOrderDialog, setShowOrderDialog] = useState(false);
+  const [isPanning, setIsPanning] = useState(false);
+  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
+  const [startPan, setStartPan] = useState({ x: 0, y: 0 });
+  const [panMode, setPanMode] = useState(true); // Auto-activated by default
+  const [orderDetails, setOrderDetails] = useState({
+    customerName: '',
+    customerEmail: '',
+    customerPhone: '',
+    deliveryMethod: 'pickup',
+    rushOrder: false,
+    specialInstructions: '',
+    estimatedDate: format(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd')
+  });
 
   // Get texture pattern for frame colors
   const getFrameTexture = (texture: string, color: string) => {
@@ -204,15 +239,200 @@ export default function VirtualFrameDesigner() {
     return patterns[texture as keyof typeof patterns] || color;
   };
 
-  // Handle toast notification for adding to cart
+  // Handle toast notification
   const { toast } = useToast();
 
-  const handleAddToCart = () => {
-    toast({
-      title: "Item Added to Cart",
-      description: "Your custom frame has been added to your cart.",
-      variant: "success",
-    });
+  // Fetch customers query
+  const { data: customers = [] } = useQuery<any[]>({
+    queryKey: ["/api/customers"],
+  });
+
+  // Create order mutation
+  const createOrderMutation = useMutation({
+    mutationFn: async (orderData: any) => {
+      const response = await fetch('/api/orders', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify(orderData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to create order');
+      }
+
+      return response.json();
+    },
+    onSuccess: async (createdOrder) => {
+      // Invalidate and refetch all order-related queries
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["/api/orders"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/customers"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/dashboard/metrics"] })
+      ]);
+      
+      // Also refetch the orders to ensure fresh data
+      await queryClient.refetchQueries({ queryKey: ["/api/orders"] });
+      
+      toast({
+        title: "Order Placed Successfully",
+        description: `Order #${createdOrder.orderNumber || createdOrder.id} has been created.`,
+      });
+      
+      setShowOrderDialog(false);
+      
+      // Navigate immediately to orders page
+      setLocation('/orders');
+    },
+    onError: (error: any) => {
+      console.error('Error creating order:', error);
+      toast({
+        title: "Order Failed",
+        description: error.message || "There was an error creating your order. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Function to capture the canvas as an image
+  const captureCanvasAsImage = (): string | null => {
+    const canvas = canvasRef.current;
+    if (!canvas) return null;
+    
+    try {
+      // Get the canvas data as base64 PNG
+      const dataUrl = canvas.toDataURL('image/png', 0.9);
+      return dataUrl;
+    } catch (error) {
+      console.error('Error capturing canvas:', error);
+      return null;
+    }
+  };
+
+  const handleMakeOrder = async () => {
+    // Validate required fields
+    if (!orderDetails.customerName || !orderDetails.customerEmail) {
+      toast({
+        title: "Missing Information",
+        description: "Please fill in all required customer information.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Capture the framed preview
+    const framedPreviewImage = captureCanvasAsImage();
+    if (!framedPreviewImage) {
+      toast({
+        title: "Preview Error",
+        description: "Could not capture the frame preview. Please try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      // First, create or find the customer
+      let customerId: string;
+      
+      // Check if customer exists in the already fetched customers data
+      const existingCustomer = customers.find((c: any) => 
+        c.email?.toLowerCase() === orderDetails.customerEmail.toLowerCase()
+      );
+      
+      if (existingCustomer) {
+        customerId = existingCustomer.id || existingCustomer._id;
+      } else {
+        // Create new customer
+        const nameParts = orderDetails.customerName.split(' ');
+        const firstName = nameParts[0] || 'Customer';
+        const lastName = nameParts.slice(1).join(' ') || '';
+        
+        const newCustomerResponse = await fetch('/api/customers', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+          body: JSON.stringify({
+            firstName,
+            lastName,
+            email: orderDetails.customerEmail,
+            phone: orderDetails.customerPhone || undefined,
+          }),
+        });
+        
+        if (!newCustomerResponse.ok) {
+          throw new Error('Failed to create customer');
+        }
+        
+        const newCustomer = await newCustomerResponse.json();
+        customerId = newCustomer.id || newCustomer._id;
+      }
+
+      // Prepare frame details
+      const frameStyle = FRAME_STYLES.find(s => s.id === selectedFrameStyle);
+      const frameColor = frameStyle?.colors.find(c => c.id === selectedFrameColor);
+      const matColor1 = selectedMatOption !== 'none' ? Object.values(MAT_COLORS).flat().find(c => c.id === selectedMatColor1) : null;
+      const matColor2 = selectedMatOption === 'double' ? Object.values(MAT_COLORS).flat().find(c => c.id === selectedMatColor2) : null;
+      
+      // Calculate pricing
+      const basePrice = calculatePrice();
+      const rushMultiplier = orderDetails.rushOrder ? 1.5 : 1;
+      const totalAmount = basePrice * rushMultiplier;
+      const deliveryFee = orderDetails.deliveryMethod === 'delivery' ? 15 : 0;
+      
+      // Prepare order data
+      const orderData = {
+        customerId,
+        customerName: orderDetails.customerName,
+        customerEmail: orderDetails.customerEmail,
+        customerPhone: orderDetails.customerPhone,
+        description: `Custom Frame - ${frameStyle?.name} in ${frameColor?.name}`,
+        artworkDescription: artworkImage && !artworkImage.includes('data:image/svg+xml') 
+          ? 'Customer uploaded artwork with frame preview' 
+          : 'Sample artwork with frame preview',
+        artworkImage: framedPreviewImage,  // Use the captured canvas image with frame
+        dimensions: `${artworkDimensions.width}" × ${artworkDimensions.height}"`,
+        frameStyle: `${frameStyle?.name} - ${frameColor?.name}`,
+        matColor: selectedMatOption === 'none' 
+          ? 'No Mat' 
+          : selectedMatOption === 'single' 
+            ? matColor1?.name 
+            : `${matColor1?.name} with ${matColor2?.name} accent`,
+        glazing: 'Standard UV Protection Glass',
+        totalAmount: totalAmount + deliveryFee,
+        depositAmount: 0,
+        discountPercentage: 0,
+        taxAmount: Math.round(totalAmount * 0.08 * 100) / 100, // 8% tax
+        status: 'pending',
+        priority: orderDetails.rushOrder ? 'rush' : 'normal',
+        notes: orderDetails.specialInstructions || undefined,
+        deliveryMethod: orderDetails.deliveryMethod,
+        rushOrder: orderDetails.rushOrder,
+        estimatedDeliveryDate: orderDetails.rushOrder 
+          ? new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString()
+          : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+        dueDate: orderDetails.rushOrder 
+          ? new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString()
+          : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+      };
+
+      console.log('Sending order data:', orderData);
+
+      // Create the order using mutation
+      createOrderMutation.mutate(orderData);
+    } catch (error) {
+      console.error('Error preparing order:', error);
+      toast({
+        title: "Order Failed",
+        description: error instanceof Error ? error.message : "There was an error preparing your order. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   // Calculate pricing
@@ -240,31 +460,89 @@ export default function VirtualFrameDesigner() {
 
         // Create image to get dimensions
         const img = new window.Image();
+        img.crossOrigin = 'anonymous';
         img.onload = () => {
           const aspectRatio = img.width / img.height;
+          setOriginalImageAspectRatio(aspectRatio);
+          
+          // Auto-fit dimensions based on aspect ratio
           let width, height;
-
-          // Standard sizes based on aspect ratio
-          if (aspectRatio > 1.5) {
-            // Landscape
-            width = 24;
-            height = 16;
-          } else if (aspectRatio < 0.75) {
-            // Portrait
-            width = 16;
-            height = 24;
+          const baseSize = 24; // Base size for calculations
+          
+          if (aspectRatio > 1) {
+            // Landscape: use width as base
+            width = Math.min(baseSize, 36);
+            height = Math.round((width / aspectRatio) * 100) / 100;
+          } else if (aspectRatio < 1) {
+            // Portrait: use height as base
+            height = Math.min(baseSize, 36);
+            width = Math.round((height * aspectRatio) * 100) / 100;
           } else {
-            // Square-ish
-            width = 20;
-            height = 20;
+            // Square
+            width = height = Math.min(baseSize, 30);
           }
+          
+          // Ensure minimum dimensions
+          width = Math.max(width, 8);
+          height = Math.max(height, 8);
 
           setArtworkDimensions({ width, height, unit: 'inches' });
+          
+          // Store the loaded image - this will trigger useEffect and redraw
+          setLoadedImage(img);
+          
+          // Show notification about auto-fit
+          toast({
+            title: "Frame Auto-Fitted",
+            description: `Frame automatically adjusted to ${width}" × ${height}" to match image proportions.`,
+          });
         };
         img.src = result;
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  // Auto-fit frame to image aspect ratio (kept for potential future use)
+  const handleAutoFit = () => {
+    if (!originalImageAspectRatio) {
+      toast({
+        title: "No Image Uploaded",
+        description: "Please upload an image first to use auto-fit.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Get the current width or height as a base
+    const currentMax = Math.max(artworkDimensions.width, artworkDimensions.height);
+    
+    // Calculate new dimensions maintaining aspect ratio
+    let newWidth, newHeight;
+    
+    if (originalImageAspectRatio > 1) {
+      // Landscape: use width as base
+      newWidth = Math.min(currentMax, 36); // Max 36 inches
+      newHeight = Math.round((newWidth / originalImageAspectRatio) * 100) / 100;
+    } else if (originalImageAspectRatio < 1) {
+      // Portrait: use height as base
+      newHeight = Math.min(currentMax, 36); // Max 36 inches
+      newWidth = Math.round((newHeight * originalImageAspectRatio) * 100) / 100;
+    } else {
+      // Square
+      newWidth = newHeight = Math.min(currentMax, 30);
+    }
+
+    // Ensure minimum dimensions
+    newWidth = Math.max(newWidth, 8);
+    newHeight = Math.max(newHeight, 8);
+
+    setArtworkDimensions({ width: newWidth, height: newHeight, unit: 'inches' });
+    
+    toast({
+      title: "Frame Auto-Fitted",
+      description: `Frame adjusted to ${newWidth}" × ${newHeight}" to match image proportions.`,
+    });
   };
 
   // Handle drag and drop
@@ -315,9 +593,22 @@ export default function VirtualFrameDesigner() {
     // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Set up scaling and positioning
+    // Add subtle background gradient (before zoom transform)
+    const bgGradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+    bgGradient.addColorStop(0, '#f8f9fa');
+    bgGradient.addColorStop(1, '#e9ecef');
+    ctx.fillStyle = bgGradient;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Apply zoom and pan transformation
+    ctx.save();
     const centerX = canvas.width / 2;
     const centerY = canvas.height / 2;
+    
+    // Apply transformations
+    ctx.translate(centerX + panOffset.x, centerY + panOffset.y);
+    ctx.scale(zoom, zoom);
+    ctx.translate(-centerX, -centerY);
     const frameStyle = FRAME_STYLES.find(s => s.id === selectedFrameStyle);
     const frameColor = frameStyle?.colors.find(c => c.id === selectedFrameColor);
 
@@ -326,8 +617,31 @@ export default function VirtualFrameDesigner() {
     const frameWidth = frameStyle.width * 20; // Scale frame width
     const matWidth = selectedMatOption !== 'none' ? 40 : 0;
 
-    const displayWidth = 300;
-    const displayHeight = (displayWidth * artworkDimensions.height) / artworkDimensions.width;
+    // Calculate display size based on aspect ratio to fit within canvas
+    const maxDisplayWidth = 300; // Fixed width for consistency
+    const maxDisplayHeight = 300; // Fixed max height
+    
+    let displayWidth, displayHeight;
+    const aspectRatio = artworkDimensions.width / artworkDimensions.height;
+    
+    // Scale to fit within bounds while maintaining aspect ratio
+    if (aspectRatio > 1) {
+      // Landscape
+      displayWidth = maxDisplayWidth;
+      displayHeight = displayWidth / aspectRatio;
+      if (displayHeight > maxDisplayHeight) {
+        displayHeight = maxDisplayHeight;
+        displayWidth = displayHeight * aspectRatio;
+      }
+    } else {
+      // Portrait
+      displayHeight = maxDisplayHeight;
+      displayWidth = displayHeight * aspectRatio;
+      if (displayWidth > maxDisplayWidth) {
+        displayWidth = maxDisplayWidth;
+        displayHeight = displayWidth / aspectRatio;
+      }
+    }
 
     // Calculate absolute positions
     const totalWidth = displayWidth + (matWidth * 2) + (frameWidth * 2);
@@ -339,9 +653,48 @@ export default function VirtualFrameDesigner() {
     const artworkX = centerX - displayWidth / 2;
     const artworkY = centerY - displayHeight / 2;
 
-    // Draw frame
-    ctx.fillStyle = frameColor.hex;
+    // Draw frame with shadow effect
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
+    ctx.shadowBlur = 15;
+    ctx.shadowOffsetX = 5;
+    ctx.shadowOffsetY = 5;
+    
+    // Create gradient for frame based on texture
+    if (frameColor.texture === 'wood-grain') {
+      const frameGradient = ctx.createLinearGradient(frameX, frameY, frameX + totalWidth, frameY + totalHeight);
+      frameGradient.addColorStop(0, frameColor.hex);
+      frameGradient.addColorStop(0.3, shadeColor(frameColor.hex, -10));
+      frameGradient.addColorStop(0.7, frameColor.hex);
+      frameGradient.addColorStop(1, shadeColor(frameColor.hex, -5));
+      ctx.fillStyle = frameGradient;
+    } else if (frameColor.texture === 'brushed-metal') {
+      const frameGradient = ctx.createLinearGradient(frameX, frameY, frameX + totalWidth, frameY);
+      frameGradient.addColorStop(0, frameColor.hex);
+      frameGradient.addColorStop(0.5, shadeColor(frameColor.hex, 20));
+      frameGradient.addColorStop(1, frameColor.hex);
+      ctx.fillStyle = frameGradient;
+    } else {
+      ctx.fillStyle = frameColor.hex;
+    }
+    
     ctx.fillRect(frameX, frameY, totalWidth, totalHeight);
+    
+    // Add inner shadow for depth
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.2)';
+    ctx.shadowBlur = 3;
+    ctx.shadowOffsetX = -2;
+    ctx.shadowOffsetY = -2;
+    
+    // Draw inner frame edge
+    ctx.strokeStyle = shadeColor(frameColor.hex, -20);
+    ctx.lineWidth = 2;
+    ctx.strokeRect(frameX + frameWidth/2, frameY + frameWidth/2, totalWidth - frameWidth, totalHeight - frameWidth);
+    
+    // Reset shadow
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 0;
 
     // Draw mat if selected
     if (selectedMatOption !== 'none') {
@@ -371,46 +724,74 @@ export default function VirtualFrameDesigner() {
       }
     }
 
-    // Draw artwork background
-    ctx.fillStyle = '#f0f0f0';
+    // Draw artwork background with subtle texture
+    const artworkBg = ctx.createLinearGradient(artworkX, artworkY, artworkX, artworkY + displayHeight);
+    artworkBg.addColorStop(0, '#ffffff');
+    artworkBg.addColorStop(1, '#f8f9fa');
+    ctx.fillStyle = artworkBg;
     ctx.fillRect(artworkX, artworkY, displayWidth, displayHeight);
 
     // Draw artwork or placeholder
-    if (artworkImage && !artworkImage.includes('data:image/svg+xml')) {
-      const img = new window.Image();
-      img.onload = () => {
-        // Calculate aspect ratio to maintain image proportions
-        const imgAspectRatio = img.naturalWidth / img.naturalHeight;
-        const displayAspectRatio = displayWidth / displayHeight;
+    if (loadedImage && artworkImage && !artworkImage.includes('data:image/svg+xml')) {
+      // Use the pre-loaded image
+      const imgAspectRatio = loadedImage.naturalWidth / loadedImage.naturalHeight;
+      const displayAspectRatio = displayWidth / displayHeight;
 
-        let drawWidth, drawHeight;
+      let drawWidth, drawHeight;
 
-        // Scale image to fit within display area while maintaining aspect ratio
-        if (imgAspectRatio > displayAspectRatio) {
-          // Image is wider - fit to width
-          drawWidth = displayWidth;
-          drawHeight = displayWidth / imgAspectRatio;
-        } else {
-          // Image is taller - fit to height
-          drawHeight = displayHeight;
-          drawWidth = displayHeight * imgAspectRatio;
-        }
+      // Scale image to fit within display area while maintaining aspect ratio
+      if (imgAspectRatio > displayAspectRatio) {
+        // Image is wider - fit to width
+        drawWidth = displayWidth;
+        drawHeight = displayWidth / imgAspectRatio;
+      } else {
+        // Image is taller - fit to height
+        drawHeight = displayHeight;
+        drawWidth = displayHeight * imgAspectRatio;
+      }
 
-        // Center the scaled image in the display area using absolute coordinates
-        const imageX = centerX - drawWidth / 2;
-        const imageY = centerY - drawHeight / 2;
+      // Center the scaled image in the display area
+      const imageX = artworkX + (displayWidth - drawWidth) / 2;
+      const imageY = artworkY + (displayHeight - drawHeight) / 2;
 
-        ctx.drawImage(img, imageX, imageY, drawWidth, drawHeight);
-      };
-      img.onerror = () => {
-        // Fallback placeholder
+      // Save current context state
+      ctx.save();
+      
+      // Clip to artwork area to prevent overflow
+      ctx.beginPath();
+      ctx.rect(artworkX, artworkY, displayWidth, displayHeight);
+      ctx.clip();
+      
+      // Draw the image
+      try {
+        ctx.drawImage(loadedImage, imageX, imageY, drawWidth, drawHeight);
+      } catch (e) {
+        console.error('Error drawing image:', e);
+        // Draw error placeholder
         ctx.fillStyle = '#666';
         ctx.font = '24px Arial';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText('Your Artwork', centerX, centerY);
+        ctx.fillText('Error Loading Image', centerX, centerY);
+      }
+      
+      // Restore context state
+      ctx.restore();
+    } else if (artworkImage && !artworkImage.includes('data:image/svg+xml') && !loadedImage) {
+      // Image URL exists but not loaded yet - load it
+      const img = new window.Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        setLoadedImage(img);
       };
       img.src = artworkImage;
+      
+      // Show loading placeholder
+      ctx.fillStyle = '#999';
+      ctx.font = '20px Arial';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('Loading Image...', centerX, centerY);
     } else {
       // Draw placeholder text
       ctx.fillStyle = '#666';
@@ -419,11 +800,72 @@ export default function VirtualFrameDesigner() {
       ctx.textBaseline = 'middle';
       ctx.fillText('Your Artwork', centerX, centerY);
     }
+    
+    // Restore context state
+    ctx.restore();
   };
 
+  // Helper function to shade colors
+  const shadeColor = (color: string, percent: number) => {
+    const num = parseInt(color.replace('#', ''), 16);
+    const amt = Math.round(2.55 * percent);
+    const R = (num >> 16) + amt;
+    const G = (num >> 8 & 0x00FF) + amt;
+    const B = (num & 0x0000FF) + amt;
+    return '#' + (0x1000000 + (R < 255 ? R < 1 ? 0 : R : 255) * 0x10000 +
+      (G < 255 ? G < 1 ? 0 : G : 255) * 0x100 +
+      (B < 255 ? B < 1 ? 0 : B : 255)).toString(16).slice(1);
+  };
+
+  // Main effect for drawing
   useEffect(() => {
     drawVisualization();
-  }, [selectedFrameStyle, selectedFrameColor, selectedMatOption, selectedMatColor1, selectedMatColor2, artworkImage, artworkDimensions]);
+  }, [selectedFrameStyle, selectedFrameColor, selectedMatOption, selectedMatColor1, selectedMatColor2, artworkImage, artworkDimensions, zoom, loadedImage, panOffset]);
+
+  // Initial draw on mount
+  useEffect(() => {
+    drawVisualization();
+  }, []);
+
+  // Handle mouse events for panning
+  const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (panMode || e.shiftKey || e.button === 1) { // Pan mode, shift key, or middle mouse button
+      setIsPanning(true);
+      setStartPan({ x: e.clientX - panOffset.x, y: e.clientY - panOffset.y });
+      e.preventDefault();
+    }
+  };
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (isPanning) {
+      setPanOffset({
+        x: e.clientX - startPan.x,
+        y: e.clientY - startPan.y
+      });
+    }
+  };
+
+  const handleMouseUp = () => {
+    setIsPanning(false);
+  };
+
+  const handleMouseLeave = () => {
+    setIsPanning(false);
+  };
+
+  const handleWheel = (e: React.WheelEvent<HTMLCanvasElement>) => {
+    if (e.ctrlKey || e.metaKey) {
+      // Zoom with ctrl/cmd + scroll
+      e.preventDefault();
+      const delta = e.deltaY > 0 ? -0.1 : 0.1;
+      setZoom(prevZoom => Math.max(0.5, Math.min(2, prevZoom + delta)));
+    }
+  };
+
+  const resetView = () => {
+    setZoom(1);
+    setPanOffset({ x: 0, y: 0 });
+  };
 
   // Color swatch component
   const ColorSwatch: React.FC<{
@@ -460,11 +902,16 @@ export default function VirtualFrameDesigner() {
   const resetDesign = () => {
     setArtworkImage('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjEzMyIgdmlld0JveD0iMCAwIDIwMCAxMzMiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMTMzIiBmaWxsPSIjNEY4NEY4Ii8+Cjx0ZXh0IHg9IjEwMCIgeT0iNzAiIGZpbGw9IndoaXRlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCI+U2FtcGxlIEFydHdvcms8L3RleHQ+Cgo8L3N2Zz4K');
     setArtworkDimensions({ width: 24, height: 16, unit: 'inches' });
+    setOriginalImageAspectRatio(null);
+    setLoadedImage(null);
     setSelectedFrameStyle('standard-wood');
     setSelectedFrameColor('natural-oak');
     setSelectedMatOption('none');
     setSelectedMatColor1('');
     setSelectedMatColor2('');
+    setZoom(1);
+    setPanOffset({ x: 0, y: 0 });
+    // Keep pan mode on by default
   };
 
   return (
@@ -492,9 +939,9 @@ export default function VirtualFrameDesigner() {
                     <RotateCcw className="w-4 h-4 mr-2" />
                     Reset Design
                   </Button>
-                  <Button onClick={handleAddToCart}>
-                    <ShoppingCart className="w-4 h-4 mr-2" />
-                    Add to Cart - ${calculatePrice()}.00
+                  <Button onClick={() => setShowOrderDialog(true)} className="bg-green-600 hover:bg-green-700">
+                    <PackagePlus className="w-4 h-4 mr-2" />
+                    Make Order - ${calculatePrice()}.00
                   </Button>
                 </div>
               </div>
@@ -520,13 +967,74 @@ export default function VirtualFrameDesigner() {
                           </CardDescription>
                         </CardHeader>
                         <CardContent>
-                          <div className="bg-gray-100 rounded-lg p-4 flex items-center justify-center min-h-[500px]">
-                            <canvas
-                              ref={canvasRef}
-                              width={600}
-                              height={500}
-                              className="border border-gray-300 rounded shadow-sm bg-white max-w-full h-auto"
-                            />
+                          <div className="bg-gray-100 rounded-lg p-4 flex flex-col items-center justify-center min-h-[500px]">
+                            <div className="flex items-center gap-2 mb-3">
+                              <div className="flex gap-1">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setZoom(Math.max(0.5, zoom - 0.1))}
+                                  disabled={zoom <= 0.5}
+                                >
+                                  <ZoomOut className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={resetView}
+                                >
+                                  <Move className="w-4 h-4 mr-1" />
+                                  {Math.round(zoom * 100)}%
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setZoom(Math.min(2, zoom + 0.1))}
+                                  disabled={zoom >= 2}
+                                >
+                                  <ZoomIn className="w-4 h-4" />
+                                </Button>
+                              </div>
+                              
+                              <div className="h-6 w-px bg-gray-300" />
+                              
+                              <Button
+                                variant={panMode ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => setPanMode(!panMode)}
+                                className={panMode ? "bg-blue-600 hover:bg-blue-700" : ""}
+                              >
+                                <Hand className="w-4 h-4 mr-1" />
+                                {panMode ? "Pan On" : "Pan Off"}
+                              </Button>
+                              
+                              {isPanning && (
+                                <Badge variant="secondary" className="ml-2">
+                                  Moving...
+                                </Badge>
+                              )}
+                            </div>
+                            
+                            <div className="text-xs text-gray-500 mb-2">
+                              {panMode ? "Click & drag to move the preview" : "Shift+drag or middle-click to pan"}
+                            </div>
+                            
+                            <div className="relative overflow-hidden rounded-lg shadow-lg border border-gray-300 bg-white">
+                              <canvas
+                                ref={canvasRef}
+                                width={600}
+                                height={500}
+                                className="block max-w-full h-auto"
+                                style={{ 
+                                  cursor: isPanning ? 'grabbing' : panMode ? 'grab' : 'default',
+                                }}
+                                onMouseDown={handleMouseDown}
+                                onMouseMove={handleMouseMove}
+                                onMouseUp={handleMouseUp}
+                                onMouseLeave={handleMouseLeave}
+                                onWheel={handleWheel}
+                              />
+                            </div>
                           </div>
 
                           <div className="mt-4 space-y-2">
@@ -616,29 +1124,62 @@ export default function VirtualFrameDesigner() {
                           )}
 
                           {/* Artwork Dimensions */}
-                          <div className="mt-4 grid grid-cols-2 gap-4">
-                            <div>
-                              <Label htmlFor="width">Width (inches)</Label>
-                              <Input
-                                id="width"
-                                type="number"
-                                value={artworkDimensions.width}
-                                onChange={(e) => setArtworkDimensions(prev => ({ ...prev, width: Number(e.target.value) }))}
-                                min="1"
-                                max="48"
-                              />
+                          <div className="mt-4 space-y-3">
+                            <div className="flex items-center justify-between">
+                              <Label className="text-sm font-medium">Frame Dimensions</Label>
+                              <div className="flex items-center gap-2">
+                                {artworkImage && !artworkImage.includes('data:image/svg+xml') && originalImageAspectRatio && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={handleAutoFit}
+                                    className="text-xs"
+                                  >
+                                    <Maximize2 className="w-3 h-3 mr-1" />
+                                    Auto-fit
+                                  </Button>
+                                )}
+                                {artworkImage && !artworkImage.includes('data:image/svg+xml') && (
+                                  <Badge variant="secondary" className="text-xs">
+                                    <Check className="w-3 h-3 mr-1" />
+                                    Auto-fitted to image
+                                  </Badge>
+                                )}
+                              </div>
                             </div>
-                            <div>
-                              <Label htmlFor="height">Height (inches)</Label>
-                              <Input
-                                id="height"
-                                type="number"
-                                value={artworkDimensions.height}
-                                onChange={(e) => setArtworkDimensions(prev => ({ ...prev, height: Number(e.target.value) }))}
-                                min="1"
-                                max="48"
-                              />
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <Label htmlFor="width" className="text-sm">Width (inches)</Label>
+                                <Input
+                                  id="width"
+                                  type="number"
+                                  value={artworkDimensions.width}
+                                  onChange={(e) => setArtworkDimensions(prev => ({ ...prev, width: Number(e.target.value) }))}
+                                  min="1"
+                                  max="48"
+                                />
+                              </div>
+                              <div>
+                                <Label htmlFor="height" className="text-sm">Height (inches)</Label>
+                                <Input
+                                  id="height"
+                                  type="number"
+                                  value={artworkDimensions.height}
+                                  onChange={(e) => setArtworkDimensions(prev => ({ ...prev, height: Number(e.target.value) }))}
+                                  min="1"
+                                  max="48"
+                                />
+                              </div>
                             </div>
+                            {originalImageAspectRatio && (
+                              <p className="text-xs text-muted-foreground">
+                                Image aspect ratio: {originalImageAspectRatio > 1 
+                                  ? `${originalImageAspectRatio.toFixed(2)}:1 (Landscape)` 
+                                  : originalImageAspectRatio < 1 
+                                    ? `1:${(1/originalImageAspectRatio).toFixed(2)} (Portrait)`
+                                    : '1:1 (Square)'}
+                              </p>
+                            )}
                           </div>
                         </CardContent>
                       </Card>
@@ -885,6 +1426,189 @@ export default function VirtualFrameDesigner() {
           </div>
         </main>
       </div>
+      {/* Order Dialog */}
+      <Dialog open={showOrderDialog} onOpenChange={setShowOrderDialog}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Complete Your Order</DialogTitle>
+            <DialogDescription>
+              Review your frame design and provide order details
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-6">
+            {/* Order Summary */}
+            <div>
+              <h3 className="text-lg font-semibold mb-3">Order Summary</h3>
+              <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Frame Style:</span>
+                  <span className="font-medium">{FRAME_STYLES.find(s => s.id === selectedFrameStyle)?.name}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Frame Color:</span>
+                  <span className="font-medium">
+                    {FRAME_STYLES.find(s => s.id === selectedFrameStyle)?.colors.find(c => c.id === selectedFrameColor)?.name}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Mat:</span>
+                  <span className="font-medium">
+                    {selectedMatOption === 'none' ? 'No Mat' : selectedMatOption === 'single' ? 'Single Mat' : 'Double Mat'}
+                    {selectedMatOption !== 'none' && selectedMatColor1 && ` - ${Object.values(MAT_COLORS).flat().find(c => c.id === selectedMatColor1)?.name}`}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Dimensions:</span>
+                  <span className="font-medium">{artworkDimensions.width}" × {artworkDimensions.height}"</span>
+                </div>
+                <Separator className="my-2" />
+                <div className="flex justify-between text-lg font-semibold">
+                  <span>Total Price:</span>
+                  <span className="text-green-600">${calculatePrice()}.00</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Customer Information */}
+            <div>
+              <h3 className="text-lg font-semibold mb-3">Customer Information</h3>
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="customerName">Full Name *</Label>
+                    <Input
+                      id="customerName"
+                      value={orderDetails.customerName}
+                      onChange={(e) => setOrderDetails({...orderDetails, customerName: e.target.value})}
+                      placeholder="John Doe"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="customerEmail">Email *</Label>
+                    <Input
+                      id="customerEmail"
+                      type="email"
+                      value={orderDetails.customerEmail}
+                      onChange={(e) => setOrderDetails({...orderDetails, customerEmail: e.target.value})}
+                      placeholder="john@example.com"
+                      required
+                    />
+                  </div>
+                </div>
+                <div>
+                  <Label htmlFor="customerPhone">Phone Number</Label>
+                  <Input
+                    id="customerPhone"
+                    type="tel"
+                    value={orderDetails.customerPhone}
+                    onChange={(e) => setOrderDetails({...orderDetails, customerPhone: e.target.value})}
+                    placeholder="(555) 123-4567"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Delivery Options */}
+            <div>
+              <h3 className="text-lg font-semibold mb-3">Delivery Method</h3>
+              <RadioGroup
+                value={orderDetails.deliveryMethod}
+                onValueChange={(value) => setOrderDetails({...orderDetails, deliveryMethod: value})}
+              >
+                <div className="space-y-3">
+                  <div className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-gray-50">
+                    <RadioGroupItem value="pickup" id="pickup" />
+                    <Label htmlFor="pickup" className="flex-1 cursor-pointer">
+                      <div className="font-medium">Store Pickup</div>
+                      <div className="text-sm text-gray-600">Free - Ready in 5-7 business days</div>
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-gray-50">
+                    <RadioGroupItem value="delivery" id="delivery" />
+                    <Label htmlFor="delivery" className="flex-1 cursor-pointer">
+                      <div className="font-medium">Local Delivery</div>
+                      <div className="text-sm text-gray-600">$15 - Within 10 miles</div>
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-gray-50">
+                    <RadioGroupItem value="shipping" id="shipping" />
+                    <Label htmlFor="shipping" className="flex-1 cursor-pointer">
+                      <div className="font-medium">Shipping</div>
+                      <div className="text-sm text-gray-600">Calculated at checkout</div>
+                    </Label>
+                  </div>
+                </div>
+              </RadioGroup>
+            </div>
+
+            {/* Rush Order Option */}
+            <div className="flex items-center space-x-3 p-3 border rounded-lg">
+              <input
+                type="checkbox"
+                id="rushOrder"
+                checked={orderDetails.rushOrder}
+                onChange={(e) => setOrderDetails({...orderDetails, rushOrder: e.target.checked})}
+                className="w-4 h-4 text-blue-600"
+              />
+              <Label htmlFor="rushOrder" className="flex-1 cursor-pointer">
+                <div className="font-medium">Rush Order</div>
+                <div className="text-sm text-gray-600">Complete in 2-3 business days (+50% surcharge)</div>
+              </Label>
+            </div>
+
+            {/* Special Instructions */}
+            <div>
+              <Label htmlFor="instructions">Special Instructions (Optional)</Label>
+              <Textarea
+                id="instructions"
+                value={orderDetails.specialInstructions}
+                onChange={(e) => setOrderDetails({...orderDetails, specialInstructions: e.target.value})}
+                placeholder="Any special requests or notes for your order..."
+                rows={3}
+              />
+            </div>
+
+            {/* Estimated Completion */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="flex items-center gap-2">
+                <Calendar className="w-5 h-5 text-blue-600" />
+                <span className="font-medium">Estimated Completion:</span>
+                <span className="text-blue-600">
+                  {format(new Date(orderDetails.rushOrder 
+                    ? Date.now() + 3 * 24 * 60 * 60 * 1000 
+                    : Date.now() + 7 * 24 * 60 * 60 * 1000), 'MMMM dd, yyyy')}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setShowOrderDialog(false)}
+              disabled={createOrderMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleMakeOrder} 
+              className="bg-green-600 hover:bg-green-700"
+              disabled={createOrderMutation.isPending}
+            >
+              {createOrderMutation.isPending ? (
+                <>Processing...</>
+              ) : (
+                <>
+                  <Check className="w-4 h-4 mr-2" />
+                  Place Order - ${orderDetails.rushOrder ? Math.round(calculatePrice() * 1.5) : calculatePrice()}.00
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

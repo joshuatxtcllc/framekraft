@@ -31,6 +31,7 @@ import KanbanBoard from "./pages/kanban";
 import CustomerPortal from "./pages/customer-portal";
 import OrderTracking from "./pages/order-tracking";
 import SystemValidation from "@/pages/system-validation";
+import Inventory from "@/pages/inventory";
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
   const [location, setLocation] = useLocation();
@@ -40,7 +41,7 @@ function Router() {
     '/dashboard', '/orders', '/orders/new', '/orders/edit', '/customers', '/pricing', '/invoices', 
     '/wholesalers', '/communication', '/api-explorer', '/ai-assistant',
     '/cart', '/integration-settings', '/vendor-catalog', '/virtual-frame-designer',
-    '/receivables', '/kanban', '/settings', '/stripe-test', '/system-validation'
+    '/receivables', '/kanban', '/settings', '/stripe-test', '/system-validation', '/inventory'
   ];
 
   // Check if current path is protected and user is not authenticated
@@ -84,6 +85,7 @@ function Router() {
           <Route path="/customers" component={Customers} />
           <Route path="/pricing" component={Pricing} />
           <Route path="/invoices" component={Invoices} />
+          <Route path="/inventory" component={Inventory} />
           <Route path="/wholesalers" component={Wholesalers} />
           <Route path="/communication" component={Communication} />
           <Route path="/api-explorer" component={APIExplorer} />

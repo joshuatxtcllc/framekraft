@@ -99,6 +99,7 @@ export interface IOrder extends Document {
   orderNumber: string;
   description: string;
   artworkDescription?: string;
+  artworkImage?: string; // Base64 encoded image or URL
   dimensions?: string;
   frameStyle?: string;
   matColor?: string;
@@ -118,6 +119,9 @@ export interface IOrder extends Document {
   notes?: string;
   aiRecommendations?: any;
   taxExempt: boolean;
+  deliveryMethod?: string;
+  rushOrder?: boolean;
+  estimatedDeliveryDate?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -127,6 +131,7 @@ const OrderSchema = new Schema({
   orderNumber: { type: String, unique: true, required: true },
   description: { type: String, required: true },
   artworkDescription: String,
+  artworkImage: String, // Base64 encoded image or URL
   dimensions: String,
   frameStyle: String,
   matColor: String,
@@ -146,6 +151,9 @@ const OrderSchema = new Schema({
   notes: String,
   aiRecommendations: Schema.Types.Mixed,
   taxExempt: { type: Boolean, default: false },
+  deliveryMethod: String,
+  rushOrder: { type: Boolean, default: false },
+  estimatedDeliveryDate: Date,
 }, { timestamps: true });
 
 export const Order = mongoose.model<IOrder>('Order', OrderSchema);

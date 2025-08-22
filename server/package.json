@@ -5,9 +5,9 @@
   "type": "module",
   "license": "MIT",
   "scripts": {
-    "dev": "tsx watch index.ts",
+    "dev": "NODE_ENV=development tsx watch --clear-screen=false index.ts",
     "build": "tsc",
-    "start": "node dist/server.js",
+    "start": "NODE_ENV=production node dist/server.js",
     "test": "vitest"
   },
   "dependencies": {

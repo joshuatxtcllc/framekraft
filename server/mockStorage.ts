@@ -150,12 +150,58 @@ export const mockStorage = {
   },
   
   // Inventory
+  mockInventory: [] as any[],
+  
   async getInventory() {
-    return [];
+    return this.mockInventory;
+  },
+  
+  async createInventoryItem(itemData: any) {
+    const newItem = {
+      id: this.mockInventory.length + 1,
+      ...itemData,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.mockInventory.push(newItem);
+    return newItem;
+  },
+  
+  async updateInventoryItem(id: number, itemData: any) {
+    const index = this.mockInventory.findIndex(item => item.id === id);
+    if (index !== -1) {
+      this.mockInventory[index] = {
+        ...this.mockInventory[index],
+        ...itemData,
+        updatedAt: new Date(),
+      };
+      return this.mockInventory[index];
+    }
+    throw new Error('Inventory item not found');
+  },
+  
+  async deleteInventoryItem(id: number) {
+    const index = this.mockInventory.findIndex(item => item.id === id);
+    if (index !== -1) {
+      this.mockInventory.splice(index, 1);
+    }
+  },
+  
+  async updateInventoryStock(id: number, quantity: number) {
+    const index = this.mockInventory.findIndex(item => item.id === id);
+    if (index !== -1) {
+      this.mockInventory[index] = {
+        ...this.mockInventory[index],
+        quantity,
+        updatedAt: new Date(),
+      };
+      return this.mockInventory[index];
+    }
+    throw new Error('Inventory item not found');
   },
   
   async getLowStockItems() {
-    return [];
+    return this.mockInventory.filter(item => (item.quantity || 0) <= (item.minQuantity || 0));
   },
   
   // Other methods with empty implementations

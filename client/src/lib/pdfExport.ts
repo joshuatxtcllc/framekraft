@@ -33,6 +33,7 @@ interface OrderData {
   customerPhone: string;
   description: string;
   artworkDescription: string;
+  artworkImage?: string;
   dimensions: string;
   frameStyle: string;
   matColor: string;
@@ -95,54 +96,93 @@ export const exportToPDF = (data: OrderData, type: 'invoice' | 'work-order') => 
   doc.setFont('helvetica', 'normal');
   doc.text(`Description: ${data.description}`, 20, 130);
   
+  let currentY = 138;
+  
   if (data.dimensions) {
-    doc.text(`Dimensions: ${data.dimensions}`, 20, 138);
+    doc.text(`Dimensions: ${data.dimensions}`, 20, currentY);
+    currentY += 8;
   }
   
   if (data.frameStyle) {
-    doc.text(`Frame: ${data.frameStyle}`, 20, 146);
+    doc.text(`Frame: ${data.frameStyle}`, 20, currentY);
+    currentY += 8;
   }
   
   if (data.matColor) {
-    doc.text(`Mat: ${data.matColor}`, 20, 154);
+    doc.text(`Mat: ${data.matColor}`, 20, currentY);
+    currentY += 8;
   }
   
   if (data.glazing) {
-    doc.text(`Glass: ${data.glazing}`, 20, 162);
+    doc.text(`Glass: ${data.glazing}`, 20, currentY);
+    currentY += 8;
+  }
+  
+  // Add artwork image if available (for work orders)
+  if (type === 'work-order' && data.artworkImage && data.artworkImage.startsWith('data:image')) {
+    currentY += 10;
+    doc.setFont('helvetica', 'bold');
+    doc.text('Artwork Reference:', 20, currentY);
+    currentY += 10;
+    
+    try {
+      // Add the image with a max width of 80mm and max height of 60mm
+      doc.addImage(data.artworkImage, 'JPEG', 20, currentY, 80, 60);
+      currentY += 65; // Move past the image
+    } catch (error) {
+      console.error('Failed to add artwork image to PDF:', error);
+      doc.setFont('helvetica', 'normal');
+      doc.text('(Artwork image could not be rendered)', 20, currentY);
+      currentY += 8;
+    }
   }
   
   // Financial information (for invoices)
   if (type === 'invoice') {
+    currentY = Math.max(currentY + 10, 180);
     doc.setFont('helvetica', 'bold');
-    doc.text('Financial Summary:', 20, 180);
+    doc.text('Financial Summary:', 20, currentY);
     
     doc.setFont('helvetica', 'normal');
-    doc.text(`Total Amount: $${data.totalAmount.toFixed(2)}`, 20, 190);
+    doc.text(`Total Amount: $${data.totalAmount.toFixed(2)}`, 20, currentY + 10);
     
     if (data.depositAmount > 0) {
-      doc.text(`Deposit: $${data.depositAmount.toFixed(2)}`, 20, 198);
-      doc.text(`Balance Due: $${(data.totalAmount - data.depositAmount).toFixed(2)}`, 20, 206);
+      doc.text(`Deposit: $${data.depositAmount.toFixed(2)}`, 20, currentY + 18);
+      doc.text(`Balance Due: $${(data.totalAmount - data.depositAmount).toFixed(2)}`, 20, currentY + 26);
+      currentY += 26;
+    } else {
+      currentY += 10;
     }
   }
   
   // Status and priority (for work orders)
   if (type === 'work-order') {
+    currentY = Math.max(currentY + 10, 180);
     doc.setFont('helvetica', 'bold');
-    doc.text('Status Information:', 20, 180);
+    doc.text('Status Information:', 20, currentY);
     
     doc.setFont('helvetica', 'normal');
-    doc.text(`Status: ${data.status}`, 20, 190);
-    doc.text(`Priority: ${data.priority}`, 20, 198);
+    doc.text(`Status: ${data.status}`, 20, currentY + 10);
+    doc.text(`Priority: ${data.priority}`, 20, currentY + 18);
+    currentY += 18;
   }
   
   // Notes
   if (data.notes) {
+    currentY = Math.max(currentY + 20, 220);
+    
+    // Check if we need a new page
+    if (currentY > 250) {
+      doc.addPage();
+      currentY = 30;
+    }
+    
     doc.setFont('helvetica', 'bold');
-    doc.text('Notes:', 20, 220);
+    doc.text('Notes:', 20, currentY);
     
     doc.setFont('helvetica', 'normal');
     const splitNotes = doc.splitTextToSize(data.notes, 170);
-    doc.text(splitNotes, 20, 230);
+    doc.text(splitNotes, 20, currentY + 10);
   }
   
   // Download the PDF

@@ -251,6 +251,63 @@ export default function Receivables() {
     }
   };
 
+  const exportToCSV = () => {
+    const headers = [
+      'Order Number',
+      'Customer Name',
+      'Email',
+      'Phone',
+      'Total Amount',
+      'Paid Amount',
+      'Outstanding Balance',
+      'Days Old',
+      'Days Overdue',
+      'Urgency Level',
+      'Status'
+    ];
+
+    const csvData = receivablesData.map((order: any) => [
+      order.orderNumber,
+      `${order.customer?.firstName || ''} ${order.customer?.lastName || ''}`.trim(),
+      order.customer?.email || '',
+      order.customer?.phone || '',
+      order.totalAmount.toFixed(2),
+      order.depositAmount.toFixed(2),
+      order.balanceAmount.toFixed(2),
+      order.daysOld,
+      order.daysPastDue > 0 ? order.daysPastDue : 0,
+      order.urgencyLevel.toUpperCase(),
+      order.status
+    ]);
+
+    const csvContent = [
+      headers.join(','),
+      ...csvData.map(row => row.map(cell => {
+        const cellStr = String(cell);
+        return cellStr.includes(',') || cellStr.includes('\n') || cellStr.includes('"')
+          ? `"${cellStr.replace(/"/g, '""')}"` 
+          : cellStr;
+      }).join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    
+    link.setAttribute('href', url);
+    link.setAttribute('download', `receivables_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    toast({
+      title: "Export Successful",
+      description: `Exported ${receivablesData.length} receivable records to CSV`,
+    });
+  };
+
   if (isLoading) {
     return <div className="p-8">Loading receivables...</div>;
   }
@@ -266,7 +323,12 @@ export default function Receivables() {
           <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold text-foreground">Accounts Receivable</h1>
-        <Button variant="outline" className="gap-2">
+        <Button 
+          variant="outline" 
+          className="gap-2"
+          onClick={exportToCSV}
+          disabled={receivablesData.length === 0}
+        >
           <Download className="h-4 w-4" />
           Export Report
         </Button>
@@ -413,19 +475,6 @@ export default function Receivables() {
                     </div>
 
                     <div className="flex flex-col md:flex-row gap-2">
-                      {order.customer?.phone && (
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          className="gap-2"
-                          onClick={() => handleSendReminder(order, 'sms')}
-                          disabled={sendReminderMutation.isPending}
-                          data-testid={`button-call-${order.id}`}
-                        >
-                          <Phone className="h-4 w-4" />
-                          Call
-                        </Button>
-                      )}
                       {order.customer?.email && (
                         <Button 
                           variant="outline" 
@@ -436,7 +485,7 @@ export default function Receivables() {
                           data-testid={`button-email-${order.id}`}
                         >
                           <Mail className="h-4 w-4" />
-                          Email
+                          Email Reminder
                         </Button>
                       )}
                       <Button 

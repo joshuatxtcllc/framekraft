@@ -24,6 +24,7 @@ interface Order {
   };
   description: string;
   artworkDescription?: string;
+  artworkImage?: string;
   dimensions?: string;
   frameStyle?: string;
   matColor?: string;
@@ -81,9 +82,22 @@ export default function OrderList({
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          ...order,
-          depositAmount: order.totalAmount,
+          customerId: order.customer?._id || order.customer?.id || order.customerId,
+          orderNumber: order.orderNumber,
+          description: order.description,
+          artworkDescription: order.artworkDescription,
+          artworkImage: order.artworkImage,
+          dimensions: order.dimensions,
+          frameStyle: order.frameStyle,
+          matColor: order.matColor,
+          glazing: order.glazing,
+          totalAmount: parseFloat(order.totalAmount),
+          depositAmount: parseFloat(order.totalAmount),
+          discountPercentage: parseFloat(order.discountPercentage || "0"),
           status: order.status === "ready" ? "completed" : order.status,
+          priority: order.priority,
+          dueDate: order.dueDate,
+          notes: order.notes,
         }),
       }).then(() => {
         toast({
@@ -103,9 +117,22 @@ export default function OrderList({
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          ...order,
-          depositAmount: order.totalAmount,
+          customerId: order.customer?._id || order.customer?.id || order.customerId,
+          orderNumber: order.orderNumber,
+          description: order.description,
+          artworkDescription: order.artworkDescription,
+          artworkImage: order.artworkImage,
+          dimensions: order.dimensions,
+          frameStyle: order.frameStyle,
+          matColor: order.matColor,
+          glazing: order.glazing,
+          totalAmount: parseFloat(order.totalAmount),
+          depositAmount: parseFloat(order.totalAmount),
+          discountPercentage: parseFloat(order.discountPercentage || "0"),
           status: "completed",
+          priority: order.priority,
+          dueDate: order.dueDate,
+          notes: order.notes,
         }),
       }).then(() => {
         toast({
@@ -127,6 +154,7 @@ export default function OrderList({
         customerPhone: order.customer.phone || '',
         description: order.description,
         artworkDescription: order.artworkDescription || '',
+        artworkImage: order.artworkImage || '',
         dimensions: order.dimensions || '',
         frameStyle: order.frameStyle || '',
         matColor: order.matColor || '',
@@ -165,6 +193,7 @@ export default function OrderList({
         customerPhone: order.customer.phone || '',
         description: order.description,
         artworkDescription: order.artworkDescription || '',
+        artworkImage: order.artworkImage || '',
         dimensions: order.dimensions || '',
         frameStyle: order.frameStyle || '',
         matColor: order.matColor || '',
@@ -203,6 +232,7 @@ export default function OrderList({
         customerPhone: order.customer.phone || '',
         description: order.description,
         artworkDescription: order.artworkDescription || '',
+        artworkImage: order.artworkImage || '',
         dimensions: order.dimensions || '',
         frameStyle: order.frameStyle || '',
         matColor: order.matColor || '',
@@ -580,15 +610,8 @@ FrameCraft`;
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center justify-between">
+            <DialogTitle>
               Order Details - {selectedOrder?.orderNumber}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setIsViewDialogOpen(false)}
-              >
-                <X className="w-4 h-4" />
-              </Button>
             </DialogTitle>
           </DialogHeader>
 
@@ -654,6 +677,19 @@ FrameCraft`;
                     <div>
                       <label className="text-sm font-medium text-gray-500">Artwork Description</label>
                       <p className="font-medium">{selectedOrder.artworkDescription}</p>
+                    </div>
+                  )}
+                  {selectedOrder.artworkImage && (
+                    <div>
+                      <label className="text-sm font-medium text-gray-500">Artwork Image</label>
+                      <div className="mt-2">
+                        <img 
+                          src={selectedOrder.artworkImage} 
+                          alt="Artwork" 
+                          className="max-w-full h-auto rounded-lg border border-gray-200 shadow-sm"
+                          style={{ maxHeight: '400px' }}
+                        />
+                      </div>
                     </div>
                   )}
                   {selectedOrder.dimensions && (

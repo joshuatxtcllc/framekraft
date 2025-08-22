@@ -81,12 +81,16 @@ export async function getOrders(): Promise<any[]> {
     .sort({ createdAt: -1 });
   
   // Transform to match expected format
-  return orders.map(order => ({
+  return orders.map(order => {
+    // Extract the populated customer data
+    const customer = order.customerId as any;
+    return {
     id: order._id.toString(),
-    customerId: order.customerId,
+    customerId: customer._id ? customer._id.toString() : order.customerId,
     orderNumber: order.orderNumber,
     description: order.description,
     artworkDescription: order.artworkDescription,
+    artworkImage: order.artworkImage,
     dimensions: order.dimensions,
     frameStyle: order.frameStyle,
     matColor: order.matColor,
@@ -106,10 +110,14 @@ export async function getOrders(): Promise<any[]> {
     notes: order.notes,
     aiRecommendations: order.aiRecommendations,
     taxExempt: order.taxExempt,
+    deliveryMethod: order.deliveryMethod,
+    rushOrder: order.rushOrder,
+    estimatedDeliveryDate: order.estimatedDeliveryDate?.toISOString(),
     createdAt: order.createdAt.toISOString(),
     updatedAt: order.updatedAt.toISOString(),
-    customer: order.customerId as any
-  }));
+    customer: customer
+  };
+  });
 }
 
 export async function getOrder(id: number | string): Promise<any | null> {
@@ -120,12 +128,14 @@ export async function getOrder(id: number | string): Promise<any | null> {
   const order = await Order.findById(id).populate('customerId');
   if (!order) return null;
   
+  const customer = order.customerId as any;
   return {
     id: order._id.toString(),
-    customerId: order.customerId,
+    customerId: customer._id ? customer._id.toString() : order.customerId,
     orderNumber: order.orderNumber,
     description: order.description,
     artworkDescription: order.artworkDescription,
+    artworkImage: order.artworkImage,
     dimensions: order.dimensions,
     frameStyle: order.frameStyle,
     matColor: order.matColor,
@@ -145,9 +155,12 @@ export async function getOrder(id: number | string): Promise<any | null> {
     notes: order.notes,
     aiRecommendations: order.aiRecommendations,
     taxExempt: order.taxExempt,
+    deliveryMethod: order.deliveryMethod,
+    rushOrder: order.rushOrder,
+    estimatedDeliveryDate: order.estimatedDeliveryDate?.toISOString(),
     createdAt: order.createdAt.toISOString(),
     updatedAt: order.updatedAt.toISOString(),
-    customer: order.customerId as any
+    customer: customer
   };
 }
 
@@ -160,12 +173,15 @@ export async function getOrdersByStatus(status: string): Promise<any[]> {
     .populate('customerId')
     .sort({ createdAt: -1 });
   
-  return orders.map(order => ({
+  return orders.map(order => {
+    const customer = order.customerId as any;
+    return {
     id: order._id.toString(),
-    customerId: order.customerId,
+    customerId: customer._id ? customer._id.toString() : order.customerId,
     orderNumber: order.orderNumber,
     description: order.description,
     artworkDescription: order.artworkDescription,
+    artworkImage: order.artworkImage,
     dimensions: order.dimensions,
     frameStyle: order.frameStyle,
     matColor: order.matColor,
@@ -185,10 +201,14 @@ export async function getOrdersByStatus(status: string): Promise<any[]> {
     notes: order.notes,
     aiRecommendations: order.aiRecommendations,
     taxExempt: order.taxExempt,
+    deliveryMethod: order.deliveryMethod,
+    rushOrder: order.rushOrder,
+    estimatedDeliveryDate: order.estimatedDeliveryDate?.toISOString(),
     createdAt: order.createdAt.toISOString(),
     updatedAt: order.updatedAt.toISOString(),
-    customer: order.customerId as any
-  }));
+    customer: customer
+  };
+  });
 }
 
 export async function getOrdersByCustomer(customerId: number | string): Promise<any[]> {
@@ -201,12 +221,15 @@ export async function getOrdersByCustomer(customerId: number | string): Promise<
     .populate('customerId')
     .sort({ createdAt: -1 });
   
-  return orders.map(order => ({
+  return orders.map(order => {
+    const customer = order.customerId as any;
+    return {
     id: order._id.toString(),
-    customerId: order.customerId,
+    customerId: customer._id ? customer._id.toString() : order.customerId,
     orderNumber: order.orderNumber,
     description: order.description,
     artworkDescription: order.artworkDescription,
+    artworkImage: order.artworkImage,
     dimensions: order.dimensions,
     frameStyle: order.frameStyle,
     matColor: order.matColor,
@@ -226,10 +249,14 @@ export async function getOrdersByCustomer(customerId: number | string): Promise<
     notes: order.notes,
     aiRecommendations: order.aiRecommendations,
     taxExempt: order.taxExempt,
+    deliveryMethod: order.deliveryMethod,
+    rushOrder: order.rushOrder,
+    estimatedDeliveryDate: order.estimatedDeliveryDate?.toISOString(),
     createdAt: order.createdAt.toISOString(),
     updatedAt: order.updatedAt.toISOString(),
-    customer: order.customerId as any
-  }));
+    customer: customer
+  };
+  });
 }
 
 export async function createOrder(orderData: any): Promise<IOrder> {

@@ -91,7 +91,10 @@ export interface IStorage {
 
   // Inventory
   getInventory(): Promise<Inventory[]>;
+  createInventoryItem(item: any): Promise<Inventory>;
   updateInventoryItem(id: number, item: any): Promise<Inventory>;
+  deleteInventoryItem(id: number): Promise<void>;
+  updateInventoryStock(id: number, quantity: number): Promise<Inventory>;
   getLowStockItems(): Promise<Inventory[]>;
 
   // Price Structure
@@ -503,6 +506,14 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(inventory).orderBy(inventory.itemName);
   }
 
+  async createInventoryItem(itemData: any): Promise<Inventory> {
+    const [item] = await db
+      .insert(inventory)
+      .values(itemData)
+      .returning();
+    return item;
+  }
+
   async updateInventoryItem(id: number, itemData: any): Promise<Inventory> {
     const [item] = await db
       .update(inventory)
@@ -512,8 +523,24 @@ export class DatabaseStorage implements IStorage {
     return item;
   }
 
-  async getLowStockItems(): Promise<any[]> {
-    const items = await db.select().from(inventory).where(lte(inventory.quantity, inventory.lowStockThreshold));
+  async deleteInventoryItem(id: number): Promise<void> {
+    await db.delete(inventory).where(eq(inventory.id, id));
+  }
+
+  async updateInventoryStock(id: number, quantity: number): Promise<Inventory> {
+    const [item] = await db
+      .update(inventory)
+      .set({ quantity, updatedAt: new Date() })
+      .where(eq(inventory.id, id))
+      .returning();
+    return item;
+  }
+
+  async getLowStockItems(): Promise<Inventory[]> {
+    const items = await db
+      .select()
+      .from(inventory)
+      .where(lte(inventory.quantity, inventory.minQuantity));
     return items;
   }
 

@@ -8,7 +8,7 @@ import { insertInventorySchema } from "../../shared/schema.js";
 const router = Router();
 
 // Get all inventory items
-router.get("/api/inventory", isAuthenticated, async (req, res) => {
+router.get("/", isAuthenticated, async (req, res) => {
   try {
     const items = await storage.getInventory();
     res.json(items);
@@ -18,8 +18,19 @@ router.get("/api/inventory", isAuthenticated, async (req, res) => {
   }
 });
 
+// Get low stock items
+router.get("/low-stock", isAuthenticated, async (req, res) => {
+  try {
+    const lowStockItems = await storage.getLowStockItems();
+    res.json(lowStockItems);
+  } catch (error) {
+    console.error("Error fetching low stock items:", error);
+    res.status(500).json({ message: "Failed to fetch low stock items" });
+  }
+});
+
 // Create new inventory item
-router.post("/api/inventory", isAuthenticated, async (req, res) => {
+router.post("/", isAuthenticated, async (req, res) => {
   try {
     const validatedData = insertInventorySchema.parse(req.body);
     const item = await storage.createInventoryItem(validatedData);
@@ -34,7 +45,7 @@ router.post("/api/inventory", isAuthenticated, async (req, res) => {
 });
 
 // Update inventory item
-router.put("/api/inventory/:id", isAuthenticated, async (req, res) => {
+router.put("/:id", isAuthenticated, async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const validatedData = insertInventorySchema.parse(req.body);
@@ -50,7 +61,7 @@ router.put("/api/inventory/:id", isAuthenticated, async (req, res) => {
 });
 
 // Delete inventory item
-router.delete("/api/inventory/:id", isAuthenticated, async (req, res) => {
+router.delete("/:id", isAuthenticated, async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     await storage.deleteInventoryItem(id);
@@ -62,7 +73,7 @@ router.delete("/api/inventory/:id", isAuthenticated, async (req, res) => {
 });
 
 // Update stock quantity
-router.patch("/api/inventory/:id/stock", isAuthenticated, async (req, res) => {
+router.patch("/:id/stock", isAuthenticated, async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const { quantity } = req.body;

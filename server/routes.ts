@@ -379,6 +379,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         orderNumber,
         description: orderData.description,
         artworkDescription: orderData.artworkDescription || undefined,
+        artworkImage: orderData.artworkImage || undefined,
         dimensions: orderData.dimensions || undefined,
         frameStyle: orderData.frameStyle || undefined,
         matColor: orderData.matColor || undefined,
@@ -393,6 +394,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         priority: orderData.priority || 'normal',
         notes: orderData.notes || undefined,
         dueDate: orderData.dueDate ? new Date(orderData.dueDate) : undefined,
+        deliveryMethod: orderData.deliveryMethod || undefined,
+        rushOrder: orderData.rushOrder || false,
+        estimatedDeliveryDate: orderData.estimatedDeliveryDate ? new Date(orderData.estimatedDeliveryDate) : undefined,
       });
       
       console.log("Order created successfully:", (order as any)._id);
@@ -458,18 +462,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put('/api/orders/:id', isAuthenticated, async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
-      const orderData = insertOrderSchema.partial().parse(req.body);
-      const order = await storage.updateOrder(id, {
-        ...orderData,
-        totalAmount: parseFloat(req.body.totalAmount),
-        depositAmount: req.body.depositAmount ? parseFloat(req.body.depositAmount) : 0,
-        discountPercentage: req.body.discountPercentage ? parseFloat(req.body.discountPercentage) : 0,
-        status: req.body.status,
-        priority: req.body.priority,
-        dueDate: req.body.dueDate || null,
-        notes: req.body.notes || '',
-      });
+      const id = req.params.id;
+      // Don't validate with insertOrderSchema since MongoDB uses string IDs
+      // Extract only the fields we need to update
+      const updateData: any = {};
+      
+      // Handle customerId - it might be an object or a string
+      if (req.body.customerId) {
+        if (typeof req.body.customerId === 'object' && req.body.customerId !== null) {
+          // If it's an object, extract the ID
+          updateData.customerId = req.body.customerId._id || req.body.customerId.id;
+        } else if (typeof req.body.customerId === 'string') {
+          // If it's already a string, use it directly
+          updateData.customerId = req.body.customerId;
+        }
+      }
+      
+      // Copy over other fields
+      if (req.body.orderNumber !== undefined) updateData.orderNumber = req.body.orderNumber;
+      if (req.body.description !== undefined) updateData.description = req.body.description;
+      if (req.body.artworkDescription !== undefined) updateData.artworkDescription = req.body.artworkDescription;
+      if (req.body.artworkImage !== undefined) updateData.artworkImage = req.body.artworkImage;
+      if (req.body.dimensions !== undefined) updateData.dimensions = req.body.dimensions;
+      if (req.body.frameStyle !== undefined) updateData.frameStyle = req.body.frameStyle;
+      if (req.body.matColor !== undefined) updateData.matColor = req.body.matColor;
+      if (req.body.glazing !== undefined) updateData.glazing = req.body.glazing;
+      if (req.body.totalAmount !== undefined) updateData.totalAmount = parseFloat(req.body.totalAmount);
+      if (req.body.depositAmount !== undefined) updateData.depositAmount = parseFloat(req.body.depositAmount);
+      if (req.body.discountPercentage !== undefined) updateData.discountPercentage = parseFloat(req.body.discountPercentage);
+      if (req.body.status !== undefined) updateData.status = req.body.status;
+      if (req.body.priority !== undefined) updateData.priority = req.body.priority;
+      if (req.body.dueDate !== undefined) updateData.dueDate = req.body.dueDate || null;
+      if (req.body.notes !== undefined) updateData.notes = req.body.notes || '';
+      
+      const order = await storage.updateOrder(id, updateData);
       res.json(order);
     } catch (error) {
       console.error("Error updating order:", error);
@@ -584,27 +610,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Inventory routes
-  app.get('/api/inventory', isAuthenticated, async (req, res) => {
-    try {
-      const inventory = await storage.getInventory();
-      res.json(inventory);
-    } catch (error) {
-      console.error("Error fetching inventory:", error);
-      res.status(500).json({ message: "Failed to fetch inventory" });
-    }
-  });
-
-  app.get('/api/inventory/low-stock', isAuthenticated, async (req, res) => {
-    try {
-      const lowStockItems = await storage.getLowStockItems();
-      res.json(lowStockItems);
-    } catch (error) {
-      console.error("Error fetching low stock items:", error);
-      res.status(500).json({ message: "Failed to fetch low stock items" });
-    }
-  });
-
   // Integration settings routes
   app.get('/api/settings/integrations', isAuthenticated, async (req, res) => {
     try {
@@ -678,7 +683,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use("/api/inventory", inventoryRoutes);
 
   // Add receivables routes for payment management
-  const receivablesRoutes = await import('./routes/receivables.js');
+  const receivablesRoutes = await import('./routes/receivables');
   app.use('/api/receivables', receivablesRoutes.default);
   
   // Add system routes for validation

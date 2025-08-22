@@ -5,6 +5,7 @@ interface OrderData {
   customerPhone: string;
   description: string;
   artworkDescription: string;
+  artworkImage?: string;
   dimensions: string;
   frameStyle: string;
   matColor: string;
@@ -200,6 +201,14 @@ export const printOrderInvoice = (data: OrderData) => {
         <div class="detail-row">
           <span class="detail-label">Artwork:</span>
           <span class="detail-value">${data.artworkDescription}</span>
+        </div>
+        ` : ''}
+        ${data.artworkImage && data.artworkImage.startsWith('data:image') ? `
+        <div class="detail-row">
+          <span class="detail-label">Artwork Image:</span>
+          <div style="margin-top: 10px;">
+            <img src="${data.artworkImage}" alt="Artwork" style="max-width: 300px; max-height: 200px; border: 1px solid #ddd; border-radius: 4px;" />
+          </div>
         </div>
         ` : ''}
         ${data.dimensions ? `

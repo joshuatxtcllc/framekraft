@@ -13,7 +13,10 @@ export const connectMongoDB = async (): Promise<void> => {
 
     console.log('✅ MongoDB connected successfully');
 
-    // Handle connection events
+    // Handle connection events - remove previous listeners to prevent memory leaks
+    mongoose.connection.removeAllListeners('error');
+    mongoose.connection.removeAllListeners('disconnected');
+    
     mongoose.connection.on('error', (error) => {
       console.error('MongoDB connection error:', error);
     });
@@ -22,12 +25,15 @@ export const connectMongoDB = async (): Promise<void> => {
       console.warn('MongoDB disconnected');
     });
 
-    // Graceful shutdown
-    process.on('SIGINT', async () => {
-      await mongoose.connection.close();
-      console.log('MongoDB connection closed through app termination');
-      process.exit(0);
-    });
+    // Graceful shutdown - only add listener once to prevent memory leaks
+    // Skip in development mode where hot reloads are frequent
+    if (process.env.NODE_ENV !== 'development' && process.listenerCount('SIGINT') === 0) {
+      process.once('SIGINT', async () => {
+        await mongoose.connection.close();
+        console.log('MongoDB connection closed through app termination');
+        process.exit(0);
+      });
+    }
   } catch (error) {
     console.error('Failed to connect to MongoDB:', error);
     process.exit(1);

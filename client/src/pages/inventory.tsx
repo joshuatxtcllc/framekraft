@@ -64,6 +64,47 @@ export default function InventoryPage() {
     }
   };
 
+  const handleExportReport = () => {
+    const csvHeaders = [
+      "Item Name",
+      "Category",
+      "Quantity",
+      "Min Quantity",
+      "Unit Cost",
+      "Total Value",
+      "Supplier",
+      "Status"
+    ];
+
+    const csvData = inventory.map(item => [
+      item.itemName,
+      item.category,
+      item.quantity?.toString() || "0",
+      item.minQuantity?.toString() || "0",
+      parseFloat(item.unitCost || "0").toFixed(2),
+      ((item.quantity || 0) * parseFloat(item.unitCost || "0")).toFixed(2),
+      item.supplier || "",
+      (item.quantity || 0) <= (item.minQuantity || 0) ? "Low Stock" : "In Stock"
+    ]);
+
+    const csvContent = [
+      csvHeaders.join(","),
+      ...csvData.map(row => row.map(cell => `"${cell}"`).join(","))
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `inventory-report-${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    toast.success("Inventory report exported successfully");
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex bg-background">
@@ -98,7 +139,7 @@ export default function InventoryPage() {
                   </p>
                 </div>
                 <div className="mt-4 flex md:mt-0 md:ml-4 space-x-3">
-                  <Button variant="outline">
+                  <Button variant="outline" onClick={handleExportReport}>
                     <TrendingDown className="w-4 h-4 mr-2" />
                     Export Report
                   </Button>

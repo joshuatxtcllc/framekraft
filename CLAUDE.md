@@ -111,3 +111,95 @@ Core tables (defined in `shared/schema.ts`):
 - Client-side routing uses Wouter (not React Router)
 - State updates use React Query's optimistic updates for better UX
 - All monetary values stored as decimals with 2 decimal precision
+
+## Comprehensive Project Analysis
+
+### Business Domain
+FrameCraft is a complete business management solution for custom framing shops, handling:
+- Order lifecycle management (pending → measuring → designing → cutting → assembly → completed)
+- Customer relationship management with history tracking
+- Inventory control with alerts and vendor catalog integration
+- Dynamic pricing with rules and tax calculations
+- AI-powered frame recommendations and business insights
+- Invoice generation and payment processing
+- Business analytics and metrics dashboards
+
+### Technical Architecture Details
+
+#### Frontend (30+ screens)
+- **Core Pages**: Dashboard, Orders (List/Kanban), Customers, Inventory, Invoices
+- **Specialized Tools**: Virtual Frame Designer, AI Assistant, Pricing Calculator
+- **Customer-Facing**: Customer Portal, Order Tracking
+- **Admin**: Settings, Integrations, API Explorer, System Validation
+- **40+ reusable UI components** using shadcn/ui design system
+- Responsive design with Tailwind CSS
+- Form validation with React Hook Form + Zod
+
+#### Backend Architecture
+- **API Design**: RESTful with 40+ endpoints
+- **Database Strategy**: 
+  - PostgreSQL (Neon) for business data (18 tables)
+  - MongoDB for authentication/sessions
+  - DynamoDB support for cloud deployments
+- **Middleware Stack**:
+  - Security headers (XSS, CSRF protection)
+  - Rate limiting (configurable per endpoint)
+  - Request sanitization and validation
+  - Comprehensive logging and monitoring
+- **Service Layer**: Separated business logic for AI, email, search, metrics
+
+#### Security Implementation
+- **Multiple Auth Strategies**: JWT, Session-based, Replit Auth, Demo mode
+- **Password Security**: bcrypt hashing with salt
+- **API Security**: Rate limiting, input validation, parameterized queries
+- **Session Management**: Secure cookies, configurable expiration
+- **Environment Security**: Separate configs for dev/prod
+
+#### Third-Party Integrations
+- **AI Services**: 
+  - Anthropic Claude (Sonnet 4) for recommendations
+  - OpenAI GPT-4 for image analysis
+- **Payment Processing**: Full Stripe integration with webhooks
+- **Communications**: Twilio SMS, Email service with templates
+- **Cloud Services**: Optimized for Replit, Railway, Vercel deployments
+
+### Database Schema (Key Relationships)
+- **Users** → manage multiple **Orders**
+- **Customers** → have multiple **Orders** and **Invoices**
+- **Orders** → contain **OrderLineItems** → reference **WholesalerProducts**
+- **Inventory** tracks stock levels for products
+- **PricingRules** and **PriceStructure** for dynamic pricing
+- **AIInsights** stores recommendations per order
+- **BusinessMetrics** for analytics and reporting
+
+### Performance Optimizations
+- Vite for fast development with HMR
+- React Query for intelligent data caching
+- Database indexes on frequently queried fields
+- Lazy loading and code splitting
+- Optimistic UI updates for better UX
+- Connection pooling for database efficiency
+
+### Testing & Quality
+- Unit tests with Vitest
+- E2E tests with Playwright
+- TypeScript strict mode
+- Zod runtime validation
+- Error boundaries for graceful failures
+- Comprehensive error logging
+
+### Notable Technical Decisions
+1. **Wouter over React Router**: Smaller bundle size, simpler API
+2. **Drizzle ORM**: Type-safe queries with excellent DX
+3. **shadcn/ui**: Customizable component library
+4. **TanStack Query**: Powerful server state management
+5. **Hybrid Database**: PostgreSQL for data, MongoDB for auth
+6. **Multiple Auth**: Flexibility for different deployment scenarios
+
+### Development Best Practices
+- Modular architecture with clear separation of concerns
+- Shared types between frontend and backend
+- Consistent error handling patterns
+- Comprehensive logging for debugging
+- Environment-based configuration
+- Security-first approach in all features
