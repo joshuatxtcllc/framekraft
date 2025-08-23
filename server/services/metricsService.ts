@@ -1,12 +1,12 @@
 
-import { storage } from '../storage';
+import * as storage from '../mongoStorage';
 
 class MetricsService {
   private metricsCache: any = null;
   private lastCalculated: Date | null = null;
   private cacheValidityMs = 5 * 60 * 1000; // 5 minutes
 
-  async getDashboardMetrics() {
+  async getDashboardMetrics(userId?: string) {
     try {
       // Force cache refresh for receivables update
       // if (this.metricsCache && this.lastCalculated && 
@@ -15,10 +15,10 @@ class MetricsService {
       // }
 
       // Try to get stored metrics first
-      const storedMetrics = await this.getStoredMetrics();
+      const storedMetrics = await this.getStoredMetrics(userId);
       
       // Calculate fresh metrics
-      const metrics = await this.calculateMetrics();
+      const metrics = await this.calculateMetrics(userId);
       
       // Compare with stored metrics for consistency check
       if (storedMetrics && this.areMetricsConsistent(storedMetrics, metrics)) {
@@ -47,10 +47,10 @@ class MetricsService {
     }
   }
 
-  private async calculateMetrics() {
+  private async calculateMetrics(userId?: string) {
     try {
-      const orders = await storage.getOrders();
-      const customers = await storage.getCustomers();
+      const orders = await storage.getOrders(userId);
+      const customers = await storage.getCustomers(userId);
 
       const currentMonth = new Date();
       currentMonth.setDate(1);
@@ -211,8 +211,8 @@ class MetricsService {
         weeklyRevenue: Number(weeklyRevenue.toFixed(2)),
         ordersByStatus,
         topCustomers: customers
-          .filter(c => c.totalSpent && parseFloat(c.totalSpent) > 0)
-          .sort((a, b) => parseFloat(b.totalSpent || "0") - parseFloat(a.totalSpent || "0"))
+          .filter(c => c.totalSpent > 0)
+          .sort((a, b) => (b.totalSpent || 0) - (a.totalSpent || 0))
           .slice(0, 5),
         // Financial metrics for receivables tracking
         totalOutstanding: Number(totalOutstanding.toFixed(2)),
@@ -252,17 +252,17 @@ class MetricsService {
   }
 
   // Force refresh of metrics cache
-  async refreshMetrics() {
+  async refreshMetrics(userId?: string) {
     this.metricsCache = null;
     this.lastCalculated = null;
-    return this.getDashboardMetrics();
+    return this.getDashboardMetrics(userId);
   }
 
   // Validate metrics accuracy
-  async validateMetrics() {
+  async validateMetrics(userId?: string) {
     try {
-      const calculated = await this.calculateMetrics();
-      const stored = await this.getStoredMetrics();
+      const calculated = await this.calculateMetrics(userId);
+      const stored = await this.getStoredMetrics(userId);
       
       const validation = {
         timestamp: new Date().toISOString(),
@@ -286,7 +286,7 @@ class MetricsService {
       }
 
       // Check for data integrity
-      const orders = await storage.getOrders();
+      const orders = await storage.getOrders(userId);
       const calculatedTotal = orders.reduce((sum, order) => sum + parseFloat(order.totalAmount), 0);
       
       if (Math.abs(calculatedTotal - calculated.totalRevenue) > 0.01) {
@@ -305,9 +305,9 @@ class MetricsService {
     }
   }
   
-  private async getStoredMetrics() {
+  private async getStoredMetrics(userId?: string) {
     try {
-      const storedMetrics = await storage.getBusinessMetrics();
+      const storedMetrics = await storage.getBusinessMetrics(userId);
       if (storedMetrics.length === 0) return null;
       
       // Convert stored metrics back to dashboard format

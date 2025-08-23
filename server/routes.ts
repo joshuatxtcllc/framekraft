@@ -64,10 +64,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // The /api/auth/user endpoint is now handled by authRoutes (authMongoDB.ts)
 
   // Dashboard metrics
-  app.get('/api/dashboard/metrics', isAuthenticated, async (req, res) => {
+  app.get('/api/dashboard/metrics', isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user?._id?.toString();
       const { metricsService } = await import('./services/metricsService');
-      const metrics = await metricsService.getDashboardMetrics();
+      const metrics = await metricsService.getDashboardMetrics(userId);
       res.json(metrics);
     } catch (error) {
       console.error("Error fetching dashboard metrics:", error);
@@ -76,10 +77,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Force refresh metrics endpoint
-  app.post('/api/dashboard/metrics/refresh', isAuthenticated, async (req, res) => {
+  app.post('/api/dashboard/metrics/refresh', isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user?._id?.toString();
       const { metricsService } = await import('./services/metricsService');
-      const metrics = await metricsService.refreshMetrics();
+      const metrics = await metricsService.refreshMetrics(userId);
       res.json({ message: "Metrics refreshed successfully", metrics });
     } catch (error) {
       console.error("Error refreshing dashboard metrics:", error);
@@ -90,8 +92,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Metrics validation endpoint
   app.get('/api/dashboard/metrics/validate', isAuthenticated, async (req: any, res: any) => {
     try {
+      const userId = req.user?._id?.toString();
       const { metricsService } = await import('./services/metricsService');
-      const validation = await metricsService.validateMetrics();
+      const validation = await metricsService.validateMetrics(userId);
       res.json(validation);
     } catch (error) {
       console.error('Metrics validation error:', error);

@@ -418,11 +418,12 @@ export async function updateInvoice(id: string, invoiceData: any, userId?: strin
       description: `Payment received for Invoice #${updatedInvoice.invoiceNumber}`,
       referenceId: updatedInvoice._id,
       referenceType: 'invoice',
-      date: invoiceData.paidDate || new Date()
+      date: invoiceData.paidDate || new Date(),
+      ...(updatedInvoice.userId && { userId: updatedInvoice.userId })
     });
     
-    // Update financial summary
-    await updateFinancialSummary(new Date());
+    // Update financial summary (with userId)
+    await updateFinancialSummary(new Date(), updatedInvoice.userId?.toString());
   }
   
   return updatedInvoice;
@@ -837,8 +838,13 @@ export { Session };
 // Financial operations
 
 // Expense operations
-export async function getExpenses(filter?: { startDate?: Date; endDate?: Date; category?: string }): Promise<IExpense[]> {
+export async function getExpenses(filter?: { userId?: string; startDate?: Date; endDate?: Date; category?: string }): Promise<IExpense[]> {
   const query: any = {};
+  
+  // Filter by userId if provided
+  if (filter?.userId) {
+    query.userId = filter.userId;
+  }
   
   if (filter?.startDate && filter?.endDate) {
     query.date = { $gte: filter.startDate, $lte: filter.endDate };
@@ -859,7 +865,7 @@ export async function createExpense(expenseData: Partial<IExpense>): Promise<IEx
   const expense = new Expense(expenseData);
   const savedExpense = await expense.save();
   
-  // Also create a transaction record
+  // Also create a transaction record (with userId if available)
   await createTransaction({
     type: 'expense',
     category: expense.category,
@@ -867,11 +873,12 @@ export async function createExpense(expenseData: Partial<IExpense>): Promise<IEx
     description: expense.description,
     referenceId: expense._id,
     referenceType: 'expense',
-    date: expense.date
+    date: expense.date,
+    ...(expense.userId && { userId: expense.userId })
   });
   
-  // Update financial summary
-  await updateFinancialSummary(expense.date);
+  // Update financial summary (pass userId if available)
+  await updateFinancialSummary(expense.date, expense.userId?.toString());
   
   return savedExpense;
 }
@@ -879,7 +886,7 @@ export async function createExpense(expenseData: Partial<IExpense>): Promise<IEx
 export async function updateExpense(id: string, expenseData: Partial<IExpense>): Promise<IExpense | null> {
   const updated = await Expense.findByIdAndUpdate(id, expenseData, { new: true });
   if (updated) {
-    await updateFinancialSummary(updated.date);
+    await updateFinancialSummary(updated.date, updated.userId?.toString());
   }
   return updated;
 }
@@ -890,15 +897,20 @@ export async function deleteExpense(id: string): Promise<boolean> {
     // Remove associated transaction
     await Transaction.deleteOne({ referenceId: expense._id, referenceType: 'expense' });
     await Expense.findByIdAndDelete(id);
-    await updateFinancialSummary(expense.date);
+    await updateFinancialSummary(expense.date, expense.userId?.toString());
     return true;
   }
   return false;
 }
 
 // Transaction operations
-export async function getTransactions(filter?: { startDate?: Date; endDate?: Date; type?: string }): Promise<ITransaction[]> {
+export async function getTransactions(filter?: { userId?: string; startDate?: Date; endDate?: Date; type?: string }): Promise<ITransaction[]> {
   const query: any = {};
+  
+  // Filter by userId if provided
+  if (filter?.userId) {
+    query.userId = filter.userId;
+  }
   
   if (filter?.startDate && filter?.endDate) {
     query.date = { $gte: filter.startDate, $lte: filter.endDate };
@@ -912,13 +924,14 @@ export async function getTransactions(filter?: { startDate?: Date; endDate?: Dat
   let transactions = await Transaction.find(query).sort({ date: -1, createdAt: -1 });
   
   // If no transactions exist, create them from orders and expenses
-  if (transactions.length === 0) {
+  if (transactions.length === 0 && filter?.userId) {
     // Get orders and create income transactions
-    const orders = await Order.find();
+    const orders = await Order.find({ userId: filter.userId });
     for (const order of orders) {
       if (order.status === 'completed' || order.depositAmount > 0) {
         const amount = order.status === 'completed' ? order.totalAmount : order.depositAmount;
         await createTransaction({
+          userId: order.userId,
           type: 'income',
           category: order.status === 'completed' ? 'order_completed' : 'deposit',
           amount,
@@ -931,9 +944,10 @@ export async function getTransactions(filter?: { startDate?: Date; endDate?: Dat
     }
     
     // Get expenses and create expense transactions
-    const expenses = await Expense.find();
+    const expenses = await Expense.find({ userId: filter.userId });
     for (const expense of expenses) {
       await createTransaction({
+        userId: expense.userId,
         type: 'expense',
         category: expense.category,
         amount: expense.amount,
@@ -971,33 +985,46 @@ export async function createTransaction(transactionData: Partial<ITransaction>):
 }
 
 // Financial Summary operations
-export async function getFinancialSummary(period?: string): Promise<IFinancialSummary | null> {
+export async function getFinancialSummary(period?: string, userId?: string): Promise<IFinancialSummary | null> {
+  const query: any = {};
+  
   if (period) {
-    return await FinancialSummary.findOne({ period });
+    query.period = period;
+  } else {
+    // Get current month if no period specified
+    query.period = new Date().toISOString().slice(0, 7);
   }
   
-  // Get current month if no period specified
-  const currentPeriod = new Date().toISOString().slice(0, 7);
-  return await FinancialSummary.findOne({ period: currentPeriod });
+  // Filter by userId if provided
+  if (userId) {
+    query.userId = userId;
+  }
+  
+  return await FinancialSummary.findOne(query);
 }
 
-export async function updateFinancialSummary(date: Date): Promise<void> {
+export async function updateFinancialSummary(date: Date, userId?: string): Promise<void> {
   const period = date.toISOString().slice(0, 7); // YYYY-MM format
   const startDate = new Date(date.getFullYear(), date.getMonth(), 1);
   const endDate = new Date(date.getFullYear(), date.getMonth() + 1, 0);
   
-  // Calculate revenue (paid invoices)
-  const paidInvoices = await Invoice.find({
+  // Build query with userId filter
+  const invoiceQuery: any = {
     status: 'paid',
     paidDate: { $gte: startDate, $lte: endDate }
-  });
+  };
+  if (userId) invoiceQuery.userId = userId;
+  
+  // Calculate revenue (paid invoices)
+  const paidInvoices = await Invoice.find(invoiceQuery);
   
   const revenue = paidInvoices.reduce((sum, inv) => sum + inv.totalAmount, 0);
   
   // Calculate expenses
-  const expenses = await Expense.find({
-    date: { $gte: startDate, $lte: endDate }
-  });
+  const expenseQuery: any = { date: { $gte: startDate, $lte: endDate } };
+  if (userId) expenseQuery.userId = userId;
+  
+  const expenses = await Expense.find(expenseQuery);
   
   const totalExpenses = expenses.reduce((sum, exp) => sum + exp.amount, 0);
   
@@ -1013,17 +1040,21 @@ export async function updateFinancialSummary(date: Date): Promise<void> {
     .slice(0, 5);
   
   // Calculate average order value
-  const orders = await Order.find({
-    createdAt: { $gte: startDate, $lte: endDate }
-  });
+  const orderQuery: any = { createdAt: { $gte: startDate, $lte: endDate } };
+  if (userId) orderQuery.userId = userId;
+  
+  const orders = await Order.find(orderQuery);
   
   const averageOrderValue = orders.length > 0 
     ? orders.reduce((sum, order) => sum + order.totalAmount, 0) / orders.length 
     : 0;
   
-  // Update or create summary
+  // Update or create summary (with userId if provided)
+  const summaryQuery: any = { period };
+  if (userId) summaryQuery.userId = userId;
+  
   await FinancialSummary.findOneAndUpdate(
-    { period },
+    summaryQuery,
     {
       periodType: 'month',
       revenue,
@@ -1033,31 +1064,36 @@ export async function updateFinancialSummary(date: Date): Promise<void> {
       paidInvoiceCount: paidInvoices.length,
       expenseCount: expenses.length,
       averageOrderValue,
-      topExpenseCategories
+      topExpenseCategories,
+      ...(userId && { userId }) // Add userId to the update if it exists
     },
     { upsert: true, new: true }
   );
 }
 
 // Get financial analytics data
-export async function getFinancialAnalytics(): Promise<any> {
+export async function getFinancialAnalytics(userId?: string): Promise<any> {
   const now = new Date();
   const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1);
   
+  // Build query with userId filter
+  const orderQuery: any = { createdAt: { $gte: sixMonthsAgo } };
+  if (userId) orderQuery.userId = userId;
+  
   // Get all orders to calculate revenue
-  const orders = await Order.find({
-    createdAt: { $gte: sixMonthsAgo }
-  }).sort({ createdAt: 1 });
+  const orders = await Order.find(orderQuery).sort({ createdAt: 1 });
   
-  // Get all invoices
-  const invoices = await Invoice.find({
-    createdAt: { $gte: sixMonthsAgo }
-  }).sort({ createdAt: 1 });
+  // Build invoice query with userId filter
+  const invoiceQuery: any = { createdAt: { $gte: sixMonthsAgo } };
+  if (userId) invoiceQuery.userId = userId;
   
-  // Get all expenses
-  const expenses = await Expense.find({
-    date: { $gte: sixMonthsAgo }
-  }).sort({ date: 1 });
+  const invoices = await Invoice.find(invoiceQuery).sort({ createdAt: 1 });
+  
+  // Get all expenses with userId filter
+  const expenseQuery: any = { date: { $gte: sixMonthsAgo } };
+  if (userId) expenseQuery.userId = userId;
+  
+  const expenses = await Expense.find(expenseQuery).sort({ date: 1 });
   
   // Group data by month
   const monthlyData: { [key: string]: { revenue: number; expenses: number; orders: number } } = {};
@@ -1133,10 +1169,13 @@ export async function getFinancialAnalytics(): Promise<any> {
   // Get current month summary
   const currentMonthData = monthlyData[currentMonth] || { revenue: 0, expenses: 0, orders: 0 };
   
-  // Also get total counts
-  const totalOrders = await Order.countDocuments();
-  const completedOrders = await Order.countDocuments({ status: 'completed' });
-  const totalCustomers = await Customer.countDocuments();
+  // Also get total counts (filter by userId if provided)
+  const totalOrdersQuery = userId ? { userId } : {};
+  const totalOrders = await Order.countDocuments(totalOrdersQuery);
+  const completedOrdersQuery = userId ? { userId, status: 'completed' } : { status: 'completed' };
+  const completedOrders = await Order.countDocuments(completedOrdersQuery);
+  const customerQuery = userId ? { userId } : {};
+  const totalCustomers = await Customer.countDocuments(customerQuery);
   
   return {
     revenueChart,

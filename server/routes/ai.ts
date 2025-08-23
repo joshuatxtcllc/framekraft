@@ -1,12 +1,12 @@
 
 import { Router } from 'express';
 import { aiService } from '../services/aiService.js';
-import { isAuthenticated } from '../middleware/auth.js';
+import { validateSession } from '../middleware/sessionValidation.js';
 
 const router = Router();
 
 // Send message to AI assistant
-router.post('/message', isAuthenticated, async (req, res) => {
+router.post('/message', validateSession, async (req, res) => {
   try {
     const { message, context } = req.body;
     const response = await aiService.sendMessage(message, context);
@@ -18,7 +18,7 @@ router.post('/message', isAuthenticated, async (req, res) => {
 });
 
 // Get frame recommendations
-router.post('/frame-recommendations', isAuthenticated, async (req, res) => {
+router.post('/frame-recommendations', validateSession, async (req, res) => {
   try {
     const { artworkDescription, dimensions, customerPreferences, budget } = req.body;
     const recommendation = await aiService.analyzeFrameRecommendation(
@@ -35,7 +35,7 @@ router.post('/frame-recommendations', isAuthenticated, async (req, res) => {
 });
 
 // Analyze artwork image
-router.post('/analyze-image', isAuthenticated, async (req, res) => {
+router.post('/analyze-image', validateSession, async (req, res) => {
   try {
     const { imageUrl, additionalContext } = req.body;
     const analysis = await aiService.analyzeArtworkImage(imageUrl, additionalContext);
@@ -47,7 +47,7 @@ router.post('/analyze-image', isAuthenticated, async (req, res) => {
 });
 
 // Generate business insights
-router.post('/business-insights', isAuthenticated, async (req, res) => {
+router.post('/business-insights', validateSession, async (req, res) => {
   try {
     const { businessData } = req.body;
     const insights = await aiService.generateBusinessInsights(businessData);
@@ -59,7 +59,7 @@ router.post('/business-insights', isAuthenticated, async (req, res) => {
 });
 
 // Analyze customer sentiment
-router.post('/customer-sentiment', isAuthenticated, async (req, res) => {
+router.post('/customer-sentiment', validateSession, async (req, res) => {
   try {
     const { customerFeedback } = req.body;
     const sentiment = await aiService.analyzeCustomerSentiment(customerFeedback);
@@ -71,7 +71,7 @@ router.post('/customer-sentiment', isAuthenticated, async (req, res) => {
 });
 
 // Enhanced market research
-router.post('/market-research', isAuthenticated, async (req, res) => {
+router.post('/market-research', validateSession, async (req, res) => {
   try {
     const { topic } = req.body;
     const research = await aiService.enhancedMarketResearch(topic);
@@ -83,7 +83,7 @@ router.post('/market-research', isAuthenticated, async (req, res) => {
 });
 
 // Intelligent framing advice
-router.post('/intelligent-framing-advice', isAuthenticated, async (req, res) => {
+router.post('/intelligent-framing-advice', validateSession, async (req, res) => {
   try {
     const { artworkDescription, customerContext } = req.body;
     const advice = await aiService.intelligentFramingAdvice(artworkDescription, customerContext);
@@ -95,7 +95,7 @@ router.post('/intelligent-framing-advice', isAuthenticated, async (req, res) => 
 });
 
 // Real-time competitor analysis
-router.get('/competitor-analysis', isAuthenticated, async (req, res) => {
+router.get('/competitor-analysis', validateSession, async (req, res) => {
   try {
     const analysis = await aiService.realTimeCompetitorAnalysis();
     res.json(analysis);
