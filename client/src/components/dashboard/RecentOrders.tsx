@@ -59,33 +59,33 @@ export default function RecentOrders({ orders }: RecentOrdersProps) {
         </div>
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
+        <div className="space-y-2">
           {orders.length === 0 ? (
             <div className="text-center py-8">
               <p className="text-muted-foreground">No orders yet</p>
             </div>
           ) : (
             orders.map((order) => (
-              <div key={order.id} className="flex items-center space-x-4">
-                <div className="flex-shrink-0">
-                  <div className="h-8 w-8 bg-accent rounded-full flex items-center justify-center">
-                    <span className="text-sm font-medium text-accent-foreground">
-                      #{order.id}
+              <div key={order.id} className="flex items-center justify-between py-2 border-b last:border-0">
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <div className="flex-shrink-0 w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+                    <span className="text-xs font-semibold text-primary">
+                      {order.customer?.firstName?.[0] || 'U'}{order.customer?.lastName?.[0] || ''}
                     </span>
                   </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground">
+                      {order.orderNumber}
+                    </p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {order.description}
+                    </p>
+                  </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-foreground truncate">
-                    {order.customer.firstName} {order.customer.lastName}
-                  </p>
-                  <p className="text-sm text-muted-foreground truncate">
-                    {order.description}
-                  </p>
-                </div>
-                <div className="flex-shrink-0 text-right space-y-1">
-                  <p className="text-sm font-medium text-foreground">
+                <div className="flex flex-col items-end gap-1 ml-4">
+                  <span className="text-sm font-semibold text-foreground">
                     {formatCurrency(order.totalAmount)}
-                  </p>
+                  </span>
                   {getStatusBadge(order.status)}
                 </div>
               </div>
