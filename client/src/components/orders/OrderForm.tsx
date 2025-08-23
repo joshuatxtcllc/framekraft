@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -182,13 +182,22 @@ export default function OrderForm({
   };
 
   // Advanced united inch-based pricing calculation with tax
-  const calculatePrice = () => {
-    const frameStyle = form.watch("frameStyle");
-    const glazing = form.watch("glazing");
-    const dimensions = form.watch("dimensions");
-    const matColor = form.watch("matColor");
-    const quantity = parseInt(form.watch("quantity") || "1");
-    const taxExempt = form.watch("taxExempt");
+  const calculatePrice = useCallback((
+    frameStyleVal?: string,
+    glazingVal?: string,
+    dimensionsVal?: string,
+    matColorVal?: string,
+    quantityVal?: string,
+    taxExemptVal?: boolean,
+    discountPercentageVal?: string
+  ) => {
+    const frameStyle = frameStyleVal ?? form.watch("frameStyle");
+    const glazing = glazingVal ?? form.watch("glazing");
+    const dimensions = dimensionsVal ?? form.watch("dimensions");
+    const matColor = matColorVal ?? form.watch("matColor");
+    const quantity = parseInt(quantityVal ?? (form.watch("quantity") || "1"));
+    const taxExempt = taxExemptVal ?? form.watch("taxExempt");
+    const discountPercentage = parseFloat(discountPercentageVal ?? (form.watch("discountPercentage") || "0"));
 
     if (!dimensions) return { subtotal: 0, tax: 0, total: 0 };
 
@@ -287,7 +296,6 @@ export default function OrderForm({
     let subtotal = framePrice + matPrice + glazingPrice + (laborCost * quantity) + (overheadCost * quantity) + specialServicesPrice;
 
     // Apply discount if specified
-    const discountPercentage = parseFloat(form.watch("discountPercentage") || "0");
     if (discountPercentage > 0) {
       subtotal = subtotal * (1 - discountPercentage / 100);
     }
@@ -302,31 +310,48 @@ export default function OrderForm({
       tax: Math.round(tax * 100) / 100,
       total: Math.round(total * 100) / 100
     };
-  };
+  }, [priceStructure, laborCost, overheadCost, specialServices, manualItems, form]);
+
+  // Watch form fields for changes
+  const frameStyle = form.watch("frameStyle");
+  const glazing = form.watch("glazing");
+  const dimensions = form.watch("dimensions");
+  const matColor = form.watch("matColor");
+  const quantity = form.watch("quantity");
+  const discountPercentage = form.watch("discountPercentage");
+  const taxExempt = form.watch("taxExempt");
 
   // Watch for changes and recalculate price only in auto mode
   useEffect(() => {
     if (!useCalculatedPrice) return; // Don't override manual pricing
     
-    const pricing = calculatePrice();
+    const pricing = calculatePrice(
+      frameStyle,
+      glazing,
+      dimensions,
+      matColor,
+      quantity,
+      taxExempt,
+      discountPercentage
+    );
     setCalculatedPrice(pricing.total);
     if (pricing.total > 0) {
       form.setValue("totalAmount", pricing.total.toFixed(2));
     }
   }, [
-    form.watch("frameStyle"), 
-    form.watch("glazing"), 
-    form.watch("dimensions"), 
-    form.watch("matColor"), 
-    form.watch("quantity"), 
-    form.watch("discountPercentage"), 
-    form.watch("taxExempt"), 
+    frameStyle, 
+    glazing, 
+    dimensions, 
+    matColor, 
+    quantity, 
+    discountPercentage, 
+    taxExempt, 
     priceStructure, 
     laborCost, 
     useCalculatedPrice, 
     specialServices,
-    // Force recalculation when any watched field changes
-    JSON.stringify(form.watch())
+    manualItems,
+    calculatePrice
   ]);
 
   // Initialize pricing mode based on whether we're editing
@@ -440,7 +465,15 @@ export default function OrderForm({
 
     if (useCalculatedPrice) {
       // Auto-calculated prices already include everything
-      const pricing = calculatePrice();
+      const pricing = calculatePrice(
+        data.frameStyle,
+        data.glazing,
+        data.dimensions,
+        data.matColor,
+        data.quantity,
+        data.taxExempt,
+        data.discountPercentage
+      );
       finalTotal = pricing.total;
       subtotal = pricing.subtotal;
       taxAmount = pricing.tax;
@@ -1058,13 +1091,15 @@ export default function OrderForm({
             <CardContent className="pt-0">
               <div className="text-sm text-blue-700">
                 {(() => {
-                  const frameStyle = form.watch("frameStyle");
-                  const glazing = form.watch("glazing");
-                  const matColor = form.watch("matColor");
-                  const dimensions = form.watch("dimensions");
-                  const quantity = parseInt(form.watch("quantity") || "1");
-                  const taxExempt = form.watch("taxExempt");
-                  const pricing = calculatePrice();
+                  const pricing = calculatePrice(
+                    frameStyle,
+                    glazing, 
+                    dimensions,
+                    matColor,
+                    quantity,
+                    taxExempt,
+                    discountPercentage
+                  );
 
                   if (!dimensions) {
                     return <p>Enter dimensions to see calculation</p>;

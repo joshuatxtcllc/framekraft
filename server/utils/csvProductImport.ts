@@ -452,9 +452,11 @@ export async function parseAndValidateCSV(csvContent: string): Promise<{
  */
 export function convertToProductData(
   rows: CSVProductRow[], 
-  wholesalerId: string
+  wholesalerId: string,
+  userId?: string
 ): Partial<IWholesalerProduct>[] {
   return rows.map(row => ({
+    userId: userId as any, // Will be converted to ObjectId in storage
     wholesalerId: wholesalerId as any, // Will be converted to ObjectId in storage
     productCode: row.productCode.trim(),
     productName: row.productName.trim(),

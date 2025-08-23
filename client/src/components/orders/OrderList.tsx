@@ -149,9 +149,9 @@ export default function OrderList({
     try {
       const invoiceData = {
         orderNumber: order.orderNumber,
-        customerName: `${order.customer.firstName} ${order.customer.lastName}`,
-        customerEmail: order.customer.email || '',
-        customerPhone: order.customer.phone || '',
+        customerName: order.customer ? `${order.customer.firstName} ${order.customer.lastName}` : 'No customer',
+        customerEmail: order.customer?.email || '',
+        customerPhone: order.customer?.phone || '',
         description: order.description,
         artworkDescription: order.artworkDescription || '',
         artworkImage: order.artworkImage || '',
@@ -188,9 +188,9 @@ export default function OrderList({
     try {
       const workOrderData = {
         orderNumber: order.orderNumber,
-        customerName: `${order.customer.firstName} ${order.customer.lastName}`,
-        customerEmail: order.customer.email || '',
-        customerPhone: order.customer.phone || '',
+        customerName: order.customer ? `${order.customer.firstName} ${order.customer.lastName}` : 'No customer',
+        customerEmail: order.customer?.email || '',
+        customerPhone: order.customer?.phone || '',
         description: order.description,
         artworkDescription: order.artworkDescription || '',
         artworkImage: order.artworkImage || '',
@@ -227,9 +227,9 @@ export default function OrderList({
     try {
       const invoiceData = {
         orderNumber: order.orderNumber,
-        customerName: `${order.customer.firstName} ${order.customer.lastName}`,
-        customerEmail: order.customer.email || '',
-        customerPhone: order.customer.phone || '',
+        customerName: order.customer ? `${order.customer.firstName} ${order.customer.lastName}` : 'No customer',
+        customerEmail: order.customer?.email || '',
+        customerPhone: order.customer?.phone || '',
         description: order.description,
         artworkDescription: order.artworkDescription || '',
         artworkImage: order.artworkImage || '',
@@ -265,7 +265,7 @@ export default function OrderList({
 
   // Email invoice
   const handleEmailInvoice = onEmailInvoice || ((order: Order) => {
-    if (!order.customer.email) {
+    if (!order.customer?.email) {
       toast({
         title: "No Email Address",
         description: "Customer has no email address on file.",
@@ -276,7 +276,7 @@ export default function OrderList({
 
     // Create mailto link with invoice details
     const subject = `Invoice ${order.orderNumber} - ${order.description}`;
-    const body = `Dear ${order.customer.firstName} ${order.customer.lastName},
+    const body = `Dear ${order.customer?.firstName || 'Customer'} ${order.customer?.lastName || ''},
 
 Please find attached your invoice for order ${order.orderNumber}.
 
@@ -290,12 +290,12 @@ Thank you for your business!
 Best regards,
 FrameCraft`;
 
-    const mailtoLink = `mailto:${order.customer.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    const mailtoLink = `mailto:${order.customer?.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     window.open(mailtoLink);
 
     toast({
       title: "Email Client Opened",
-      description: `Email client opened for ${order.customer.email}`,
+      description: `Email client opened for ${order.customer?.email}`,
     });
   });
 
@@ -359,7 +359,7 @@ FrameCraft`;
   const filteredOrders = orders.filter((order) => {
     const matchesSearch = 
       order.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      `${order.customer.firstName} ${order.customer.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (order.customer ? `${order.customer.firstName} ${order.customer.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) : false) ||
       order.description.toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesStatus = statusFilter === "all" || order.status === statusFilter;
@@ -476,7 +476,7 @@ FrameCraft`;
                       <div className="flex flex-col">
                         <span className="text-sm">{order.orderNumber}</span>
                         <span className="text-xs text-muted-foreground sm:hidden">
-                          {order.customer.firstName} {order.customer.lastName}
+                          {order.customer ? `${order.customer.firstName} ${order.customer.lastName}` : 'No customer'}
                         </span>
                         <span className="text-xs text-muted-foreground md:hidden">
                           {order.description.substring(0, 30)}{order.description.length > 30 ? '...' : ''}
@@ -484,8 +484,8 @@ FrameCraft`;
                       </div>
                     </TableCell>
                     <TableCell className="hidden sm:table-cell">
-                      <div className="truncate max-w-[120px]" title={`${order.customer.firstName} ${order.customer.lastName}`}>
-                        {order.customer.firstName} {order.customer.lastName}
+                      <div className="truncate max-w-[120px]" title={order.customer ? `${order.customer.firstName} ${order.customer.lastName}` : 'No customer'}>
+                        {order.customer ? `${order.customer.firstName} ${order.customer.lastName}` : 'No customer'}
                       </div>
                     </TableCell>
                     <TableCell className="hidden md:table-cell">
@@ -568,7 +568,7 @@ FrameCraft`;
                               <Printer className="w-4 h-4 mr-2" />
                               Print Invoice
                             </DropdownMenuItem>
-                            {order.customer.email && (
+                            {order.customer?.email && (
                               <DropdownMenuItem onClick={() => handleEmailInvoice(order)}>
                                 <Mail className="w-4 h-4 mr-2" />
                                 Email Invoice
@@ -631,18 +631,18 @@ FrameCraft`;
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="text-sm font-medium text-gray-500">Name</label>
-                    <p className="font-medium">{selectedOrder.customer.firstName} {selectedOrder.customer.lastName}</p>
+                    <p className="font-medium">{selectedOrder.customer ? `${selectedOrder.customer.firstName} ${selectedOrder.customer.lastName}` : 'No customer'}</p>
                   </div>
-                  {selectedOrder.customer.email && (
+                  {selectedOrder.customer?.email && (
                     <div>
                       <label className="text-sm font-medium text-gray-500">Email</label>
-                      <p className="font-medium">{selectedOrder.customer.email}</p>
+                      <p className="font-medium">{selectedOrder.customer?.email}</p>
                     </div>
                   )}
-                  {selectedOrder.customer.phone && (
+                  {selectedOrder.customer?.phone && (
                     <div>
                       <label className="text-sm font-medium text-gray-500">Phone</label>
-                      <p className="font-medium">{selectedOrder.customer.phone}</p>
+                      <p className="font-medium">{selectedOrder.customer?.phone}</p>
                     </div>
                   )}
                 </div>

@@ -218,3 +218,10 @@ For issues and feature requests, please use the GitHub issues tracker.
 ---
 
 Built with ❤️ for the custom framing industry
+
+
+
+
+Login credentials:
+  - Email: owner@framecraft.com
+  - Password: SecurePass2024

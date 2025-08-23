@@ -54,26 +54,32 @@ export function useAuth() {
           'Content-Type': 'application/json',
         }
       });
-      if (!response.ok && response.status !== 302) {
-        throw new Error('Logout failed');
+      
+      // Try to parse JSON response
+      try {
+        const data = await response.json();
+        return data;
+      } catch {
+        // If response is not JSON, return success
+        return { success: true };
       }
-      return response.json();
     },
     onSuccess: () => {
-      // Clear the user query cache
+      // Clear the user query cache immediately
       queryClient.setQueryData(['/api/auth/user'], null);
       queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
-      // Clear any cached data
+      // Clear all cached data
       queryClient.clear();
-      // Redirect to landing page
-      setLocation('/landing');
+      // Force redirect to landing page
+      window.location.href = '/landing';
     },
     onError: (error) => {
       console.error('Logout error:', error);
       // Even on error, clear auth and redirect
       queryClient.setQueryData(['/api/auth/user'], null);
       queryClient.clear();
-      setLocation('/landing');
+      // Force redirect to landing page
+      window.location.href = '/landing';
     }
   });
 

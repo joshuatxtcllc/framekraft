@@ -17,6 +17,7 @@ import {
 import { Plus, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function Customers() {
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -25,6 +26,7 @@ export default function Customers() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   const { data: customers, isLoading } = useQuery({
     queryKey: ["/api/customers"],
@@ -32,7 +34,11 @@ export default function Customers() {
 
   const createCustomerMutation = useMutation({
     mutationFn: async (customerData: any) => {
-      const response = await apiRequest("POST", "/api/customers", customerData);
+      const dataWithUserId = {
+        ...customerData,
+        userId: user?.id || user?.userId
+      };
+      const response = await apiRequest("POST", "/api/customers", dataWithUserId);
       return response.json();
     },
     onSuccess: () => {

@@ -82,9 +82,10 @@ export function registerWholesalerRoutes(app: Express, isAuthenticated: any) {
   });
 
   // Get all wholesalers
-  app.get("/api/wholesalers", isAuthenticated, async (req, res) => {
+  app.get("/api/wholesalers", isAuthenticated, async (req: any, res) => {
     try {
-      const wholesalers = await storage.getWholesalers();
+      const userId = req.user?.id || req.user?._id;
+      const wholesalers = await storage.getWholesalersByUserId(userId);
       res.json(wholesalers);
     } catch (error) {
       console.error("Error fetching wholesalers:", error);
@@ -93,11 +94,15 @@ export function registerWholesalerRoutes(app: Express, isAuthenticated: any) {
   });
 
   // Get specific wholesaler by ID
-  app.get("/api/wholesalers/:id", isAuthenticated, async (req, res) => {
+  app.get("/api/wholesalers/:id", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user?.id || req.user?._id;
       const wholesaler = await storage.getWholesalerById(req.params.id);
       if (!wholesaler) {
         return res.status(404).json({ message: "Wholesaler not found" });
+      }
+      if (wholesaler.userId?.toString() !== userId?.toString()) {
+        return res.status(403).json({ message: "Access denied" });
       }
       res.json(wholesaler);
     } catch (error) {
@@ -107,11 +112,15 @@ export function registerWholesalerRoutes(app: Express, isAuthenticated: any) {
   });
 
   // Create new wholesaler
-  app.post("/api/wholesalers", isAuthenticated, async (req, res) => {
+  app.post("/api/wholesalers", isAuthenticated, async (req: any, res) => {
     try {
+      // Get userId from authenticated user
+      const userId = req.user?.id || req.user?._id;
+      
       // Convert min order amount to number if provided
       const data = {
         ...req.body,
+        userId,
         minOrderAmount: req.body.minOrderAmount ? parseFloat(req.body.minOrderAmount) : undefined,
       };
       
@@ -124,17 +133,24 @@ export function registerWholesalerRoutes(app: Express, isAuthenticated: any) {
   });
 
   // Update wholesaler
-  app.put("/api/wholesalers/:id", isAuthenticated, async (req, res) => {
+  app.put("/api/wholesalers/:id", isAuthenticated, async (req: any, res) => {
     try {
+      // Verify user owns this wholesaler
+      const userId = req.user?.id || req.user?._id;
+      const existingWholesaler = await storage.getWholesalerById(req.params.id);
+      if (!existingWholesaler) {
+        return res.status(404).json({ message: "Wholesaler not found" });
+      }
+      if (existingWholesaler.userId?.toString() !== userId?.toString()) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
       const data = {
         ...req.body,
         minOrderAmount: req.body.minOrderAmount ? parseFloat(req.body.minOrderAmount) : undefined,
       };
       
       const wholesaler = await storage.updateWholesaler(req.params.id, data);
-      if (!wholesaler) {
-        return res.status(404).json({ message: "Wholesaler not found" });
-      }
       res.json(wholesaler);
     } catch (error) {
       console.error("Error updating wholesaler:", error);
@@ -143,12 +159,19 @@ export function registerWholesalerRoutes(app: Express, isAuthenticated: any) {
   });
 
   // Delete wholesaler
-  app.delete("/api/wholesalers/:id", isAuthenticated, async (req, res) => {
+  app.delete("/api/wholesalers/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const deleted = await storage.deleteWholesaler(req.params.id);
-      if (!deleted) {
+      // Verify user owns this wholesaler
+      const userId = req.user?.id || req.user?._id;
+      const wholesaler = await storage.getWholesalerById(req.params.id);
+      if (!wholesaler) {
         return res.status(404).json({ message: "Wholesaler not found" });
       }
+      if (wholesaler.userId?.toString() !== userId?.toString()) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const deleted = await storage.deleteWholesaler(req.params.id);
       res.status(200).json({ message: "Wholesaler deleted successfully" });
     } catch (error) {
       console.error("Error deleting wholesaler:", error);
@@ -157,10 +180,22 @@ export function registerWholesalerRoutes(app: Express, isAuthenticated: any) {
   });
 
   // Upload catalog file for wholesaler
-  app.post("/api/wholesalers/:id/upload-catalog", isAuthenticated, upload.single("catalog"), async (req, res) => {
+  app.post("/api/wholesalers/:id/upload-catalog", isAuthenticated, upload.single("catalog"), async (req: any, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      // Verify user owns this wholesaler
+      const userId = req.user?.id || req.user?._id;
+      const existingWholesaler = await storage.getWholesalerById(req.params.id);
+      if (!existingWholesaler) {
+        if (req.file) await fs.unlink(req.file.path).catch(() => {});
+        return res.status(404).json({ message: "Wholesaler not found" });
+      }
+      if (existingWholesaler.userId?.toString() !== userId?.toString()) {
+        if (req.file) await fs.unlink(req.file.path).catch(() => {});
+        return res.status(403).json({ message: "Access denied" });
       }
 
       const wholesaler = await storage.updateWholesaler(req.params.id, {
@@ -254,10 +289,12 @@ export function registerWholesalerRoutes(app: Express, isAuthenticated: any) {
   });
 
   // Create product for wholesaler
-  app.post("/api/wholesalers/:id/products", isAuthenticated, async (req, res) => {
+  app.post("/api/wholesalers/:id/products", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user?.id || req.user?._id;
       const productData = {
         ...req.body,
+        userId,
         wholesalerId: req.params.id,
         wholesalePrice: parseFloat(req.body.wholesalePrice),
         suggestedRetail: req.body.suggestedRetail ? parseFloat(req.body.suggestedRetail) : undefined,
@@ -326,9 +363,16 @@ export function registerWholesalerRoutes(app: Express, isAuthenticated: any) {
   });
 
   // Get all products across all wholesalers
-  app.get("/api/wholesaler-products", isAuthenticated, async (req, res) => {
+  app.get("/api/wholesaler-products", isAuthenticated, async (req: any, res) => {
     try {
-      const products = await storage.getWholesalerProducts();
+      const userId = req.user?.id || req.user?._id;
+      // Get only user's wholesalers
+      const wholesalers = await storage.getWholesalersByUserId(userId);
+      const wholesalerIds = wholesalers.map(w => w._id.toString());
+      
+      // Get all products and filter by user's wholesalers
+      let products = await storage.getWholesalerProducts();
+      products = products.filter(p => wholesalerIds.includes(p.wholesalerId?.toString() || ''));
       res.json(products);
     } catch (error) {
       console.error("Error fetching all products:", error);
@@ -337,9 +381,10 @@ export function registerWholesalerRoutes(app: Express, isAuthenticated: any) {
   });
 
   // Vendor catalog API routes for compatibility with vendor-catalog page
-  app.get("/api/vendor/wholesalers", isAuthenticated, async (req, res) => {
+  app.get("/api/vendor/wholesalers", isAuthenticated, async (req: any, res) => {
     try {
-      const wholesalers = await storage.getWholesalers();
+      const userId = req.user?.id || req.user?._id;
+      const wholesalers = await storage.getWholesalersByUserId(userId);
       res.json(wholesalers);
     } catch (error) {
       console.error("Error fetching wholesalers:", error);
@@ -348,16 +393,19 @@ export function registerWholesalerRoutes(app: Express, isAuthenticated: any) {
   });
 
   // Search vendor products
-  app.get("/api/vendor/products/search", isAuthenticated, async (req, res) => {
+  app.get("/api/vendor/products/search", isAuthenticated, async (req: any, res) => {
     try {
       const { query, category, supplier } = req.query;
+      const userId = req.user?.id || req.user?._id;
       
-      // Get all products
-      let products = await storage.getWholesalerProducts();
-      
-      // Transform to match vendor-catalog format and include supplier info
-      const wholesalersData = await storage.getWholesalers();
+      // Get only user's wholesalers
+      const wholesalersData = await storage.getWholesalersByUserId(userId);
       const wholesalerMap = new Map(wholesalersData.map(w => [w._id.toString(), w]));
+      const wholesalerIds = wholesalersData.map(w => w._id.toString());
+      
+      // Get all products and filter by user's wholesalers
+      let products = await storage.getWholesalerProducts();
+      products = products.filter(p => wholesalerIds.includes(p.wholesalerId?.toString() || ''));
       
       products = products.map(product => {
         const wholesaler = wholesalerMap.get(product.wholesalerId?.toString() || '');
@@ -412,16 +460,19 @@ export function registerWholesalerRoutes(app: Express, isAuthenticated: any) {
   });
 
   // Get products by category
-  app.get("/api/vendor/categories/:category", isAuthenticated, async (req, res) => {
+  app.get("/api/vendor/categories/:category", isAuthenticated, async (req: any, res) => {
     try {
       const { category } = req.params;
+      const userId = req.user?.id || req.user?._id;
       
-      // Get all products
-      let products = await storage.getWholesalerProducts();
-      
-      // Transform to match vendor-catalog format
-      const wholesalersData = await storage.getWholesalers();
+      // Get only user's wholesalers
+      const wholesalersData = await storage.getWholesalersByUserId(userId);
       const wholesalerMap = new Map(wholesalersData.map(w => [w._id.toString(), w]));
+      const wholesalerIds = wholesalersData.map(w => w._id.toString());
+      
+      // Get all products and filter by user's wholesalers
+      let products = await storage.getWholesalerProducts();
+      products = products.filter(p => wholesalerIds.includes(p.wholesalerId?.toString() || ''));
       
       products = products
         .filter(p => p.category === category)
@@ -476,10 +527,17 @@ export function registerWholesalerRoutes(app: Express, isAuthenticated: any) {
   });
 
   // Validate CSV file
-  app.post("/api/wholesalers/:id/validate-csv", isAuthenticated, csvUpload.single("csv"), async (req, res) => {
+  app.post("/api/wholesalers/:id/validate-csv", isAuthenticated, csvUpload.single("csv"), async (req: any, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      // Verify user owns this wholesaler
+      const userId = req.user?.id || req.user?._id;
+      const wholesaler = await storage.getWholesalerById(req.params.id);
+      if (!wholesaler || wholesaler.userId?.toString() !== userId?.toString()) {
+        return res.status(403).json({ message: "Access denied" });
       }
 
       const csvContent = req.file.buffer.toString("utf-8");
@@ -526,8 +584,15 @@ export function registerWholesalerRoutes(app: Express, isAuthenticated: any) {
   });
 
   // Get catalog statistics
-  app.get("/api/wholesalers/:id/catalog-stats", isAuthenticated, async (req, res) => {
+  app.get("/api/wholesalers/:id/catalog-stats", isAuthenticated, async (req: any, res) => {
     try {
+      // Verify user owns this wholesaler
+      const userId = req.user?.id || req.user?._id;
+      const wholesaler = await storage.getWholesalerById(req.params.id);
+      if (!wholesaler || wholesaler.userId?.toString() !== userId?.toString()) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
       const products = await storage.getWholesalerProductsByWholesaler(req.params.id);
       
       const stats = {
@@ -557,10 +622,17 @@ export function registerWholesalerRoutes(app: Express, isAuthenticated: any) {
   });
 
   // Validate catalog CSV
-  app.post("/api/wholesalers/:id/validate-catalog", isAuthenticated, csvUpload.single("csv"), async (req, res) => {
+  app.post("/api/wholesalers/:id/validate-catalog", isAuthenticated, csvUpload.single("csv"), async (req: any, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      // Verify user owns this wholesaler
+      const userId = req.user?.id || req.user?._id;
+      const wholesaler = await storage.getWholesalerById(req.params.id);
+      if (!wholesaler || wholesaler.userId?.toString() !== userId?.toString()) {
+        return res.status(403).json({ message: "Access denied" });
       }
 
       const csvContent = req.file.buffer.toString("utf-8");
@@ -648,7 +720,7 @@ export function registerWholesalerRoutes(app: Express, isAuthenticated: any) {
   });
 
   // Import catalog CSV
-  app.post("/api/wholesalers/:id/import-catalog", isAuthenticated, csvUpload.single("csv"), async (req, res) => {
+  app.post("/api/wholesalers/:id/import-catalog", isAuthenticated, csvUpload.single("csv"), async (req: any, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ message: "No file uploaded" });
@@ -657,10 +729,14 @@ export function registerWholesalerRoutes(app: Express, isAuthenticated: any) {
       const wholesalerId = req.params.id;
       const importMode = req.body.importMode || "replace";
 
-      // Verify wholesaler exists
+      // Verify wholesaler exists and user owns it
+      const userId = req.user?.id || req.user?._id;
       const wholesaler = await storage.getWholesalerById(wholesalerId);
       if (!wholesaler) {
         return res.status(404).json({ message: "Wholesaler not found" });
+      }
+      if (wholesaler.userId?.toString() !== userId?.toString()) {
+        return res.status(403).json({ message: "Access denied" });
       }
 
       // Parse and validate CSV
@@ -690,7 +766,7 @@ export function registerWholesalerRoutes(app: Express, isAuthenticated: any) {
       const existingMap = new Map(existingProducts.map(p => [p.productCode, p]));
 
       // Convert CSV rows to product data
-      const productData = convertToProductData(validation.valid, wholesalerId);
+      const productData = convertToProductData(validation.valid, wholesalerId, userId);
       
       let imported = 0;
       let updated = 0;
@@ -755,8 +831,15 @@ export function registerWholesalerRoutes(app: Express, isAuthenticated: any) {
   });
 
   // Export catalog as CSV
-  app.get("/api/wholesalers/:id/export-catalog", isAuthenticated, async (req, res) => {
+  app.get("/api/wholesalers/:id/export-catalog", isAuthenticated, async (req: any, res) => {
     try {
+      // Verify user owns this wholesaler
+      const userId = req.user?.id || req.user?._id;
+      const wholesaler = await storage.getWholesalerById(req.params.id);
+      if (!wholesaler || wholesaler.userId?.toString() !== userId?.toString()) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
       const products = await storage.getWholesalerProductsByWholesaler(req.params.id);
       
       if (products.length === 0) {
@@ -816,8 +899,15 @@ export function registerWholesalerRoutes(app: Express, isAuthenticated: any) {
   });
 
   // Delete all catalog products
-  app.delete("/api/wholesalers/:id/catalog-products", isAuthenticated, async (req, res) => {
+  app.delete("/api/wholesalers/:id/catalog-products", isAuthenticated, async (req: any, res) => {
     try {
+      // Verify user owns this wholesaler
+      const userId = req.user?.id || req.user?._id;
+      const wholesaler = await storage.getWholesalerById(req.params.id);
+      if (!wholesaler || wholesaler.userId?.toString() !== userId?.toString()) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
       const products = await storage.getWholesalerProductsByWholesaler(req.params.id);
       
       for (const product of products) {
@@ -836,7 +926,7 @@ export function registerWholesalerRoutes(app: Express, isAuthenticated: any) {
 
 
   // Import CSV file
-  app.post("/api/wholesalers/:id/import-csv", isAuthenticated, csvUpload.single("csv"), async (req, res) => {
+  app.post("/api/wholesalers/:id/import-csv", isAuthenticated, csvUpload.single("csv"), async (req: any, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ message: "No file uploaded" });
@@ -846,10 +936,14 @@ export function registerWholesalerRoutes(app: Express, isAuthenticated: any) {
       const updateExisting = req.body.updateExisting === "true";
       const skipDuplicates = req.body.skipDuplicates === "true";
 
-      // Verify wholesaler exists
+      // Verify wholesaler exists and user owns it
+      const userId = req.user?.id || req.user?._id;
       const wholesaler = await storage.getWholesalerById(wholesalerId);
       if (!wholesaler) {
         return res.status(404).json({ message: "Wholesaler not found" });
+      }
+      if (wholesaler.userId?.toString() !== userId?.toString()) {
+        return res.status(403).json({ message: "Access denied" });
       }
 
       // Parse and validate CSV
@@ -868,7 +962,7 @@ export function registerWholesalerRoutes(app: Express, isAuthenticated: any) {
       const existingMap = new Map(existingProducts.map(p => [p.productCode, p]));
 
       // Convert CSV rows to product data
-      const productData = convertToProductData(validation.valid, wholesalerId);
+      const productData = convertToProductData(validation.valid, wholesalerId, userId);
       
       let imported = 0;
       let updated = 0;

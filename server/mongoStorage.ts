@@ -55,41 +55,50 @@ export async function createOrUpdateUser(userData: Partial<IUser>): Promise<IUse
 }
 
 // Customer operations
-export async function getCustomers(): Promise<ICustomer[]> {
-  return await Customer.find().sort({ createdAt: -1 });
+export async function getCustomers(userId?: string): Promise<ICustomer[]> {
+  const query = userId ? { userId } : {};
+  return await Customer.find(query).sort({ createdAt: -1 });
 }
 
-export async function getCustomer(id: number | string): Promise<ICustomer | null> {
+export async function getCustomer(id: number | string, userId?: string): Promise<ICustomer | null> {
   // Handle both numeric IDs (from old system) and MongoDB ObjectIds
   if (typeof id === 'number' || !mongoose.Types.ObjectId.isValid(id)) {
     // For numeric IDs, we might need to find by a different field
     // or handle migration differently
     return null;
   }
-  return await Customer.findById(id);
+  const query: any = { _id: id };
+  if (userId) query.userId = userId;
+  return await Customer.findOne(query);
 }
 
 export async function getCustomerById(id: string): Promise<ICustomer | null> {
   return await Customer.findById(id);
 }
 
-export async function createCustomer(customerData: Partial<ICustomer>): Promise<ICustomer> {
-  const customer = new Customer(customerData);
+export async function createCustomer(customerData: Partial<ICustomer>, userId?: string): Promise<ICustomer> {
+  const data = userId ? { ...customerData, userId } : customerData;
+  const customer = new Customer(data);
   return await customer.save();
 }
 
-export async function updateCustomer(id: string, customerData: Partial<ICustomer>): Promise<ICustomer | null> {
-  return await Customer.findByIdAndUpdate(id, customerData, { new: true });
+export async function updateCustomer(id: string, customerData: Partial<ICustomer>, userId?: string): Promise<ICustomer | null> {
+  const query: any = { _id: id };
+  if (userId) query.userId = userId;
+  return await Customer.findOneAndUpdate(query, customerData, { new: true });
 }
 
-export async function deleteCustomer(id: string): Promise<boolean> {
-  const result = await Customer.findByIdAndDelete(id);
+export async function deleteCustomer(id: string, userId?: string): Promise<boolean> {
+  const query: any = { _id: id };
+  if (userId) query.userId = userId;
+  const result = await Customer.findOneAndDelete(query);
   return !!result;
 }
 
 // Order operations
-export async function getOrders(): Promise<any[]> {
-  const orders = await Order.find()
+export async function getOrders(userId?: string): Promise<any[]> {
+  const query = userId ? { userId } : {};
+  const orders = await Order.find(query)
     .populate('customerId')
     .sort({ createdAt: -1 });
   
@@ -97,9 +106,24 @@ export async function getOrders(): Promise<any[]> {
   return orders.map(order => {
     // Extract the populated customer data
     const customer = order.customerId as any;
+    
+    // Ensure customer object has the required fields
+    const customerData = customer && customer._id ? {
+      id: customer._id.toString(),
+      _id: customer._id.toString(),
+      firstName: customer.firstName || '',
+      lastName: customer.lastName || '',
+      email: customer.email || '',
+      phone: customer.phone || '',
+      address: customer.address || '',
+      notes: customer.notes || '',
+      totalSpent: customer.totalSpent || 0,
+      orderCount: customer.orderCount || 0
+    } : null;
+    
     return {
     id: order._id.toString(),
-    customerId: customer._id ? customer._id.toString() : order.customerId,
+    customerId: customer && customer._id ? customer._id.toString() : order.customerId,
     orderNumber: order.orderNumber,
     description: order.description,
     artworkDescription: order.artworkDescription,
@@ -128,23 +152,40 @@ export async function getOrders(): Promise<any[]> {
     estimatedDeliveryDate: order.estimatedDeliveryDate?.toISOString(),
     createdAt: order.createdAt.toISOString(),
     updatedAt: order.updatedAt.toISOString(),
-    customer: customer
+    customer: customerData
   };
   });
 }
 
-export async function getOrder(id: number | string): Promise<any | null> {
+export async function getOrder(id: number | string, userId?: string): Promise<any | null> {
   // Handle both numeric IDs (from old system) and MongoDB ObjectIds
   if (typeof id === 'number' || !mongoose.Types.ObjectId.isValid(id.toString())) {
     return null;
   }
-  const order = await Order.findById(id).populate('customerId');
+  const query: any = { _id: id };
+  if (userId) query.userId = userId;
+  const order = await Order.findOne(query).populate('customerId');
   if (!order) return null;
   
   const customer = order.customerId as any;
+  
+  // Ensure customer object has the required fields
+  const customerData = customer && customer._id ? {
+    id: customer._id.toString(),
+    _id: customer._id.toString(),
+    firstName: customer.firstName || '',
+    lastName: customer.lastName || '',
+    email: customer.email || '',
+    phone: customer.phone || '',
+    address: customer.address || '',
+    notes: customer.notes || '',
+    totalSpent: customer.totalSpent || 0,
+    orderCount: customer.orderCount || 0
+  } : null;
+  
   return {
     id: order._id.toString(),
-    customerId: customer._id ? customer._id.toString() : order.customerId,
+    customerId: customer && customer._id ? customer._id.toString() : order.customerId,
     orderNumber: order.orderNumber,
     description: order.description,
     artworkDescription: order.artworkDescription,
@@ -173,24 +214,43 @@ export async function getOrder(id: number | string): Promise<any | null> {
     estimatedDeliveryDate: order.estimatedDeliveryDate?.toISOString(),
     createdAt: order.createdAt.toISOString(),
     updatedAt: order.updatedAt.toISOString(),
-    customer: customer
+    customer: customerData
   };
 }
 
-export async function getOrderById(id: string): Promise<IOrder | null> {
-  return await Order.findById(id).populate('customerId');
+export async function getOrderById(id: string, userId?: string): Promise<IOrder | null> {
+  const query: any = { _id: id };
+  if (userId) query.userId = userId;
+  return await Order.findOne(query).populate('customerId');
 }
 
-export async function getOrdersByStatus(status: string): Promise<any[]> {
-  const orders = await Order.find({ status })
+export async function getOrdersByStatus(status: string, userId?: string): Promise<any[]> {
+  const query: any = { status };
+  if (userId) query.userId = userId;
+  const orders = await Order.find(query)
     .populate('customerId')
     .sort({ createdAt: -1 });
   
   return orders.map(order => {
     const customer = order.customerId as any;
+    
+    // Ensure customer object has the required fields
+    const customerData = customer && customer._id ? {
+      id: customer._id.toString(),
+      _id: customer._id.toString(),
+      firstName: customer.firstName || '',
+      lastName: customer.lastName || '',
+      email: customer.email || '',
+      phone: customer.phone || '',
+      address: customer.address || '',
+      notes: customer.notes || '',
+      totalSpent: customer.totalSpent || 0,
+      orderCount: customer.orderCount || 0
+    } : null;
+    
     return {
     id: order._id.toString(),
-    customerId: customer._id ? customer._id.toString() : order.customerId,
+    customerId: customer && customer._id ? customer._id.toString() : order.customerId,
     orderNumber: order.orderNumber,
     description: order.description,
     artworkDescription: order.artworkDescription,
@@ -219,26 +279,43 @@ export async function getOrdersByStatus(status: string): Promise<any[]> {
     estimatedDeliveryDate: order.estimatedDeliveryDate?.toISOString(),
     createdAt: order.createdAt.toISOString(),
     updatedAt: order.updatedAt.toISOString(),
-    customer: customer
+    customer: customerData
   };
   });
 }
 
-export async function getOrdersByCustomer(customerId: number | string): Promise<any[]> {
+export async function getOrdersByCustomer(customerId: number | string, userId?: string): Promise<any[]> {
   // Handle both numeric IDs (from old system) and MongoDB ObjectIds
   if (typeof customerId === 'number' || !mongoose.Types.ObjectId.isValid(customerId.toString())) {
     return [];
   }
   
-  const orders = await Order.find({ customerId })
+  const query: any = { customerId };
+  if (userId) query.userId = userId;
+  const orders = await Order.find(query)
     .populate('customerId')
     .sort({ createdAt: -1 });
   
   return orders.map(order => {
     const customer = order.customerId as any;
+    
+    // Ensure customer object has the required fields
+    const customerData = customer && customer._id ? {
+      id: customer._id.toString(),
+      _id: customer._id.toString(),
+      firstName: customer.firstName || '',
+      lastName: customer.lastName || '',
+      email: customer.email || '',
+      phone: customer.phone || '',
+      address: customer.address || '',
+      notes: customer.notes || '',
+      totalSpent: customer.totalSpent || 0,
+      orderCount: customer.orderCount || 0
+    } : null;
+    
     return {
     id: order._id.toString(),
-    customerId: customer._id ? customer._id.toString() : order.customerId,
+    customerId: customer && customer._id ? customer._id.toString() : order.customerId,
     orderNumber: order.orderNumber,
     description: order.description,
     artworkDescription: order.artworkDescription,
@@ -267,59 +344,70 @@ export async function getOrdersByCustomer(customerId: number | string): Promise<
     estimatedDeliveryDate: order.estimatedDeliveryDate?.toISOString(),
     createdAt: order.createdAt.toISOString(),
     updatedAt: order.updatedAt.toISOString(),
-    customer: customer
+    customer: customerData
   };
   });
 }
 
-export async function createOrder(orderData: any): Promise<IOrder> {
+export async function createOrder(orderData: any, userId?: string): Promise<IOrder> {
   // Generate order number if not provided
   if (!orderData.orderNumber) {
     const count = await Order.countDocuments();
     orderData.orderNumber = `ORD-${String(count + 1).padStart(6, '0')}`;
   }
   
-  const order = new Order(orderData);
+  const data = userId ? { ...orderData, userId } : orderData;
+  const order = new Order(data);
   return await order.save();
 }
 
-export async function updateOrder(id: string, orderData: any): Promise<IOrder | null> {
-  return await Order.findByIdAndUpdate(id, orderData, { new: true });
+export async function updateOrder(id: string, orderData: any, userId?: string): Promise<IOrder | null> {
+  const query: any = { _id: id };
+  if (userId) query.userId = userId;
+  return await Order.findOneAndUpdate(query, orderData, { new: true });
 }
 
-export async function deleteOrder(id: string): Promise<boolean> {
-  const result = await Order.findByIdAndDelete(id);
+export async function deleteOrder(id: string, userId?: string): Promise<boolean> {
+  const query: any = { _id: id };
+  if (userId) query.userId = userId;
+  const result = await Order.findOneAndDelete(query);
   return !!result;
 }
 
 // Invoice operations
-export async function getInvoices(): Promise<IInvoice[]> {
-  return await Invoice.find()
+export async function getInvoices(userId?: string): Promise<IInvoice[]> {
+  const query = userId ? { userId } : {};
+  return await Invoice.find(query)
     .populate('customerId')
     .populate('orderId')
     .sort({ createdAt: -1 });
 }
 
-export async function getInvoiceById(id: string): Promise<IInvoice | null> {
-  return await Invoice.findById(id)
+export async function getInvoiceById(id: string, userId?: string): Promise<IInvoice | null> {
+  const query: any = { _id: id };
+  if (userId) query.userId = userId;
+  return await Invoice.findOne(query)
     .populate('customerId')
     .populate('orderId');
 }
 
-export async function createInvoice(invoiceData: any): Promise<IInvoice> {
+export async function createInvoice(invoiceData: any, userId?: string): Promise<IInvoice> {
   // Generate invoice number if not provided
   if (!invoiceData.invoiceNumber) {
     const count = await Invoice.countDocuments();
     invoiceData.invoiceNumber = `INV-${String(count + 1).padStart(6, '0')}`;
   }
   
-  const invoice = new Invoice(invoiceData);
+  const data = userId ? { ...invoiceData, userId } : invoiceData;
+  const invoice = new Invoice(data);
   return await invoice.save();
 }
 
-export async function updateInvoice(id: string, invoiceData: any): Promise<IInvoice | null> {
-  const oldInvoice = await Invoice.findById(id);
-  const updatedInvoice = await Invoice.findByIdAndUpdate(id, invoiceData, { new: true });
+export async function updateInvoice(id: string, invoiceData: any, userId?: string): Promise<IInvoice | null> {
+  const query: any = { _id: id };
+  if (userId) query.userId = userId;
+  const oldInvoice = await Invoice.findOne(query);
+  const updatedInvoice = await Invoice.findOneAndUpdate(query, invoiceData, { new: true });
   
   // If invoice is being marked as paid, create an income transaction
   if (updatedInvoice && oldInvoice?.status !== 'paid' && invoiceData.status === 'paid') {
@@ -346,8 +434,10 @@ export async function deleteInvoice(id: string): Promise<boolean> {
 }
 
 // Wholesaler operations
-export async function getWholesalers(): Promise<IWholesaler[]> {
-  return await Wholesaler.find({ isActive: true }).sort({ companyName: 1 });
+export async function getWholesalers(userId?: string): Promise<IWholesaler[]> {
+  const query: any = { isActive: true };
+  if (userId) query.userId = userId;
+  return await Wholesaler.find(query).sort({ companyName: 1 });
 }
 
 export async function getWholesalerById(id: string): Promise<IWholesaler | null> {
@@ -366,6 +456,11 @@ export async function updateWholesaler(id: string, wholesalerData: Partial<IWhol
 export async function deleteWholesaler(id: string): Promise<boolean> {
   const result = await Wholesaler.findByIdAndDelete(id);
   return !!result;
+}
+
+// Get wholesalers by userId
+export async function getWholesalersByUserId(userId: string): Promise<IWholesaler[]> {
+  return await Wholesaler.find({ userId, isActive: true }).sort({ companyName: 1 });
 }
 
 // Wholesaler Product operations
@@ -417,8 +512,10 @@ export async function searchWholesalerProducts(query: string): Promise<IWholesal
 }
 
 // Price Structure operations
-export async function getPriceStructures(): Promise<IPriceStructure[]> {
-  return await PriceStructure.find({ isActive: true }).sort({ category: 1, itemName: 1 });
+export async function getPriceStructures(userId?: string): Promise<IPriceStructure[]> {
+  const query: any = { isActive: true };
+  if (userId) query.userId = userId;
+  return await PriceStructure.find(query).sort({ category: 1, itemName: 1 });
 }
 
 export async function getPriceStructureById(id: string): Promise<IPriceStructure | null> {
@@ -440,8 +537,9 @@ export async function deletePriceStructure(id: string): Promise<boolean> {
 }
 
 // Inventory operations
-export async function getInventory(): Promise<IInventory[]> {
-  return await Inventory.find().sort({ category: 1, itemName: 1 });
+export async function getInventory(userId?: string): Promise<IInventory[]> {
+  const query = userId ? { userId } : {};
+  return await Inventory.find(query).sort({ category: 1, itemName: 1 });
 }
 
 export async function getInventoryById(id: string): Promise<IInventory | null> {
@@ -503,8 +601,9 @@ export async function createBusinessMetric(metricData: any): Promise<any> {
   return await metric.save();
 }
 
-export async function getBusinessMetrics(metricType?: string, startDate?: Date, endDate?: Date): Promise<any[]> {
+export async function getBusinessMetrics(userId?: string, metricType?: string, startDate?: Date, endDate?: Date): Promise<any[]> {
   const query: any = {};
+  if (userId) query.userId = userId;
   if (metricType) query.metricType = metricType;
   if (startDate || endDate) {
     query.date = {};

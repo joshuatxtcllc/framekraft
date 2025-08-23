@@ -310,22 +310,6 @@ router.post('/login', async (req, res) => {
 // Get current user
 router.get('/user', async (req, res) => {
   try {
-    // In development mode, return a mock user
-    if (process.env.NODE_ENV === 'development' && !process.env.REPL_ID?.startsWith('repl-')) {
-      return res.json({
-        success: true,
-        user: {
-          id: 'local-dev-user',
-          email: 'dev@localhost',
-          firstName: 'Local',
-          lastName: 'Developer',
-          businessName: 'Dev Framing Co.',
-          role: 'owner',
-          emailVerified: true,
-        },
-      });
-    }
-
     // Check for demo user
     if (req.cookies.accessToken === 'demo-token' || req.cookies.sessionId === 'demo-session') {
       return res.json({

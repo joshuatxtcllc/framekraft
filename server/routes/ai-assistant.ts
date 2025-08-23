@@ -1,8 +1,9 @@
-import { Router } from 'express';
+import { Router, Request } from 'express';
 import Anthropic from '@anthropic-ai/sdk';
 import { z } from 'zod';
 import { AIChatSession } from '../models';
 import * as storage from '../mongoStorage';
+import { validateSession } from '../middleware/sessionValidation';
 
 const router = Router();
 
@@ -60,29 +61,15 @@ const createSessionSchema = z.object({
   context: z.string().default('general'),
 });
 
-// Helper function to get user ID from request
-async function getUserId(req: any): Promise<string | null> {
-  // Check for demo user
-  if (req.cookies?.accessToken === 'demo-token' || req.cookies?.sessionId === 'demo-session') {
-    return 'demo-user-id';
-  }
-
-  // Get from session or token (implement based on your auth system)
-  const sessionId = req.cookies?.sessionId;
-  if (sessionId) {
-    const session = await storage.Session.findOne({ sid: sessionId });
-    if (session && session.expire > new Date()) {
-      return session.sess.userId;
-    }
-  }
-
-  return null;
+// Extend Request type to include user
+interface AuthenticatedRequest extends Request {
+  user?: any;
 }
 
 // Get or create chat session
-router.get('/sessions', async (req, res) => {
+router.get('/sessions', validateSession, async (req: any, res) => {
   try {
-    const userId = await getUserId(req);
+    const userId = req.user?._id || req.user?.id;
     if (!userId) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
@@ -103,9 +90,9 @@ router.get('/sessions', async (req, res) => {
 });
 
 // Get specific session with messages
-router.get('/sessions/:sessionId', async (req, res) => {
+router.get('/sessions/:sessionId', validateSession, async (req: any, res) => {
   try {
-    const userId = await getUserId(req);
+    const userId = req.user?._id || req.user?.id;
     if (!userId) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
@@ -127,9 +114,9 @@ router.get('/sessions/:sessionId', async (req, res) => {
 });
 
 // Create new chat session
-router.post('/sessions', async (req, res) => {
+router.post('/sessions', validateSession, async (req: any, res) => {
   try {
-    const userId = await getUserId(req);
+    const userId = req.user?._id || req.user?.id;
     if (!userId) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
@@ -171,9 +158,9 @@ router.post('/sessions', async (req, res) => {
 });
 
 // Send message to AI
-router.post('/message', async (req, res) => {
+router.post('/message', validateSession, async (req: any, res) => {
   try {
-    const userId = await getUserId(req);
+    const userId = req.user?._id || req.user?.id;
     if (!userId) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
@@ -343,9 +330,9 @@ router.post('/message', async (req, res) => {
 });
 
 // Delete a chat session
-router.delete('/sessions/:sessionId', async (req, res) => {
+router.delete('/sessions/:sessionId', validateSession, async (req: any, res) => {
   try {
-    const userId = await getUserId(req);
+    const userId = req.user?._id || req.user?.id;
     if (!userId) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
@@ -372,9 +359,9 @@ router.delete('/sessions/:sessionId', async (req, res) => {
 });
 
 // Generate business insights for dashboard
-router.post('/business-insights', async (req, res) => {
+router.post('/business-insights', validateSession, async (req: any, res) => {
   try {
-    const userId = await getUserId(req);
+    const userId = req.user?._id || req.user?.id;
     if (!userId) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
@@ -513,9 +500,9 @@ Return ONLY a JSON array of insights, no other text.`;
 });
 
 // Get AI usage statistics
-router.get('/stats', async (req, res) => {
+router.get('/stats', validateSession, async (req: any, res) => {
   try {
-    const userId = await getUserId(req);
+    const userId = req.user?._id || req.user?.id;
     if (!userId) {
       return res.status(401).json({ error: 'Unauthorized' });
     }

@@ -14,23 +14,6 @@ export async function authenticate(
   next: NextFunction
 ): Promise<void> {
   try {
-    // In development mode, allow bypass for local testing
-    if (process.env.NODE_ENV === 'development' && !process.env.REPL_ID?.startsWith('repl-')) {
-      req.user = {
-        id: 'local-dev-user',
-        email: 'dev@localhost',
-        firstName: 'Local',
-        lastName: 'Developer',
-        businessName: 'Dev Framing Co.',
-        role: 'owner',
-        emailVerified: true,
-        isActive: true,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      } as any;
-      return next();
-    }
-    
     // Extract token from Authorization header
     const authHeader = req.headers.authorization;
     const token = jwtService.extractTokenFromHeader(authHeader);

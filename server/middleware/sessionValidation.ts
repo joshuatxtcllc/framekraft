@@ -24,23 +24,6 @@ export const validateSession = async (
   next: NextFunction
 ) => {
   try {
-    // In development mode, bypass authentication
-    if (process.env.NODE_ENV === 'development' && !process.env.REPL_ID?.startsWith('repl-')) {
-      req.user = {
-        _id: 'local-dev-user',
-        id: 'local-dev-user',
-        email: 'dev@localhost',
-        firstName: 'Local',
-        lastName: 'Developer',
-        businessName: 'Dev Framing Co.',
-        role: 'owner',
-        isActive: true,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      };
-      return next();
-    }
-
     // Get token from multiple sources
     const token = 
       req.cookies?.accessToken || 

@@ -48,6 +48,7 @@ export const users = pgTable("users", {
 // Customers table
 export const customers = pgTable("customers", {
   id: serial("id").primaryKey(),
+  userId: varchar("user_id").references(() => users.id).notNull(),
   firstName: varchar("first_name").notNull(),
   lastName: varchar("last_name").notNull(),
   email: varchar("email"),
@@ -63,6 +64,7 @@ export const customers = pgTable("customers", {
 // Orders table with enhanced vendor item tracking
 export const orders = pgTable("orders", {
   id: serial("id").primaryKey(),
+  userId: varchar("user_id").references(() => users.id).notNull(),
   customerId: integer("customer_id").references(() => customers.id).notNull(),
   orderNumber: varchar("order_number").unique().notNull(),
   description: text("description").notNull(),
@@ -133,6 +135,7 @@ export const projectSteps = pgTable("project_steps", {
 // AI recommendations and insights
 export const aiInsights = pgTable("ai_insights", {
   id: serial("id").primaryKey(),
+  userId: varchar("user_id").references(() => users.id).notNull(),
   orderId: integer("order_id").references(() => orders.id),
   customerId: integer("customer_id").references(() => customers.id),
   insightType: varchar("insight_type").notNull(), // pricing_opportunity, upsell_suggestion, efficiency_improvement
@@ -146,6 +149,7 @@ export const aiInsights = pgTable("ai_insights", {
 
 export const communicationSettings = pgTable("communication_settings", {
   id: serial("id").primaryKey(),
+  userId: varchar("user_id").references(() => users.id).notNull(),
   twilioEnabled: boolean("twilio_enabled").default(false),
   emailEnabled: boolean("email_enabled").default(true),
   smsEnabled: boolean("sms_enabled").default(false),
@@ -171,6 +175,7 @@ export const communicationLogs = pgTable("communication_logs", {
 // Business metrics and analytics
 export const businessMetrics = pgTable("business_metrics", {
   id: serial("id").primaryKey(),
+  userId: varchar("user_id").references(() => users.id).notNull(),
   metricType: varchar("metric_type").notNull(), // daily_revenue, monthly_revenue, order_count, customer_count, completion_rate
   value: decimal("value", { precision: 12, scale: 2 }).notNull(),
   date: timestamp("date").notNull(),
@@ -181,6 +186,7 @@ export const businessMetrics = pgTable("business_metrics", {
 // Inventory tracking
 export const inventory = pgTable("inventory", {
   id: serial("id").primaryKey(),
+  userId: varchar("user_id").references(() => users.id).notNull(),
   itemName: varchar("item_name").notNull(),
   category: varchar("category").notNull(), // frame_molding, mat_board, glazing, hardware
   description: text("description"),
@@ -196,6 +202,7 @@ export const inventory = pgTable("inventory", {
 // Price structure for framing components
 export const priceStructure = pgTable("price_structure", {
   id: serial("id").primaryKey(),
+  userId: varchar("user_id").references(() => users.id).notNull(),
   category: varchar("category").notNull(), // frame, mat, glazing, labor, misc
   subcategory: varchar("subcategory"), // wood, metal, fabric, standard_glass, acrylic, conservation_glass
   itemName: varchar("item_name").notNull(),
@@ -213,6 +220,7 @@ export const priceStructure = pgTable("price_structure", {
 // Wholesaler catalogs and suppliers
 export const wholesalers = pgTable("wholesalers", {
   id: serial("id").primaryKey(),
+  userId: varchar("user_id").references(() => users.id).notNull(),
   companyName: varchar("company_name").notNull(),
   contactName: varchar("contact_name"),
   email: varchar("email"),
@@ -235,6 +243,7 @@ export const wholesalers = pgTable("wholesalers", {
 // Enhanced wholesaler product catalog with precise tracking
 export const wholesalerProducts = pgTable("wholesaler_products", {
   id: serial("id").primaryKey(),
+  userId: varchar("user_id").references(() => users.id).notNull(),
   wholesalerId: integer("wholesaler_id").references(() => wholesalers.id).notNull(),
   productCode: varchar("product_code").notNull(), // Vendor's exact SKU/part number
   productName: varchar("product_name").notNull(),
@@ -265,6 +274,7 @@ export const wholesalerProducts = pgTable("wholesaler_products", {
 // Invoices
 export const invoices = pgTable("invoices", {
   id: serial("id").primaryKey(),
+  userId: varchar("user_id").references(() => users.id).notNull(),
   invoiceNumber: varchar("invoice_number").unique().notNull(),
   orderId: integer("order_id").references(() => orders.id),
   customerId: integer("customer_id").references(() => customers.id).notNull(),
@@ -299,6 +309,7 @@ export const invoiceItems = pgTable("invoice_items", {
 // Payment tracking
 export const payments = pgTable("payments", {
   id: serial("id").primaryKey(),
+  userId: varchar("user_id").references(() => users.id).notNull(),
   invoiceId: integer("invoice_id").references(() => invoices.id).notNull(),
   orderId: integer("order_id").references(() => orders.id),
   amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),

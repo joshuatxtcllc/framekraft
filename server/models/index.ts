@@ -28,6 +28,7 @@ export interface IUser extends Document {
   stripeCustomerId?: string;
   stripeSubscriptionId?: string;
   emailVerified: boolean;
+  isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
@@ -44,6 +45,7 @@ const UserSchema = new Schema({
   stripeCustomerId: String,
   stripeSubscriptionId: String,
   emailVerified: { type: Boolean, default: false },
+  isActive: { type: Boolean, default: true },
 }, { timestamps: true });
 
 // Hash password before saving
@@ -68,6 +70,7 @@ export const User = mongoose.model<IUser>('User', UserSchema);
 
 // Customer Model
 export interface ICustomer extends Document {
+  userId: mongoose.Types.ObjectId;
   firstName: string;
   lastName: string;
   email?: string;
@@ -81,6 +84,7 @@ export interface ICustomer extends Document {
 }
 
 const CustomerSchema = new Schema({
+  userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
   firstName: { type: String, required: true },
   lastName: { type: String, required: true },
   email: String,
@@ -95,6 +99,7 @@ export const Customer = mongoose.model<ICustomer>('Customer', CustomerSchema);
 
 // Order Model
 export interface IOrder extends Document {
+  userId: mongoose.Types.ObjectId;
   customerId: mongoose.Types.ObjectId;
   orderNumber: string;
   description: string;
@@ -127,6 +132,7 @@ export interface IOrder extends Document {
 }
 
 const OrderSchema = new Schema({
+  userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
   customerId: { type: Schema.Types.ObjectId, ref: 'Customer', required: true },
   orderNumber: { type: String, unique: true, required: true },
   description: { type: String, required: true },
@@ -231,6 +237,7 @@ export const ProjectStep = mongoose.model<IProjectStep>('ProjectStep', ProjectSt
 
 // AI Insights Model
 export interface IAIInsight extends Document {
+  userId: mongoose.Types.ObjectId;
   orderId?: mongoose.Types.ObjectId;
   customerId?: mongoose.Types.ObjectId;
   insightType: string;
@@ -243,6 +250,7 @@ export interface IAIInsight extends Document {
 }
 
 const AIInsightSchema = new Schema({
+  userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
   orderId: { type: Schema.Types.ObjectId, ref: 'Order' },
   customerId: { type: Schema.Types.ObjectId, ref: 'Customer' },
   insightType: { type: String, required: true },
@@ -257,6 +265,7 @@ export const AIInsight = mongoose.model<IAIInsight>('AIInsight', AIInsightSchema
 
 // Communication Settings Model
 export interface ICommunicationSettings extends Document {
+  userId: mongoose.Types.ObjectId;
   twilioEnabled: boolean;
   emailEnabled: boolean;
   smsEnabled: boolean;
@@ -268,6 +277,7 @@ export interface ICommunicationSettings extends Document {
 }
 
 const CommunicationSettingsSchema = new Schema({
+  userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
   twilioEnabled: { type: Boolean, default: false },
   emailEnabled: { type: Boolean, default: true },
   smsEnabled: { type: Boolean, default: false },
@@ -303,6 +313,7 @@ export const CommunicationLog = mongoose.model<ICommunicationLog>('Communication
 
 // Business Metrics Model
 export interface IBusinessMetric extends Document {
+  userId: mongoose.Types.ObjectId;
   metricType: string;
   value: number;
   date: Date;
@@ -311,6 +322,7 @@ export interface IBusinessMetric extends Document {
 }
 
 const BusinessMetricSchema = new Schema({
+  userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
   metricType: { type: String, required: true },
   value: { type: Number, required: true },
   date: { type: Date, required: true },
@@ -321,6 +333,7 @@ export const BusinessMetric = mongoose.model<IBusinessMetric>('BusinessMetric', 
 
 // Inventory Model
 export interface IInventory extends Document {
+  userId: mongoose.Types.ObjectId;
   itemName: string;
   category: string;
   description?: string;
@@ -334,6 +347,7 @@ export interface IInventory extends Document {
 }
 
 const InventorySchema = new Schema({
+  userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
   itemName: { type: String, required: true },
   category: { type: String, required: true },
   description: String,
@@ -348,6 +362,7 @@ export const Inventory = mongoose.model<IInventory>('Inventory', InventorySchema
 
 // Price Structure Model
 export interface IPriceStructure extends Document {
+  userId: mongoose.Types.ObjectId;
   category: string;
   subcategory?: string;
   itemName: string;
@@ -363,6 +378,7 @@ export interface IPriceStructure extends Document {
 }
 
 const PriceStructureSchema = new Schema({
+  userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
   category: { type: String, required: true },
   subcategory: String,
   itemName: { type: String, required: true },
@@ -379,6 +395,7 @@ export const PriceStructure = mongoose.model<IPriceStructure>('PriceStructure', 
 
 // Wholesaler Model
 export interface IWholesaler extends Document {
+  userId: mongoose.Types.ObjectId;
   companyName: string;
   contactName?: string;
   email?: string;
@@ -399,6 +416,7 @@ export interface IWholesaler extends Document {
 }
 
 const WholesalerSchema = new Schema({
+  userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
   companyName: { type: String, required: true },
   contactName: String,
   email: String,
@@ -420,6 +438,7 @@ export const Wholesaler = mongoose.model<IWholesaler>('Wholesaler', WholesalerSc
 
 // Wholesaler Product Model
 export interface IWholesalerProduct extends Document {
+  userId: mongoose.Types.ObjectId;
   wholesalerId: mongoose.Types.ObjectId;
   productCode: string;
   productName: string;
@@ -443,6 +462,7 @@ export interface IWholesalerProduct extends Document {
 }
 
 const WholesalerProductSchema = new Schema({
+  userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
   wholesalerId: { type: Schema.Types.ObjectId, ref: 'Wholesaler', required: true },
   productCode: { type: String, required: true },
   productName: { type: String, required: true },
@@ -472,6 +492,7 @@ export const WholesalerProduct = mongoose.model<IWholesalerProduct>('WholesalerP
 
 // Invoice Model
 export interface IInvoice extends Document {
+  userId: mongoose.Types.ObjectId;
   invoiceNumber: string;
   orderId?: mongoose.Types.ObjectId;
   customerId: mongoose.Types.ObjectId;
@@ -492,6 +513,7 @@ export interface IInvoice extends Document {
 }
 
 const InvoiceSchema = new Schema({
+  userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
   invoiceNumber: { type: String, unique: true, required: true },
   orderId: { type: Schema.Types.ObjectId, ref: 'Order' },
   customerId: { type: Schema.Types.ObjectId, ref: 'Customer', required: true },
@@ -535,6 +557,7 @@ export const InvoiceItem = mongoose.model<IInvoiceItem>('InvoiceItem', InvoiceIt
 
 // Payment Model
 export interface IPayment extends Document {
+  userId: mongoose.Types.ObjectId;
   invoiceId: mongoose.Types.ObjectId;
   orderId?: mongoose.Types.ObjectId;
   amount: number;
@@ -549,6 +572,7 @@ export interface IPayment extends Document {
 }
 
 const PaymentSchema = new Schema({
+  userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
   invoiceId: { type: Schema.Types.ObjectId, ref: 'Invoice', required: true },
   orderId: { type: Schema.Types.ObjectId, ref: 'Order' },
   amount: { type: Number, required: true },
@@ -565,6 +589,7 @@ export const Payment = mongoose.model<IPayment>('Payment', PaymentSchema);
 
 // Expense Model for financial tracking
 export interface IExpense extends Document {
+  userId: mongoose.Types.ObjectId;
   category: string;
   amount: number;
   description: string;
@@ -579,6 +604,7 @@ export interface IExpense extends Document {
 }
 
 const ExpenseSchema = new Schema({
+  userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
   category: { 
     type: String, 
     required: true,
@@ -598,6 +624,7 @@ export const Expense = mongoose.model<IExpense>('Expense', ExpenseSchema);
 
 // Financial Transaction Model (combines income and expenses)
 export interface ITransaction extends Document {
+  userId: mongoose.Types.ObjectId;
   type: 'income' | 'expense';
   category: string;
   amount: number;
@@ -611,6 +638,7 @@ export interface ITransaction extends Document {
 }
 
 const TransactionSchema = new Schema({
+  userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
   type: { type: String, enum: ['income', 'expense'], required: true },
   category: { type: String, required: true },
   amount: { type: Number, required: true },
@@ -625,6 +653,7 @@ export const Transaction = mongoose.model<ITransaction>('Transaction', Transacti
 
 // Financial Summary Model (cached summaries for performance)
 export interface IFinancialSummary extends Document {
+  userId: mongoose.Types.ObjectId;
   period: string; // e.g., '2024-01', '2024-Q1', '2024'
   periodType: 'month' | 'quarter' | 'year';
   revenue: number;
@@ -640,7 +669,8 @@ export interface IFinancialSummary extends Document {
 }
 
 const FinancialSummarySchema = new Schema({
-  period: { type: String, required: true, unique: true },
+  userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+  period: { type: String, required: true },
   periodType: { type: String, enum: ['month', 'quarter', 'year'], required: true },
   revenue: { type: Number, default: 0 },
   expenses: { type: Number, default: 0 },
@@ -659,6 +689,7 @@ export const FinancialSummary = mongoose.model<IFinancialSummary>('FinancialSumm
 
 // Pricing Rules Model (formerly part of schema)
 export interface IPricingRule extends Document {
+  userId: mongoose.Types.ObjectId;
   name: string;
   description?: string;
   ruleType: string;
@@ -675,6 +706,7 @@ export interface IPricingRule extends Document {
 }
 
 const PricingRuleSchema = new Schema({
+  userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
   name: { type: String, required: true },
   description: String,
   ruleType: { type: String, required: true },
@@ -692,6 +724,7 @@ export const PricingRule = mongoose.model<IPricingRule>('PricingRule', PricingRu
 
 // Business Settings Model
 export interface IBusinessSettings extends Document {
+  userId: mongoose.Types.ObjectId;
   companyName: string;
   address: string;
   city: string;
@@ -709,6 +742,7 @@ export interface IBusinessSettings extends Document {
 }
 
 const BusinessSettingsSchema = new Schema({
+  userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
   companyName: { type: String, default: "Jay's Frames" },
   address: { type: String, default: '' },
   city: { type: String, default: '' },
@@ -727,6 +761,7 @@ export const BusinessSettings = mongoose.model<IBusinessSettings>('BusinessSetti
 
 // Notification Settings Model
 export interface INotificationSettings extends Document {
+  userId: mongoose.Types.ObjectId;
   emailNotifications: boolean;
   orderUpdates: boolean;
   paymentReminders: boolean;
@@ -737,6 +772,7 @@ export interface INotificationSettings extends Document {
 }
 
 const NotificationSettingsSchema = new Schema({
+  userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
   emailNotifications: { type: Boolean, default: true },
   orderUpdates: { type: Boolean, default: true },
   paymentReminders: { type: Boolean, default: true },
@@ -748,6 +784,7 @@ export const NotificationSettings = mongoose.model<INotificationSettings>('Notif
 
 // Display Settings Model
 export interface IDisplaySettings extends Document {
+  userId: mongoose.Types.ObjectId;
   theme: 'light' | 'dark' | 'system';
   compactMode: boolean;
   showPriceBreakdown: boolean;
@@ -759,6 +796,7 @@ export interface IDisplaySettings extends Document {
 }
 
 const DisplaySettingsSchema = new Schema({
+  userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
   theme: { type: String, enum: ['light', 'dark', 'system'], default: 'system' },
   compactMode: { type: Boolean, default: false },
   showPriceBreakdown: { type: Boolean, default: true },

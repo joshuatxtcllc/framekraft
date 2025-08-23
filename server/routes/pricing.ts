@@ -1,12 +1,18 @@
-import type { Express } from "express";
+import type { Express, Request } from "express";
 import * as storage from "../mongoStorage";
 import { insertPriceStructureSchema } from "@shared/schema";
 
+// Extend Express Request type to include user
+interface AuthenticatedRequest extends Request {
+  user?: any;
+}
+
 export function registerPricingRoutes(app: Express, isAuthenticated: any) {
-  // Get all price structure items
-  app.get("/api/pricing/structure", isAuthenticated, async (req, res) => {
+  // Get all price structure items for the authenticated user
+  app.get("/api/pricing/structure", isAuthenticated, async (req: AuthenticatedRequest, res) => {
     try {
-      const prices = await storage.getPriceStructures();
+      const userId = req.user?._id?.toString() || req.user?.id;
+      const prices = await storage.getPriceStructures(userId);
       res.json(prices);
     } catch (error) {
       console.error("Error fetching price structure:", error);
@@ -14,11 +20,14 @@ export function registerPricingRoutes(app: Express, isAuthenticated: any) {
     }
   });
 
-  // Create new price structure item
-  app.post("/api/pricing/structure", isAuthenticated, async (req, res) => {
+  // Create new price structure item for the authenticated user
+  app.post("/api/pricing/structure", isAuthenticated, async (req: AuthenticatedRequest, res) => {
     try {
+      const userId = req.user?._id?.toString() || req.user?.id;
       const validatedData = insertPriceStructureSchema.parse(req.body);
-      const price = await storage.createPriceStructure(validatedData);
+      // Add userId to the data
+      const priceData = { ...validatedData, userId };
+      const price = await storage.createPriceStructure(priceData);
       res.status(201).json(price);
     } catch (error) {
       console.error("Error creating price structure:", error);
@@ -26,11 +35,19 @@ export function registerPricingRoutes(app: Express, isAuthenticated: any) {
     }
   });
 
-  // Update price structure item
-  app.put("/api/pricing/structure/:id", isAuthenticated, async (req, res) => {
+  // Update price structure item for the authenticated user
+  app.put("/api/pricing/structure/:id", isAuthenticated, async (req: AuthenticatedRequest, res) => {
     try {
+      const userId = req.user?._id?.toString() || req.user?.id;
       const id = req.params.id;
       const validatedData = insertPriceStructureSchema.partial().parse(req.body);
+      
+      // First check if the price structure belongs to this user
+      const existingPrice = await storage.getPriceStructureById(id);
+      if (!existingPrice || (existingPrice.userId && existingPrice.userId !== userId)) {
+        return res.status(404).json({ message: "Price structure item not found" });
+      }
+      
       const price = await storage.updatePriceStructure(id, validatedData);
       res.json(price);
     } catch (error) {
@@ -39,10 +56,18 @@ export function registerPricingRoutes(app: Express, isAuthenticated: any) {
     }
   });
 
-  // Delete price structure item
-  app.delete("/api/pricing/structure/:id", isAuthenticated, async (req, res) => {
+  // Delete price structure item for the authenticated user
+  app.delete("/api/pricing/structure/:id", isAuthenticated, async (req: AuthenticatedRequest, res) => {
     try {
+      const userId = req.user?._id?.toString() || req.user?.id;
       const id = req.params.id;
+      
+      // First check if the price structure belongs to this user
+      const existingPrice = await storage.getPriceStructureById(id);
+      if (!existingPrice || (existingPrice.userId && existingPrice.userId !== userId)) {
+        return res.status(404).json({ message: "Price structure item not found" });
+      }
+      
       await storage.deletePriceStructure(id);
       res.json({ message: "Price structure item deleted successfully" });
     } catch (error) {

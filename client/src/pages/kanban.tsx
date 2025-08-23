@@ -70,13 +70,12 @@ const KanbanBoard = () => {
   const [stockSearchQuery, setStockSearchQuery] = useState('');
 
   const stages = [
-    { id: 'pending', title: 'Order Processed', color: 'bg-blue-500', count: 0 },
-    { id: 'measuring', title: 'Materials Ordered', color: 'bg-orange-500', count: 0 },
-    { id: 'production', title: 'In Production', color: 'bg-purple-500', count: 0 },
-    { id: 'quality_check', title: 'Quality Check', color: 'bg-indigo-500', count: 0 },
-    { id: 'ready', title: 'Ready for Pickup', color: 'bg-green-500', count: 0 },
-    { id: 'completed', title: 'Completed', color: 'bg-gray-500', count: 0 },
-    { id: 'cancelled', title: 'Delayed/Issues', color: 'bg-red-500', count: 0 },
+    { id: 'pending', title: 'Pending', color: 'bg-blue-500', count: 0 },
+    { id: 'measuring', title: 'Measuring', color: 'bg-orange-500', count: 0 },
+    { id: 'designing', title: 'Designing', color: 'bg-purple-500', count: 0 },
+    { id: 'cutting', title: 'Cutting', color: 'bg-indigo-500', count: 0 },
+    { id: 'assembly', title: 'Assembly', color: 'bg-yellow-500', count: 0 },
+    { id: 'completed', title: 'Completed', color: 'bg-green-500', count: 0 },
   ];
 
   // Count orders in each stage
@@ -139,7 +138,7 @@ const KanbanBoard = () => {
   // Handle printing work orders for all in-production orders
   const handlePrintWorkOrders = async () => {
     const productionOrders = orders.filter(order => 
-      ['pending', 'measuring', 'production', 'quality_check'].includes(order.status)
+      ['pending', 'measuring', 'designing', 'cutting', 'assembly'].includes(order.status)
     );
     
     if (productionOrders.length === 0) {
@@ -304,7 +303,7 @@ const KanbanBoard = () => {
         </div>
 
         <div className="mb-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-7 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6 gap-4">
                 {stages.map((stage) => (
                   <div
                     key={stage.id}

@@ -57,20 +57,20 @@ export interface IStorage {
   upsertUser(user: UpsertUser): Promise<User>;
 
   // Customer operations
-  getCustomers(): Promise<Customer[]>;
-  getCustomer(id: number): Promise<Customer | undefined>;
-  createCustomer(customer: InsertCustomer): Promise<Customer>;
-  updateCustomer(id: number, customer: Partial<InsertCustomer>): Promise<Customer>;
-  deleteCustomer(id: number): Promise<void>;
+  getCustomers(userId: string): Promise<Customer[]>;
+  getCustomer(id: number, userId: string): Promise<Customer | undefined>;
+  createCustomer(customer: InsertCustomer, userId: string): Promise<Customer>;
+  updateCustomer(id: number, customer: Partial<InsertCustomer>, userId: string): Promise<Customer>;
+  deleteCustomer(id: number, userId: string): Promise<void>;
 
   // Order operations
-  getOrders(): Promise<OrderWithCustomer[]>;
-  getOrder(id: number): Promise<OrderWithCustomer | undefined>;
-  createOrder(order: InsertOrder): Promise<Order>;
-  updateOrder(id: number, order: Partial<InsertOrder>): Promise<Order>;
-  deleteOrder(id: number): Promise<void>;
-  getOrdersByCustomer(customerId: number): Promise<Order[]>;
-  getOrdersByStatus(status: string): Promise<OrderWithCustomer[]>;
+  getOrders(userId: string): Promise<OrderWithCustomer[]>;
+  getOrder(id: number, userId: string): Promise<OrderWithCustomer | undefined>;
+  createOrder(order: InsertOrder, userId: string): Promise<Order>;
+  updateOrder(id: number, order: Partial<InsertOrder>, userId: string): Promise<Order>;
+  deleteOrder(id: number, userId: string): Promise<void>;
+  getOrdersByCustomer(customerId: number, userId: string): Promise<Order[]>;
+  getOrdersByStatus(status: string, userId: string): Promise<OrderWithCustomer[]>;
 
   // Project tracking
   getProjectSteps(orderId: number): Promise<ProjectStep[]>;
@@ -78,43 +78,43 @@ export interface IStorage {
   updateProjectStep(id: number, step: any): Promise<ProjectStep>;
 
   // AI insights
-  getAiInsights(limit?: number): Promise<AiInsight[]>;
-  createAiInsight(insight: any): Promise<AiInsight>;
-  markInsightActionTaken(id: number): Promise<void>;
-  deleteAiInsight(id: number): Promise<void>;
+  getAiInsights(userId: string, limit?: number): Promise<AiInsight[]>;
+  createAiInsight(insight: any, userId: string): Promise<AiInsight>;
+  markInsightActionTaken(id: number, userId: string): Promise<void>;
+  deleteAiInsight(id: number, userId: string): Promise<void>;
 
   // Business metrics
-  getBusinessMetrics(type?: string, dateRange?: { start: Date; end: Date }): Promise<BusinessMetric[]>;
-  createBusinessMetric(metric: Omit<BusinessMetric, 'id' | 'createdAt'>): Promise<BusinessMetric>;
-  storeBusinessMetric(metricType: string, value: number): Promise<void>;
-  getBusinessMetrics(): Promise<Array<{metricType: string, value: number, updatedAt: Date}>>;
+  getBusinessMetrics(userId: string, type?: string, dateRange?: { start: Date; end: Date }): Promise<BusinessMetric[]>;
+  createBusinessMetric(metric: Omit<BusinessMetric, 'id' | 'createdAt'>, userId: string): Promise<BusinessMetric>;
+  storeBusinessMetric(metricType: string, value: number, userId: string): Promise<void>;
+  getBusinessMetricsSimple(userId: string): Promise<Array<{metricType: string, value: number, updatedAt: Date}>>;
 
   // Inventory
-  getInventory(): Promise<Inventory[]>;
-  createInventoryItem(item: any): Promise<Inventory>;
-  updateInventoryItem(id: number, item: any): Promise<Inventory>;
-  deleteInventoryItem(id: number): Promise<void>;
-  updateInventoryStock(id: number, quantity: number): Promise<Inventory>;
-  getLowStockItems(): Promise<Inventory[]>;
+  getInventory(userId: string): Promise<Inventory[]>;
+  createInventoryItem(item: any, userId: string): Promise<Inventory>;
+  updateInventoryItem(id: number, item: any, userId: string): Promise<Inventory>;
+  deleteInventoryItem(id: number, userId: string): Promise<void>;
+  updateInventoryStock(id: number, quantity: number, userId: string): Promise<Inventory>;
+  getLowStockItems(userId: string): Promise<Inventory[]>;
 
   // Price Structure
-  getPriceStructure(): Promise<PriceStructure[]>;
-  createPriceStructure(price: InsertPriceStructure): Promise<PriceStructure>;
-  updatePriceStructure(id: number, price: Partial<InsertPriceStructure>): Promise<PriceStructure>;
-  deletePriceStructure(id: number): Promise<void>;
+  getPriceStructure(userId: string): Promise<PriceStructure[]>;
+  createPriceStructure(price: InsertPriceStructure, userId: string): Promise<PriceStructure>;
+  updatePriceStructure(id: number, price: Partial<InsertPriceStructure>, userId: string): Promise<PriceStructure>;
+  deletePriceStructure(id: number, userId: string): Promise<void>;
 
   // Wholesalers
-  getWholesalers(): Promise<Wholesaler[]>;
-  createWholesaler(wholesaler: InsertWholesaler): Promise<Wholesaler>;
-  getWholesalerProducts(wholesalerId: number): Promise<WholesalerProduct[]>;
+  getWholesalers(userId: string): Promise<Wholesaler[]>;
+  createWholesaler(wholesaler: InsertWholesaler, userId: string): Promise<Wholesaler>;
+  getWholesalerProducts(wholesalerId: number, userId: string): Promise<WholesalerProduct[]>;
 
   // Invoices
-  getInvoices(): Promise<InvoiceWithDetails[]>;
-  getInvoice(id: number): Promise<InvoiceWithDetails | undefined>;
-  createInvoice(invoice: InsertInvoice, items: InsertInvoiceItem[]): Promise<Invoice>;
-  updateInvoice(id: number, invoice: Partial<InsertInvoice>): Promise<Invoice>;
-  deleteInvoice(id: number): Promise<void>;
-  markInvoicePaid(invoiceId: number, payment: InsertPayment): Promise<void>;
+  getInvoices(userId: string): Promise<InvoiceWithDetails[]>;
+  getInvoice(id: number, userId: string): Promise<InvoiceWithDetails | undefined>;
+  createInvoice(invoice: InsertInvoice, items: InsertInvoiceItem[], userId: string): Promise<Invoice>;
+  updateInvoice(id: number, invoice: Partial<InsertInvoice>, userId: string): Promise<Invoice>;
+  deleteInvoice(id: number, userId: string): Promise<void>;
+  markInvoicePaid(invoiceId: number, payment: InsertPayment, userId: string): Promise<void>;
 
   // Stripe integration
   updateUserStripeInfo(userId: string, customerId: string, subscriptionId?: string): Promise<User>;
@@ -143,39 +143,40 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Customer operations
-  async getCustomers(): Promise<Customer[]> {
-    return await db.select().from(customers).orderBy(desc(customers.createdAt));
+  async getCustomers(userId: string): Promise<Customer[]> {
+    return await db.select().from(customers).where(eq(customers.userId, userId)).orderBy(desc(customers.createdAt));
   }
 
-  async getCustomer(id: number): Promise<Customer | undefined> {
-    const [customer] = await db.select().from(customers).where(eq(customers.id, id));
+  async getCustomer(id: number, userId: string): Promise<Customer | undefined> {
+    const [customer] = await db.select().from(customers).where(and(eq(customers.id, id), eq(customers.userId, userId)));
     return customer;
   }
 
-  async createCustomer(customerData: InsertCustomer): Promise<Customer> {
-    const [customer] = await db.insert(customers).values(customerData).returning();
+  async createCustomer(customerData: InsertCustomer, userId: string): Promise<Customer> {
+    const [customer] = await db.insert(customers).values({ ...customerData, userId }).returning();
     return customer;
   }
 
-  async updateCustomer(id: number, customerData: Partial<InsertCustomer>): Promise<Customer> {
+  async updateCustomer(id: number, customerData: Partial<InsertCustomer>, userId: string): Promise<Customer> {
     const [customer] = await db
       .update(customers)
       .set({ ...customerData, updatedAt: new Date() })
-      .where(eq(customers.id, id))
+      .where(and(eq(customers.id, id), eq(customers.userId, userId)))
       .returning();
     return customer;
   }
 
-  async deleteCustomer(id: number): Promise<void> {
-    await db.delete(customers).where(eq(customers.id, id));
+  async deleteCustomer(id: number, userId: string): Promise<void> {
+    await db.delete(customers).where(and(eq(customers.id, id), eq(customers.userId, userId)));
   }
 
   // Order operations
-  async getOrders(): Promise<OrderWithCustomer[]> {
+  async getOrders(userId: string): Promise<OrderWithCustomer[]> {
     return await db
       .select()
       .from(orders)
       .leftJoin(customers, eq(orders.customerId, customers.id))
+      .where(eq(orders.userId, userId))
       .orderBy(desc(orders.createdAt))
       .then(rows => 
         rows.map(row => ({
@@ -185,12 +186,12 @@ export class DatabaseStorage implements IStorage {
       );
   }
 
-  async getOrder(id: number): Promise<OrderWithCustomer | undefined> {
+  async getOrder(id: number, userId: string): Promise<OrderWithCustomer | undefined> {
     const [result] = await db
       .select()
       .from(orders)
       .leftJoin(customers, eq(orders.customerId, customers.id))
-      .where(eq(orders.id, id));
+      .where(and(eq(orders.id, id), eq(orders.userId, userId)));
 
     if (!result) return undefined;
 
@@ -200,7 +201,7 @@ export class DatabaseStorage implements IStorage {
     };
   }
 
-  async createOrder(orderData: InsertOrder): Promise<Order> {
+  async createOrder(orderData: InsertOrder, userId: string): Promise<Order> {
     try {
       console.log("Storage createOrder called with:", JSON.stringify(orderData, null, 2));
 
@@ -226,6 +227,7 @@ export class DatabaseStorage implements IStorage {
 
       // Prepare data for database insertion, converting numbers to strings for decimal fields
       const insertData = {
+        userId,
         customerId: orderData.customerId,
         orderNumber,
         description: orderData.description,
@@ -301,7 +303,7 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async updateOrder(id: number, orderData: Partial<InsertOrder>): Promise<Order> {
+  async updateOrder(id: number, orderData: Partial<InsertOrder>, userId: string): Promise<Order> {
     // Convert number fields to strings for database storage, exclude problematic fields
     const updateData: any = {
       updatedAt: new Date()
@@ -336,29 +338,29 @@ export class DatabaseStorage implements IStorage {
     const [order] = await db
       .update(orders)
       .set(updateData)
-      .where(eq(orders.id, id))
+      .where(and(eq(orders.id, id), eq(orders.userId, userId)))
       .returning();
     return order;
   }
 
-  async deleteOrder(id: number): Promise<void> {
-    await db.delete(orders).where(eq(orders.id, id));
+  async deleteOrder(id: number, userId: string): Promise<void> {
+    await db.delete(orders).where(and(eq(orders.id, id), eq(orders.userId, userId)));
   }
 
-  async getOrdersByCustomer(customerId: number): Promise<Order[]> {
+  async getOrdersByCustomer(customerId: number, userId: string): Promise<Order[]> {
     return await db
       .select()
       .from(orders)
-      .where(eq(orders.customerId, customerId))
+      .where(and(eq(orders.customerId, customerId), eq(orders.userId, userId)))
       .orderBy(desc(orders.createdAt));
   }
 
-  async getOrdersByStatus(status: string): Promise<OrderWithCustomer[]> {
+  async getOrdersByStatus(status: string, userId: string): Promise<OrderWithCustomer[]> {
     return await db
       .select()
       .from(orders)
       .leftJoin(customers, eq(orders.customerId, customers.id))
-      .where(eq(orders.status, status))
+      .where(and(eq(orders.status, status), eq(orders.userId, userId)))
       .orderBy(desc(orders.createdAt))
       .then(rows => 
         rows.map(row => ({
@@ -800,10 +802,5 @@ export class DatabaseStorage implements IStorage {
   }
 }
 
-// Use mock storage in development if database is not available
-import { mockStorage } from './mockStorage';
-
-const isDevelopment = process.env.NODE_ENV !== 'production';
-const hasDatabase = process.env.DATABASE_URL && !process.env.DATABASE_URL.includes('localhost');
-
-export const storage = (!isDevelopment || hasDatabase) ? new DatabaseStorage() : mockStorage as any;
+// Always use real database storage
+export const storage = new DatabaseStorage();

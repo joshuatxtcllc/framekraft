@@ -57,36 +57,80 @@ export default function VendorCatalog() {
 
   // Fetch wholesalers
   const { data: wholesalers = [] } = useQuery<Wholesaler[]>({
-    queryKey: ['/api/vendor/wholesalers'],
+    queryKey: ['/api/wholesalers'],
   });
 
-  // Build search query string
-  const searchParams = new URLSearchParams();
-  if (searchQuery) searchParams.append('query', searchQuery);
-  if (selectedCategory && selectedCategory !== 'all') searchParams.append('category', selectedCategory);
-  if (selectedSupplier && selectedSupplier !== 'all') searchParams.append('supplier', selectedSupplier);
-  const searchQueryString = searchParams.toString();
-
-  // Search products
-  const { data: searchResults = [], isLoading: isSearching } = useQuery<VendorProduct[]>({
-    queryKey: searchQueryString ? [`/api/vendor/products/search?${searchQueryString}`] : ['/api/vendor/products/search'],
-    enabled: !!(searchQuery || (selectedCategory && selectedCategory !== 'all') || (selectedSupplier && selectedSupplier !== 'all')),
+  // Fetch products for each wholesaler
+  const wholesalerProducts = useQuery({
+    queryKey: ['wholesaler-products', wholesalers],
+    queryFn: async () => {
+      if (!wholesalers.length) return [];
+      
+      const allProducts = [];
+      for (const wholesaler of wholesalers) {
+        const wholesalerId = wholesaler._id || wholesaler.id;
+        if (wholesalerId) {
+          try {
+            const response = await fetch(`/api/wholesalers/${wholesalerId}/products`);
+            if (response.ok) {
+              const products = await response.json();
+              // Add wholesaler info to each product
+              const productsWithSupplier = products.map((product: any) => ({
+                ...product,
+                id: product._id || product.id,
+                wholesalePrice: product.wholesalePrice?.toString() || '0',
+                suggestedRetail: product.suggestedRetail?.toString() || '0',
+                supplierName: wholesaler.companyName,
+                supplierContact: wholesaler.contactName,
+                supplierPhone: wholesaler.phone,
+                supplierEmail: wholesaler.email,
+                paymentTerms: wholesaler.paymentTerms,
+                minOrderAmount: wholesaler.minOrderAmount?.toString() || '0'
+              }));
+              allProducts.push(...productsWithSupplier);
+            }
+          } catch (error) {
+            console.error(`Failed to fetch products for wholesaler ${wholesalerId}:`, error);
+          }
+        }
+      }
+      return allProducts;
+    },
+    enabled: wholesalers.length > 0,
   });
+
+  const allProducts = wholesalerProducts.data || [];
+  const isSearching = wholesalerProducts.isLoading;
+
+  // Filter products based on search and category
+  const searchResults = allProducts.filter(product => {
+    if (searchQuery && !product.productName.toLowerCase().includes(searchQuery.toLowerCase()) &&
+        !product.productCode.toLowerCase().includes(searchQuery.toLowerCase()) &&
+        !product.description?.toLowerCase().includes(searchQuery.toLowerCase())) {
+      return false;
+    }
+    if (selectedCategory && selectedCategory !== 'all' && product.category !== selectedCategory) {
+      return false;
+    }
+    if (selectedSupplier && selectedSupplier !== 'all' && product.supplierName !== selectedSupplier) {
+      return false;
+    }
+    return true;
+  });
+
+  // Show all products if no search criteria, otherwise show filtered results
+  const displayResults = (searchQuery || (selectedCategory && selectedCategory !== 'all') || (selectedSupplier && selectedSupplier !== 'all')) 
+    ? searchResults 
+    : allProducts;
 
   // Get frames
-  const { data: frames = [] } = useQuery<VendorProduct[]>({
-    queryKey: ['/api/vendor/categories/frame'],
-  });
+  const frames = allProducts.filter(product => product.category === 'frame');
 
   // Get mats
-  const { data: mats = [] } = useQuery<VendorProduct[]>({
-    queryKey: ['/api/vendor/categories/mat'],
-  });
+  const mats = allProducts.filter(product => product.category === 'mat');
 
   // Get glazing
-  const { data: glazing = [] } = useQuery<VendorProduct[]>({
-    queryKey: ['/api/vendor/categories/glazing'],
-  });
+  const glazing = allProducts.filter(product => product.category === 'glazing');
 
   const ProductCard = ({ product }: { product: VendorProduct }) => (
     <Card className="h-full hover:shadow-md transition-shadow">
@@ -314,12 +358,12 @@ export default function VendorCatalog() {
           )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {searchResults.map((product) => (
+            {displayResults.map((product) => (
               <ProductCard key={product.id} product={product} />
             ))}
           </div>
 
-          {searchResults.length === 0 && (searchQuery || (selectedCategory && selectedCategory !== 'all') || (selectedSupplier && selectedSupplier !== 'all')) && !isSearching && (
+          {displayResults.length === 0 && !isSearching && (
             <div className="text-center py-8 text-gray-500">
               No products found matching your search criteria
             </div>

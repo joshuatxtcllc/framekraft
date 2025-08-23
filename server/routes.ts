@@ -7,7 +7,6 @@ import { aiService } from "./services/aiService";
 import { emailService } from './services/emailService';
 import { searchService } from './services/searchService';
 import { settingsService } from './services/settingsService';
-import { insertCustomerSchema, insertOrderSchema } from "@shared/schema";
 import { registerPricingRoutes } from "./routes/pricing";
 import { registerWholesalerRoutes } from "./routes/wholesalers";
 import { registerInvoiceRoutes } from "./routes/invoices";
@@ -101,9 +100,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Customer routes
-  app.get('/api/customers', isAuthenticated, async (req, res) => {
+  app.get('/api/customers', isAuthenticated, async (req: any, res) => {
     try {
-      const customers = await storage.getCustomers();
+      const userId = req.user?._id?.toString();
+      const customers = await storage.getCustomers(userId);
       // Transform MongoDB documents to match frontend expectations
       const formattedCustomers = customers.map((customer: any) => ({
         id: customer._id?.toString() || customer.id,
@@ -125,18 +125,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/customers', isAuthenticated, async (req, res) => {
+  app.post('/api/customers', isAuthenticated, async (req: any, res) => {
     try {
-      const customerData = insertCustomerSchema.parse(req.body);
-      // Filter out null values for MongoDB
-      const cleanedData: any = {};
-      Object.keys(customerData).forEach(key => {
-        const value = (customerData as any)[key];
-        if (value !== null) {
-          cleanedData[key] = value;
-        }
-      });
-      const customer = await storage.createCustomer(cleanedData);
+      const userId = req.user?._id?.toString();
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+      
+      // Don't use PostgreSQL schema for MongoDB - just validate required fields
+      const { firstName, lastName, email, phone, address, notes } = req.body;
+      
+      if (!firstName || !lastName) {
+        return res.status(400).json({ message: "First name and last name are required" });
+      }
+      
+      const customerData = {
+        firstName,
+        lastName,
+        email: email || undefined,
+        phone: phone || undefined,
+        address: address || undefined,
+        notes: notes || undefined,
+      };
+      
+      const customer = await storage.createCustomer(customerData, userId);
       res.status(201).json(customer);
     } catch (error) {
       console.error("Error creating customer:", error);
@@ -144,14 +156,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/customers/:id', isAuthenticated, async (req, res) => {
+  app.get('/api/customers/:id', isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user?._id?.toString();
       const id = req.params.id;
-      const customer = await storage.getCustomer(id);
+      const customer = await storage.getCustomer(id, userId);
       if (!customer) {
         return res.status(404).json({ message: "Customer not found" });
       }
-      const orders = await storage.getOrdersByCustomer(id);
+      const orders = await storage.getOrdersByCustomer(id, userId);
       
       // Format customer data properly
       const formattedCustomer = {
@@ -176,11 +189,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/customers/:id', isAuthenticated, async (req, res) => {
+  app.put('/api/customers/:id', isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user?._id?.toString();
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+      
       const id = req.params.id;
-      const customerData = insertCustomerSchema.partial().parse(req.body);
-      const customer = await storage.updateCustomer(id, customerData);
+      
+      // Don't use PostgreSQL schema for MongoDB - just extract the fields we can update
+      const { firstName, lastName, email, phone, address, notes } = req.body;
+      
+      const updateData: any = {};
+      if (firstName !== undefined) updateData.firstName = firstName;
+      if (lastName !== undefined) updateData.lastName = lastName;
+      if (email !== undefined) updateData.email = email;
+      if (phone !== undefined) updateData.phone = phone;
+      if (address !== undefined) updateData.address = address;
+      if (notes !== undefined) updateData.notes = notes;
+      
+      const customer = await storage.updateCustomer(id, updateData, userId);
       res.json(customer);
     } catch (error) {
       console.error("Error updating customer:", error);
@@ -188,12 +217,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/customers/:id', isAuthenticated, async (req, res) => {
+  app.delete('/api/customers/:id', isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user?._id?.toString();
       const id = req.params.id;
       
       // Check if customer has any orders
-      const orders = await storage.getOrdersByCustomer(id);
+      const orders = await storage.getOrdersByCustomer(id, userId);
       if (orders && orders.length > 0) {
         return res.status(400).json({ 
           message: "Cannot delete customer with existing orders",
@@ -201,7 +231,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      await storage.deleteCustomer(id);
+      await storage.deleteCustomer(id, userId);
       res.json({ success: true, message: "Customer deleted successfully" });
     } catch (error) {
       console.error("Error deleting customer:", error);
@@ -210,15 +240,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Order routes
-  app.get('/api/orders', isAuthenticated, async (req, res) => {
+  app.get('/api/orders', isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user?._id?.toString();
       const { status } = req.query;
       let orders;
 
       if (status && typeof status === 'string') {
-        orders = await storage.getOrdersByStatus(status);
+        orders = await storage.getOrdersByStatus(status, userId);
       } else {
-        orders = await storage.getOrders();
+        orders = await storage.getOrders(userId);
       }
 
       // The mongoStorage.getOrders already populates customer data
@@ -226,7 +257,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const formattedOrders = orders.map((order: any) => ({
         ...order,
         id: order.id || order._id?.toString(),
-        customer: order.customerId || order.customer,
+        customer: order.customer || order.customerId,
       }));
 
       res.json(formattedOrders);
@@ -236,8 +267,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/orders', isAuthenticated, async (req, res) => {
+  app.post('/api/orders', isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user?._id?.toString();
       console.log("Raw order data received:", JSON.stringify(req.body, null, 2));
 
       // Don't use the PostgreSQL schema validation for MongoDB
@@ -263,21 +295,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
           lastName,
           email: orderData.customerEmail || undefined,
           phone: orderData.customerPhone || undefined,
-        });
+        }, userId);
         
         finalCustomerId = (newCustomer as any)._id.toString();
         console.log("Created new customer with ID:", finalCustomerId);
       } else {
         // For existing customers, we need to find them by their numeric ID
         // and get their MongoDB ObjectId
-        const customers = await storage.getCustomers();
+        const customers = await storage.getCustomers(userId);
         const customer = customers.find(c => c.id?.toString() === orderData.customerId?.toString());
         
         if (customer) {
           finalCustomerId = customer._id ? customer._id.toString() : customer.id;
         } else {
           // If not found by id field, try to find by _id directly
-          const directCustomer = await storage.getCustomer(orderData.customerId);
+          const directCustomer = await storage.getCustomer(orderData.customerId, userId);
           if (directCustomer) {
             finalCustomerId = (directCustomer as any)._id.toString();
           } else {
@@ -287,7 +319,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Generate order number using current orders count for unique ID
-      const existingOrders = await storage.getOrders();
+      const existingOrders = await storage.getOrders(userId);
       const nextOrderId = existingOrders.length + 1;
       const orderNumber = `FC${new Date().getFullYear().toString().slice(-2)}${String(nextOrderId).padStart(4, '0')}`;
       console.log("Generated order number:", orderNumber);
@@ -316,7 +348,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         deliveryMethod: orderData.deliveryMethod || undefined,
         rushOrder: orderData.rushOrder || false,
         estimatedDeliveryDate: orderData.estimatedDeliveryDate ? new Date(orderData.estimatedDeliveryDate) : undefined,
-      });
+      }, userId);
       
       console.log("Order created successfully:", (order as any)._id);
       
@@ -324,7 +356,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const responseOrder = {
         ...(order as any).toObject(),
         id: (order as any)._id.toString(),
-        customer: await storage.getCustomer(finalCustomerId),
+        customer: await storage.getCustomer(finalCustomerId, userId),
       };
       
       res.status(201).json(responseOrder);
@@ -379,8 +411,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/orders/:id', isAuthenticated, async (req, res) => {
+  app.put('/api/orders/:id', isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user?._id?.toString();
       const id = req.params.id;
       // Don't validate with insertOrderSchema since MongoDB uses string IDs
       // Extract only the fields we need to update
@@ -414,7 +447,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (req.body.dueDate !== undefined) updateData.dueDate = req.body.dueDate || null;
       if (req.body.notes !== undefined) updateData.notes = req.body.notes || '';
       
-      const order = await storage.updateOrder(id, updateData);
+      const order = await storage.updateOrder(id, updateData, userId);
       res.json(order);
     } catch (error) {
       console.error("Error updating order:", error);

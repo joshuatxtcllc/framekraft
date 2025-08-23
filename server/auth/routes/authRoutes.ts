@@ -44,18 +44,8 @@ router.post('/register',
       const ipAddress = req.ip || req.socket.remoteAddress;
       const userAgent = req.headers['user-agent'];
       
-      // Register user - use demo service if database is not available
-      let result;
-      try {
-        result = await authService.register(validatedData, ipAddress, userAgent);
-      } catch (dbError: any) {
-        if (dbError.message?.includes('DATABASE_URL') || dbError.code === 'ECONNREFUSED') {
-          console.log('Using demo auth service for registration');
-          result = await demoAuthService.register(validatedData);
-        } else {
-          throw dbError;
-        }
-      }
+      // Register user - MongoDB only, no demo fallback
+      const result = await authService.register(validatedData, ipAddress, userAgent);
       
       // Set cookies
       res.cookie('accessToken', result.accessToken, {
@@ -110,18 +100,8 @@ router.post('/login',
       const ipAddress = req.ip || req.socket.remoteAddress;
       const userAgent = req.headers['user-agent'];
       
-      // Login user - use demo service if database is not available
-      let result;
-      try {
-        result = await authService.login(validatedData, ipAddress, userAgent);
-      } catch (dbError: any) {
-        if (dbError.message?.includes('DATABASE_URL') || dbError.code === 'ECONNREFUSED') {
-          console.log('Using demo auth service for login');
-          result = await demoAuthService.login(validatedData.email, validatedData.password);
-        } else {
-          throw dbError;
-        }
-      }
+      // Login user - MongoDB only, no demo fallback
+      const result = await authService.login(validatedData, ipAddress, userAgent);
       
       // Handle 2FA requirement
       if (result.requiresTwoFactor) {
@@ -175,28 +155,51 @@ router.post('/login',
  * @access  Private
  */
 router.post('/logout',
-  authenticate,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
+      // Try to logout if user is authenticated
       if (req.session && req.user) {
         const ipAddress = req.ip || req.socket.remoteAddress;
         const userAgent = req.headers['user-agent'];
         
-        await authService.logout(req.session.id, req.user.id, ipAddress, userAgent);
+        try {
+          await authService.logout(req.session.id, req.user.id, ipAddress, userAgent);
+        } catch (logoutError) {
+          console.error('Error during logout service:', logoutError);
+          // Continue with clearing cookies even if service fails
+        }
       }
       
-      // Clear cookies
-      res.clearCookie('accessToken');
-      res.clearCookie('refreshToken');
+      // Clear cookies with proper options
+      const cookieOptions = {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict' as const,
+        path: '/'
+      };
+      
+      res.clearCookie('accessToken', cookieOptions);
+      res.clearCookie('refreshToken', cookieOptions);
       
       res.json({
         success: true,
         message: 'Logged out successfully'
       });
     } catch (error: any) {
-      res.status(500).json({
-        success: false,
-        message: 'Logout failed'
+      // Even on error, clear cookies
+      const cookieOptions = {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict' as const,
+        path: '/'
+      };
+      
+      res.clearCookie('accessToken', cookieOptions);
+      res.clearCookie('refreshToken', cookieOptions);
+      
+      res.json({
+        success: true,
+        message: 'Logged out successfully'
       });
     }
   }
@@ -250,19 +253,15 @@ router.post('/refresh', refreshToken);
  */
 router.get('/user',
   async (req: Request & { user?: any }, res: Response) => {
-    // For development, return a mock user if not authenticated
-    if (process.env.NODE_ENV === 'development' && !req.user) {
-      return res.json({
-        id: 'local-dev-user',
-        email: 'dev@localhost',
-        firstName: 'Local',
-        lastName: 'Developer',
-        businessName: 'Dev Business',
-        role: 'owner'
-      });
+    // Check for access token in cookies
+    const accessToken = req.cookies?.accessToken;
+    
+    // If no access token, return null (user is not authenticated)
+    if (!accessToken) {
+      return res.json(null);
     }
     
-    // Return authenticated user or null
+    // Return authenticated user or null - NO MOCK DATA
     res.json(req.user || null);
   }
 );

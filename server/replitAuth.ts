@@ -8,17 +8,17 @@ import memoize from "memoizee";
 import connectPg from "connect-pg-simple";
 import { storage } from "./storage";
 
-// For local development, we'll use a mock auth system
-const isLocalDevelopment = process.env.NODE_ENV === 'development' && !process.env.REPL_ID?.startsWith('repl-');
+// Check if running on Replit
+const isReplit = !!process.env.REPLIT_DOMAINS;
 
-if (!isLocalDevelopment && !process.env.REPLIT_DOMAINS) {
+if (isReplit && !process.env.REPLIT_DOMAINS) {
   throw new Error("Environment variable REPLIT_DOMAINS not provided");
 }
 
 const getOidcConfig = memoize(
   async () => {
-    if (isLocalDevelopment) {
-      // Return a mock config for local development
+    if (!isReplit) {
+      // Not on Replit, use MongoDB auth instead
       return null;
     }
     return await client.discovery(
@@ -79,24 +79,9 @@ export async function setupAuth(app: Express) {
   app.use(passport.initialize());
   app.use(passport.session());
 
-  if (isLocalDevelopment) {
-    // For local development, use a simple mock auth
-    console.log("🔓 Running in local development mode - authentication disabled");
-    
-    // Add mock login/logout routes for local development
-    app.get("/api/login", (req, res) => {
-      // In local dev, just redirect to home (auto-logged in)
-      res.redirect("/");
-    });
-    
-    app.get("/api/logout", (req, res) => {
-      res.redirect("/");
-    });
-    
-    app.get("/api/callback", (req, res) => {
-      res.redirect("/");
-    });
-    
+  if (!isReplit) {
+    // Not on Replit - MongoDB auth will be used
+    console.log("✅ Using MongoDB authentication");
     return;
   }
 
@@ -179,19 +164,6 @@ export async function setupAuth(app: Express) {
 }
 
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
-  // In local development, bypass authentication
-  if (isLocalDevelopment) {
-    // Mock a local user for development
-    (req as any).user = {
-      claims: {
-        sub: 'local-dev-user',
-        email: 'dev@localhost',
-        name: 'Local Developer'
-      }
-    };
-    return next();
-  }
-
   // Check if user is authenticated first
   if (!req.isAuthenticated()) {
     return res.status(401).json({ message: "Unauthorized" });
