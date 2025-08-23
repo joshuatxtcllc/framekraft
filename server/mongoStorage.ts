@@ -29,7 +29,13 @@ import {
   IInventory,
   IBusinessSettings,
   INotificationSettings,
-  IDisplaySettings
+  IDisplaySettings,
+  Expense,
+  IExpense,
+  Transaction,
+  ITransaction,
+  FinancialSummary,
+  IFinancialSummary
 } from './models';
 import mongoose from 'mongoose';
 
@@ -311,7 +317,26 @@ export async function createInvoice(invoiceData: any): Promise<IInvoice> {
 }
 
 export async function updateInvoice(id: string, invoiceData: any): Promise<IInvoice | null> {
-  return await Invoice.findByIdAndUpdate(id, invoiceData, { new: true });
+  const oldInvoice = await Invoice.findById(id);
+  const updatedInvoice = await Invoice.findByIdAndUpdate(id, invoiceData, { new: true });
+  
+  // If invoice is being marked as paid, create an income transaction
+  if (updatedInvoice && oldInvoice?.status !== 'paid' && invoiceData.status === 'paid') {
+    await createTransaction({
+      type: 'income',
+      category: 'invoice_payment',
+      amount: updatedInvoice.totalAmount,
+      description: `Payment received for Invoice #${updatedInvoice.invoiceNumber}`,
+      referenceId: updatedInvoice._id,
+      referenceType: 'invoice',
+      date: invoiceData.paidDate || new Date()
+    });
+    
+    // Update financial summary
+    await updateFinancialSummary(new Date());
+  }
+  
+  return updatedInvoice;
 }
 
 export async function deleteInvoice(id: string): Promise<boolean> {
@@ -705,4 +730,322 @@ export async function updateDisplaySettings(settingsData: Partial<IDisplaySettin
     { new: true, upsert: true }
   );
   return settings!;
+}
+// Financial operations
+
+// Expense operations
+export async function getExpenses(filter?: { startDate?: Date; endDate?: Date; category?: string }): Promise<IExpense[]> {
+  const query: any = {};
+  
+  if (filter?.startDate && filter?.endDate) {
+    query.date = { $gte: filter.startDate, $lte: filter.endDate };
+  }
+  
+  if (filter?.category) {
+    query.category = filter.category;
+  }
+  
+  return await Expense.find(query).sort({ date: -1 });
+}
+
+export async function getExpenseById(id: string): Promise<IExpense | null> {
+  return await Expense.findById(id);
+}
+
+export async function createExpense(expenseData: Partial<IExpense>): Promise<IExpense> {
+  const expense = new Expense(expenseData);
+  const savedExpense = await expense.save();
+  
+  // Also create a transaction record
+  await createTransaction({
+    type: 'expense',
+    category: expense.category,
+    amount: expense.amount,
+    description: expense.description,
+    referenceId: expense._id,
+    referenceType: 'expense',
+    date: expense.date
+  });
+  
+  // Update financial summary
+  await updateFinancialSummary(expense.date);
+  
+  return savedExpense;
+}
+
+export async function updateExpense(id: string, expenseData: Partial<IExpense>): Promise<IExpense | null> {
+  const updated = await Expense.findByIdAndUpdate(id, expenseData, { new: true });
+  if (updated) {
+    await updateFinancialSummary(updated.date);
+  }
+  return updated;
+}
+
+export async function deleteExpense(id: string): Promise<boolean> {
+  const expense = await Expense.findById(id);
+  if (expense) {
+    // Remove associated transaction
+    await Transaction.deleteOne({ referenceId: expense._id, referenceType: 'expense' });
+    await Expense.findByIdAndDelete(id);
+    await updateFinancialSummary(expense.date);
+    return true;
+  }
+  return false;
+}
+
+// Transaction operations
+export async function getTransactions(filter?: { startDate?: Date; endDate?: Date; type?: string }): Promise<ITransaction[]> {
+  const query: any = {};
+  
+  if (filter?.startDate && filter?.endDate) {
+    query.date = { $gte: filter.startDate, $lte: filter.endDate };
+  }
+  
+  if (filter?.type) {
+    query.type = filter.type;
+  }
+  
+  // Get transactions from database
+  let transactions = await Transaction.find(query).sort({ date: -1, createdAt: -1 });
+  
+  // If no transactions exist, create them from orders and expenses
+  if (transactions.length === 0) {
+    // Get orders and create income transactions
+    const orders = await Order.find();
+    for (const order of orders) {
+      if (order.status === 'completed' || order.depositAmount > 0) {
+        const amount = order.status === 'completed' ? order.totalAmount : order.depositAmount;
+        await createTransaction({
+          type: 'income',
+          category: order.status === 'completed' ? 'order_completed' : 'deposit',
+          amount,
+          description: `Order #${order.orderNumber} - ${order.description}`,
+          referenceId: order._id,
+          referenceType: 'order',
+          date: order.createdAt
+        });
+      }
+    }
+    
+    // Get expenses and create expense transactions
+    const expenses = await Expense.find();
+    for (const expense of expenses) {
+      await createTransaction({
+        type: 'expense',
+        category: expense.category,
+        amount: expense.amount,
+        description: expense.description,
+        referenceId: expense._id,
+        referenceType: 'expense',
+        date: expense.date
+      });
+    }
+    
+    // Re-fetch transactions
+    transactions = await Transaction.find(query).sort({ date: -1, createdAt: -1 });
+  }
+  
+  return transactions;
+}
+
+export async function createTransaction(transactionData: Partial<ITransaction>): Promise<ITransaction> {
+  // Calculate running balance
+  const lastTransaction = await Transaction.findOne().sort({ date: -1, createdAt: -1 });
+  let balance = lastTransaction?.balance || 0;
+  
+  if (transactionData.type === 'income') {
+    balance += transactionData.amount || 0;
+  } else {
+    balance -= transactionData.amount || 0;
+  }
+  
+  const transaction = new Transaction({
+    ...transactionData,
+    balance
+  });
+  
+  return await transaction.save();
+}
+
+// Financial Summary operations
+export async function getFinancialSummary(period?: string): Promise<IFinancialSummary | null> {
+  if (period) {
+    return await FinancialSummary.findOne({ period });
+  }
+  
+  // Get current month if no period specified
+  const currentPeriod = new Date().toISOString().slice(0, 7);
+  return await FinancialSummary.findOne({ period: currentPeriod });
+}
+
+export async function updateFinancialSummary(date: Date): Promise<void> {
+  const period = date.toISOString().slice(0, 7); // YYYY-MM format
+  const startDate = new Date(date.getFullYear(), date.getMonth(), 1);
+  const endDate = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+  
+  // Calculate revenue (paid invoices)
+  const paidInvoices = await Invoice.find({
+    status: 'paid',
+    paidDate: { $gte: startDate, $lte: endDate }
+  });
+  
+  const revenue = paidInvoices.reduce((sum, inv) => sum + inv.totalAmount, 0);
+  
+  // Calculate expenses
+  const expenses = await Expense.find({
+    date: { $gte: startDate, $lte: endDate }
+  });
+  
+  const totalExpenses = expenses.reduce((sum, exp) => sum + exp.amount, 0);
+  
+  // Calculate expense breakdown by category
+  const categoryTotals: { [key: string]: number } = {};
+  expenses.forEach(exp => {
+    categoryTotals[exp.category] = (categoryTotals[exp.category] || 0) + exp.amount;
+  });
+  
+  const topExpenseCategories = Object.entries(categoryTotals)
+    .map(([category, amount]) => ({ category, amount }))
+    .sort((a, b) => b.amount - a.amount)
+    .slice(0, 5);
+  
+  // Calculate average order value
+  const orders = await Order.find({
+    createdAt: { $gte: startDate, $lte: endDate }
+  });
+  
+  const averageOrderValue = orders.length > 0 
+    ? orders.reduce((sum, order) => sum + order.totalAmount, 0) / orders.length 
+    : 0;
+  
+  // Update or create summary
+  await FinancialSummary.findOneAndUpdate(
+    { period },
+    {
+      periodType: 'month',
+      revenue,
+      expenses: totalExpenses,
+      netProfit: revenue - totalExpenses,
+      invoiceCount: paidInvoices.length,
+      paidInvoiceCount: paidInvoices.length,
+      expenseCount: expenses.length,
+      averageOrderValue,
+      topExpenseCategories
+    },
+    { upsert: true, new: true }
+  );
+}
+
+// Get financial analytics data
+export async function getFinancialAnalytics(): Promise<any> {
+  const now = new Date();
+  const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+  
+  // Get all orders to calculate revenue
+  const orders = await Order.find({
+    createdAt: { $gte: sixMonthsAgo }
+  }).sort({ createdAt: 1 });
+  
+  // Get all invoices
+  const invoices = await Invoice.find({
+    createdAt: { $gte: sixMonthsAgo }
+  }).sort({ createdAt: 1 });
+  
+  // Get all expenses
+  const expenses = await Expense.find({
+    date: { $gte: sixMonthsAgo }
+  }).sort({ date: 1 });
+  
+  // Group data by month
+  const monthlyData: { [key: string]: { revenue: number; expenses: number; orders: number } } = {};
+  
+  // Process orders for revenue
+  orders.forEach(order => {
+    const month = order.createdAt.toISOString().slice(0, 7);
+    if (!monthlyData[month]) {
+      monthlyData[month] = { revenue: 0, expenses: 0, orders: 0 };
+    }
+    
+    // For completed orders, count the full amount
+    if (order.status === 'completed') {
+      monthlyData[month].revenue += Number(order.totalAmount) || 0;
+    } 
+    // For other orders, only count the deposit that's been collected
+    else if (order.depositAmount && Number(order.depositAmount) > 0) {
+      monthlyData[month].revenue += Number(order.depositAmount) || 0;
+    }
+    
+    monthlyData[month].orders += 1;
+  });
+  
+  // Process paid invoices for additional revenue tracking
+  invoices.forEach(invoice => {
+    if (invoice.status === 'paid' && invoice.paidDate) {
+      const month = invoice.paidDate.toISOString().slice(0, 7);
+      if (!monthlyData[month]) {
+        monthlyData[month] = { revenue: 0, expenses: 0, orders: 0 };
+      }
+      // Only add if not already counted in orders
+      const orderInvoice = orders.find(o => o._id.toString() === invoice.orderId?.toString());
+      if (!orderInvoice) {
+        monthlyData[month].revenue += invoice.totalAmount || 0;
+      }
+    }
+  });
+  
+  // Process expenses
+  expenses.forEach(expense => {
+    const month = expense.date.toISOString().slice(0, 7);
+    if (!monthlyData[month]) {
+      monthlyData[month] = { revenue: 0, expenses: 0, orders: 0 };
+    }
+    monthlyData[month].expenses += Number(expense.amount) || 0;
+  });
+  
+  // Format revenue chart data
+  const revenueChart = Object.entries(monthlyData)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([month, data]) => ({
+      month: new Date(month + '-01').toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+      revenue: data.revenue,
+      expenses: data.expenses,
+      profit: data.revenue - data.expenses
+    }));
+  
+  // Calculate expense breakdown by category for current month
+  const currentMonth = now.toISOString().slice(0, 7);
+  const currentMonthExpenses = expenses.filter(exp => 
+    exp.date.toISOString().slice(0, 7) === currentMonth
+  );
+  
+  const categoryTotals: { [key: string]: number } = {};
+  currentMonthExpenses.forEach(exp => {
+    categoryTotals[exp.category] = (categoryTotals[exp.category] || 0) + Number(exp.amount);
+  });
+  
+  const expenseBreakdown = Object.entries(categoryTotals)
+    .map(([name, value]) => ({ name, value }))
+    .sort((a, b) => b.value - a.value);
+  
+  // Get current month summary
+  const currentMonthData = monthlyData[currentMonth] || { revenue: 0, expenses: 0, orders: 0 };
+  
+  // Also get total counts
+  const totalOrders = await Order.countDocuments();
+  const completedOrders = await Order.countDocuments({ status: 'completed' });
+  const totalCustomers = await Customer.countDocuments();
+  
+  return {
+    revenueChart,
+    expenseBreakdown,
+    currentMonthSummary: {
+      revenue: currentMonthData.revenue,
+      expenses: currentMonthData.expenses,
+      netProfit: currentMonthData.revenue - currentMonthData.expenses,
+      orderCount: currentMonthData.orders,
+      totalOrders,
+      completedOrders,
+      totalCustomers
+    }
+  };
 }

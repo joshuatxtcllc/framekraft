@@ -20,6 +20,7 @@ import giclee from "./routes/giclee.js";
 import communication from "./routes/communication.js";
 import authRoutes from "./routes/authMongoDB";
 import searchRoutes from "./routes/search";
+import financeRoutes from "./routes/finance";
 import { rateLimit } from "./middleware/rateLimiting";
 import { requestLogger } from "./middleware/logging";
 
@@ -693,6 +694,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Add system routes for validation
   const systemRoutes = await import('./routes/system.js');
   app.use('/api/system', systemRoutes.default);
+  
+  // Finance routes
+  app.use('/api/finance', financeRoutes);
 
   const httpServer = createServer(app);
   return httpServer;

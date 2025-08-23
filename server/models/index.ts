@@ -563,6 +563,100 @@ const PaymentSchema = new Schema({
 
 export const Payment = mongoose.model<IPayment>('Payment', PaymentSchema);
 
+// Expense Model for financial tracking
+export interface IExpense extends Document {
+  category: string;
+  amount: number;
+  description: string;
+  vendor?: string;
+  date: Date;
+  receiptUrl?: string;
+  taxDeductible: boolean;
+  notes?: string;
+  createdBy?: mongoose.Types.ObjectId;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const ExpenseSchema = new Schema({
+  category: { 
+    type: String, 
+    required: true,
+    enum: ['materials', 'equipment', 'utilities', 'rent', 'salaries', 'marketing', 'shipping', 'office_supplies', 'professional_services', 'other']
+  },
+  amount: { type: Number, required: true },
+  description: { type: String, required: true },
+  vendor: String,
+  date: { type: Date, required: true },
+  receiptUrl: String,
+  taxDeductible: { type: Boolean, default: true },
+  notes: String,
+  createdBy: { type: Schema.Types.ObjectId, ref: 'User' },
+}, { timestamps: true });
+
+export const Expense = mongoose.model<IExpense>('Expense', ExpenseSchema);
+
+// Financial Transaction Model (combines income and expenses)
+export interface ITransaction extends Document {
+  type: 'income' | 'expense';
+  category: string;
+  amount: number;
+  description: string;
+  referenceId?: mongoose.Types.ObjectId; // Reference to Invoice, Payment, or Expense
+  referenceType?: string; // 'invoice', 'payment', 'expense'
+  date: Date;
+  balance?: number; // Running balance
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const TransactionSchema = new Schema({
+  type: { type: String, enum: ['income', 'expense'], required: true },
+  category: { type: String, required: true },
+  amount: { type: Number, required: true },
+  description: { type: String, required: true },
+  referenceId: Schema.Types.ObjectId,
+  referenceType: String,
+  date: { type: Date, required: true },
+  balance: Number,
+}, { timestamps: true });
+
+export const Transaction = mongoose.model<ITransaction>('Transaction', TransactionSchema);
+
+// Financial Summary Model (cached summaries for performance)
+export interface IFinancialSummary extends Document {
+  period: string; // e.g., '2024-01', '2024-Q1', '2024'
+  periodType: 'month' | 'quarter' | 'year';
+  revenue: number;
+  expenses: number;
+  netProfit: number;
+  invoiceCount: number;
+  paidInvoiceCount: number;
+  expenseCount: number;
+  averageOrderValue: number;
+  topExpenseCategories: Array<{ category: string; amount: number }>;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const FinancialSummarySchema = new Schema({
+  period: { type: String, required: true, unique: true },
+  periodType: { type: String, enum: ['month', 'quarter', 'year'], required: true },
+  revenue: { type: Number, default: 0 },
+  expenses: { type: Number, default: 0 },
+  netProfit: { type: Number, default: 0 },
+  invoiceCount: { type: Number, default: 0 },
+  paidInvoiceCount: { type: Number, default: 0 },
+  expenseCount: { type: Number, default: 0 },
+  averageOrderValue: { type: Number, default: 0 },
+  topExpenseCategories: [{
+    category: String,
+    amount: Number
+  }],
+}, { timestamps: true });
+
+export const FinancialSummary = mongoose.model<IFinancialSummary>('FinancialSummary', FinancialSummarySchema);
+
 // Pricing Rules Model (formerly part of schema)
 export interface IPricingRule extends Document {
   name: string;

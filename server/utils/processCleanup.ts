@@ -165,18 +165,25 @@ export function setupExceptionHandlers(server?: Server): void {
   process.removeAllListeners('unhandledRejection');
   
   // Register fresh handlers
-  process.once('uncaughtException', async (error) => {
-    console.error('Uncaught Exception:', error);
-    await cleanupAndExit(server, 1);
+  process.on('uncaughtException', (error) => {
+    console.error('🚨 Uncaught Exception:', error);
+    // Log the error but don't crash in development
+    if (process.env.NODE_ENV === 'production') {
+      console.error('Exiting due to uncaught exception in production...');
+      cleanupAndExit(server, 1);
+    } else {
+      console.error('⚠️ Continuing despite error in development mode...');
+    }
   });
 
-  process.once('unhandledRejection', async (reason, promise) => {
-    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
-    // In development, we might want to continue running
+  process.on('unhandledRejection', (reason, promise) => {
+    console.error('🚨 Unhandled Rejection at:', promise, 'reason:', reason);
+    // In development, log but continue running
     if (process.env.NODE_ENV === 'production') {
-      await cleanupAndExit(server, 1);
+      console.error('Exiting due to unhandled rejection in production...');
+      cleanupAndExit(server, 1);
     } else {
-      console.error('Continuing in development mode...');
+      console.error('⚠️ Continuing despite rejection in development mode...');
     }
   });
 }

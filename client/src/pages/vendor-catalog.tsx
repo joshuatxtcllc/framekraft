@@ -37,7 +37,8 @@ interface VendorProduct {
 }
 
 interface Wholesaler {
-  id: number;
+  id?: number;
+  _id?: string;
   companyName: string;
   contactName: string;
   email: string;
@@ -59,13 +60,16 @@ export default function VendorCatalog() {
     queryKey: ['/api/vendor/wholesalers'],
   });
 
+  // Build search query string
+  const searchParams = new URLSearchParams();
+  if (searchQuery) searchParams.append('query', searchQuery);
+  if (selectedCategory && selectedCategory !== 'all') searchParams.append('category', selectedCategory);
+  if (selectedSupplier && selectedSupplier !== 'all') searchParams.append('supplier', selectedSupplier);
+  const searchQueryString = searchParams.toString();
+
   // Search products
   const { data: searchResults = [], isLoading: isSearching } = useQuery<VendorProduct[]>({
-    queryKey: ['/api/vendor/products/search', { 
-      category: selectedCategory === 'all' ? '' : selectedCategory, 
-      query: searchQuery,
-      supplier: selectedSupplier === 'all' ? '' : selectedSupplier
-    }],
+    queryKey: searchQueryString ? [`/api/vendor/products/search?${searchQueryString}`] : ['/api/vendor/products/search'],
     enabled: !!(searchQuery || (selectedCategory && selectedCategory !== 'all') || (selectedSupplier && selectedSupplier !== 'all')),
   });
 
@@ -289,8 +293,8 @@ export default function VendorCatalog() {
                     <SelectItem value="all">All Suppliers</SelectItem>
                     {wholesalers
                       .filter((supplier) => supplier.companyName && supplier.companyName.trim() !== '')
-                      .map((supplier) => (
-                        <SelectItem key={supplier.id} value={supplier.companyName}>
+                      .map((supplier, index) => (
+                        <SelectItem key={supplier.id || supplier._id || index} value={supplier.companyName}>
                           {supplier.companyName}
                         </SelectItem>
                       ))}
@@ -365,7 +369,7 @@ export default function VendorCatalog() {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {wholesalers.map((supplier) => (
-              <Card key={supplier.id}>
+              <Card key={supplier.id || supplier._id || supplier.companyName}>
                 <CardHeader>
                   <CardTitle>{supplier.companyName}</CardTitle>
                   <CardDescription>{supplier.contactName}</CardDescription>

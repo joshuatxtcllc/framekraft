@@ -100,6 +100,9 @@ app.use((req, res, next) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
 
+    // Log the error for debugging
+    console.error('Error:', err);
+
     // Don't expose internal error details in production
     if (process.env.NODE_ENV === 'production' && status >= 500) {
       res.status(status).json({ message: "Internal Server Error" });
@@ -107,10 +110,8 @@ app.use((req, res, next) => {
       res.status(status).json({ message });
     }
     
-    // Only throw in development to prevent server crashes in production
-    if (process.env.NODE_ENV !== 'production') {
-      throw err;
-    }
+    // Never throw errors - this prevents server crashes
+    // Errors are logged above for debugging
   });
 
   // importantly only setup vite in development and after
@@ -130,6 +131,9 @@ app.use((req, res, next) => {
   server.listen(port, process.env.NODE_ENV === 'development' ? "127.0.0.1" : "0.0.0.0", () => {
     log(`✨ serving on port ${port}`);
     
+    // Setup exception handlers for both dev and production
+    setupExceptionHandlers(server);
+    
     // In development, just exit immediately on any signal - no cleanup
     if (process.env.NODE_ENV === 'development') {
       ['SIGINT', 'SIGTERM', 'SIGUSR2'].forEach(sig => {
@@ -138,7 +142,6 @@ app.use((req, res, next) => {
       });
     } else {
       // Production cleanup only
-      setupExceptionHandlers(server);
       registerProductionCleanup(server);
     }
   });

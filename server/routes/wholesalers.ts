@@ -336,6 +336,129 @@ export function registerWholesalerRoutes(app: Express, isAuthenticated: any) {
     }
   });
 
+  // Vendor catalog API routes for compatibility with vendor-catalog page
+  app.get("/api/vendor/wholesalers", isAuthenticated, async (req, res) => {
+    try {
+      const wholesalers = await storage.getWholesalers();
+      res.json(wholesalers);
+    } catch (error) {
+      console.error("Error fetching wholesalers:", error);
+      res.status(500).json({ message: "Failed to fetch wholesalers" });
+    }
+  });
+
+  // Search vendor products
+  app.get("/api/vendor/products/search", isAuthenticated, async (req, res) => {
+    try {
+      const { query, category, supplier } = req.query;
+      
+      // Get all products
+      let products = await storage.getWholesalerProducts();
+      
+      // Transform to match vendor-catalog format and include supplier info
+      const wholesalersData = await storage.getWholesalers();
+      const wholesalerMap = new Map(wholesalersData.map(w => [w._id.toString(), w]));
+      
+      products = products.map(product => {
+        const wholesaler = wholesalerMap.get(product.wholesalerId?.toString() || '');
+        return {
+          id: product._id,
+          productCode: product.productCode,
+          productName: product.productName,
+          category: product.category,
+          subcategory: product.subcategory || '',
+          description: product.description || '',
+          specifications: product.specifications || {},
+          unitType: product.unitType || 'linear_foot',
+          wholesalePrice: product.wholesalePrice?.toString() || '0',
+          suggestedRetail: product.suggestedRetail?.toString() || '0',
+          minQuantity: product.minQuantity || 1,
+          packSize: product.packSize || 1,
+          leadTime: product.leadTime || '',
+          stockStatus: product.stockStatus || 'available',
+          vendorCatalogPage: product.vendorCatalogPage || '',
+          supplierName: wholesaler?.companyName || '',
+          supplierContact: wholesaler?.contactName || '',
+          supplierPhone: wholesaler?.phone || '',
+          supplierEmail: wholesaler?.email || '',
+          paymentTerms: wholesaler?.paymentTerms || '',
+          minOrderAmount: wholesaler?.minOrderAmount?.toString() || '0'
+        };
+      });
+      
+      // Apply filters
+      if (query) {
+        const searchTerm = query.toString().toLowerCase();
+        products = products.filter(p => 
+          p.productCode.toLowerCase().includes(searchTerm) ||
+          p.productName.toLowerCase().includes(searchTerm) ||
+          p.description.toLowerCase().includes(searchTerm)
+        );
+      }
+      
+      if (category && category !== 'all') {
+        products = products.filter(p => p.category === category);
+      }
+      
+      if (supplier && supplier !== 'all') {
+        products = products.filter(p => p.supplierName === supplier);
+      }
+      
+      res.json(products);
+    } catch (error) {
+      console.error("Error searching vendor products:", error);
+      res.status(500).json({ message: "Failed to search products" });
+    }
+  });
+
+  // Get products by category
+  app.get("/api/vendor/categories/:category", isAuthenticated, async (req, res) => {
+    try {
+      const { category } = req.params;
+      
+      // Get all products
+      let products = await storage.getWholesalerProducts();
+      
+      // Transform to match vendor-catalog format
+      const wholesalersData = await storage.getWholesalers();
+      const wholesalerMap = new Map(wholesalersData.map(w => [w._id.toString(), w]));
+      
+      products = products
+        .filter(p => p.category === category)
+        .map(product => {
+          const wholesaler = wholesalerMap.get(product.wholesalerId?.toString() || '');
+          return {
+            id: product._id,
+            productCode: product.productCode,
+            productName: product.productName,
+            category: product.category,
+            subcategory: product.subcategory || '',
+            description: product.description || '',
+            specifications: product.specifications || {},
+            unitType: product.unitType || 'linear_foot',
+            wholesalePrice: product.wholesalePrice?.toString() || '0',
+            suggestedRetail: product.suggestedRetail?.toString() || '0',
+            minQuantity: product.minQuantity || 1,
+            packSize: product.packSize || 1,
+            leadTime: product.leadTime || '',
+            stockStatus: product.stockStatus || 'available',
+            vendorCatalogPage: product.vendorCatalogPage || '',
+            supplierName: wholesaler?.companyName || '',
+            supplierContact: wholesaler?.contactName || '',
+            supplierPhone: wholesaler?.phone || '',
+            supplierEmail: wholesaler?.email || '',
+            paymentTerms: wholesaler?.paymentTerms || '',
+            minOrderAmount: wholesaler?.minOrderAmount?.toString() || '0'
+          };
+        });
+      
+      res.json(products);
+    } catch (error) {
+      console.error("Error fetching category products:", error);
+      res.status(500).json({ message: "Failed to fetch category products" });
+    }
+  });
+
 
   // Configure multer for CSV uploads
   const csvUpload = multer({
