@@ -214,50 +214,26 @@ router.post('/register', async (req, res) => {
 // Login route
 router.post('/login', async (req, res) => {
   try {
-    // Check for demo login first
-    if (req.body.email === 'demo@framecraft.com' && req.body.password === 'demo123456') {
-      const demoUser = {
-        id: 'demo-user-id',
-        email: 'demo@framecraft.com',
-        firstName: 'Demo',
-        lastName: 'User',
-        businessName: 'Demo Framing Co.',
-        role: 'owner',
-        emailVerified: true,
-      };
-      
-      // Set demo cookies
-      res.cookie('sessionId', 'demo-session', {
-        httpOnly: true,
-        maxAge: 24 * 60 * 60 * 1000, // 24 hours
-      });
-      
-      res.cookie('accessToken', 'demo-token', {
-        httpOnly: true,
-        maxAge: 24 * 60 * 60 * 1000, // 24 hours
-      });
-      
-      return res.json({
-        success: true,
-        user: demoUser,
-        token: 'demo-token',
-      });
-    }
-
+    // No demo login - real authentication only
+    
     // Validate input
     const data = loginSchema.parse(req.body);
+    console.log('Login attempt for email:', data.email);
 
-    // Find user
-    const user = await User.findOne({ email: data.email });
+    // Find user (including password field for comparison)
+    const user = await User.findOne({ email: data.email }).select('+password');
     if (!user) {
+      console.log('User not found for email:', data.email);
       return res.status(401).json({ 
         success: false, 
         message: 'Invalid email or password' 
       });
     }
+    console.log('User found:', user.email, 'Has password:', !!user.password);
 
     // Check password
     const isPasswordValid = await user.comparePassword(data.password);
+    console.log('Password comparison result:', isPasswordValid);
     if (!isPasswordValid) {
       return res.status(401).json({ 
         success: false, 
@@ -334,6 +310,22 @@ router.post('/login', async (req, res) => {
 // Get current user
 router.get('/user', async (req, res) => {
   try {
+    // In development mode, return a mock user
+    if (process.env.NODE_ENV === 'development' && !process.env.REPL_ID?.startsWith('repl-')) {
+      return res.json({
+        success: true,
+        user: {
+          id: 'local-dev-user',
+          email: 'dev@localhost',
+          firstName: 'Local',
+          lastName: 'Developer',
+          businessName: 'Dev Framing Co.',
+          role: 'owner',
+          emailVerified: true,
+        },
+      });
+    }
+
     // Check for demo user
     if (req.cookies.accessToken === 'demo-token' || req.cookies.sessionId === 'demo-session') {
       return res.json({
@@ -441,6 +433,65 @@ router.post('/logout', async (req, res) => {
     res.status(500).json({ 
       success: false, 
       message: 'Failed to logout' 
+    });
+  }
+});
+
+// Get current user authentication status
+router.get('/user', async (req, res) => {
+  try {
+    // Get token from cookies or header
+    const token = req.cookies?.accessToken || 
+                  req.headers.authorization?.replace('Bearer ', '');
+    
+    if (!token) {
+      return res.status(401).json({ 
+        message: 'Not authenticated',
+        isAuthenticated: false 
+      });
+    }
+
+    // No demo tokens allowed - real authentication only
+
+    try {
+      // Verify JWT token
+      const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
+      
+      // Find user in database
+      const user = await User.findById(decoded.userId).select('-password');
+      
+      if (!user) {
+        return res.status(401).json({ 
+          message: 'User not found',
+          isAuthenticated: false
+        });
+      }
+
+      // Return user data
+      return res.json({
+        user: {
+          id: user._id.toString(),
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          businessName: user.businessName,
+          role: user.role || 'owner',
+          emailVerified: user.emailVerified || false,
+          isAuthenticated: true
+        }
+      });
+    } catch (error) {
+      // Token is invalid or expired
+      return res.status(401).json({ 
+        message: 'Invalid or expired token',
+        isAuthenticated: false
+      });
+    }
+  } catch (error) {
+    console.error('Auth check error:', error);
+    return res.status(500).json({ 
+      message: 'Failed to check authentication',
+      isAuthenticated: false
     });
   }
 });

@@ -39,18 +39,37 @@ function Router() {
 
   // Protected routes that require authentication
   const protectedPaths = [
-    '/dashboard', '/orders', '/orders/new', '/orders/edit', '/customers', '/pricing', '/invoices', 
+    '/', '/dashboard', '/orders', '/orders/new', '/orders/edit', '/customers', '/pricing', '/invoices', 
     '/wholesalers', '/communication', '/api-explorer', '/ai-assistant',
     '/cart', '/integration-settings', '/vendor-catalog', '/virtual-frame-designer',
     '/receivables', '/kanban', '/settings', '/stripe-test', '/system-validation', '/inventory', '/finance'
   ];
 
+  // Public routes that don't require authentication
+  const publicPaths = ['/login', '/signup', '/customer-portal', '/order-tracking', '/landing'];
+
   // Check if current path is protected and user is not authenticated
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      const isProtectedPath = protectedPaths.some(path => location === path);
-      if (isProtectedPath) {
-        setLocation('/login');
+    if (!isLoading) {
+      const isProtectedPath = protectedPaths.some(path => 
+        location === path || location.startsWith(path + '/')
+      );
+      const isPublicPath = publicPaths.some(path => 
+        location === path || location.startsWith(path + '/')
+      );
+      
+      // If on a protected path and not authenticated, redirect to landing
+      if (isProtectedPath && !isAuthenticated) {
+        // Redirect root path to landing, others to login
+        if (location === '/') {
+          setLocation('/landing');
+        } else {
+          setLocation('/login');
+        }
+      }
+      // If authenticated and on landing or root, redirect to dashboard
+      else if (isAuthenticated && (location === '/landing' || location === '/')) {
+        setLocation('/dashboard');
       }
     }
   }, [location, isAuthenticated, isLoading]);
@@ -70,12 +89,13 @@ function Router() {
   return (
     <Switch>
       {/* Public routes - always accessible */}
+      <Route path="/landing" component={Landing} />
       <Route path="/customer-portal" component={CustomerPortal} />
       <Route path="/order-tracking" component={OrderTracking} />
       <Route path="/login" component={Login} />
       <Route path="/signup" component={SignUp} />
       
-      {/* Protected routes */}
+      {/* Protected routes - require authentication */}
       {isAuthenticated ? (
         <>
           <Route path="/" component={Dashboard} />
@@ -101,13 +121,16 @@ function Router() {
           <Route path="/settings" component={Settings} />
           <Route path="/stripe-test" component={StripeTestPage} />
           <Route path="/system-validation" component={SystemValidation} />
+          <Route component={NotFound} />
         </>
       ) : (
-        /* Show landing page for non-authenticated users */
-        <Route path="/" component={Landing} />
+        <>
+          {/* Default route for non-authenticated users */}
+          <Route path="/" component={Landing} />
+          {/* 404 for non-authenticated users trying to access protected routes */}
+          <Route component={NotFound} />
+        </>
       )}
-      
-      <Route component={NotFound} />
     </Switch>
   );
 }

@@ -24,53 +24,13 @@ import financeRoutes from "./routes/finance";
 import aiAssistantRoutes from "./routes/ai-assistant";
 import { rateLimit } from "./middleware/rateLimiting";
 import { requestLogger } from "./middleware/logging";
+import { validateSession, optionalAuth } from "./middleware/sessionValidation";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Register MongoDB auth routes
   app.use('/api/auth', authRoutes);
   
-  // Keep the original demo login for backward compatibility
-  app.post('/api/auth/login-demo', async (req, res) => {
-    try {
-      const { email, password } = req.body;
-      
-      // Check demo credentials
-      if (email === 'demo@framecraft.com' && password === 'demo123456') {
-        const user = {
-          id: '1',
-          email: 'demo@framecraft.com',
-          firstName: 'Demo',
-          lastName: 'User',
-          businessName: 'Demo Framing Co.',
-          role: 'owner',
-          emailVerified: true,
-        };
-        
-        // Set a simple cookie
-        res.cookie('accessToken', 'demo-token', {
-          httpOnly: true,
-          maxAge: 24 * 60 * 60 * 1000, // 24 hours
-        });
-        
-        return res.json({
-          success: true,
-          user,
-          message: 'Login successful',
-        });
-      } else {
-        return res.status(401).json({
-          success: false,
-          message: 'Invalid email or password',
-        });
-      }
-    } catch (error) {
-      console.error('Login error:', error);
-      return res.status(500).json({
-        success: false,
-        message: 'Internal server error',
-      });
-    }
-  });
+  // Demo login removed - use real authentication only
   
   // Simple logout endpoint  
   app.get('/api/logout', (req, res) => {
@@ -99,62 +59,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     console.log('⚠️ Using simplified auth setup due to:', error.message);
   }
   
-  // Use new authentication middleware
-  const isAuthenticated = authenticate;
+  // Use new authentication middleware with session validation
+  const isAuthenticated = validateSession;
 
-  // Auth user endpoint
-  app.get('/api/auth/user', async (req: any, res) => {
-    try {
-      // Check for actual authentication tokens
-      const accessToken = req.cookies?.accessToken || req.headers?.authorization?.replace('Bearer ', '');
-      
-      // If no token, user is not authenticated
-      if (!accessToken) {
-        return res.status(401).json({ message: "Not authenticated", isAuthenticated: false });
-      }
-      
-      // For demo mode only
-      if (accessToken === 'demo-token') {
-        const demoUser = {
-          user: {
-            id: '1',
-            email: 'demo@framecraft.com',
-            firstName: 'Demo',
-            lastName: 'User',
-            profileImageUrl: null,
-            role: 'owner',
-            businessName: 'Demo Framing Co.',
-            emailVerified: true,
-            isAuthenticated: true
-          }
-        };
-        return res.json(demoUser);
-      }
-      
-      // Check for Replit authentication
-      if (req.user && req.user.claims) {
-        const userResponse = {
-          user: {
-            id: req.user.claims.sub,
-            email: req.user.claims.email || req.user.claims.name || 'user@replit.com',
-            firstName: req.user.claims.first_name || req.user.claims.name?.split(' ')[0] || 'User',
-            lastName: req.user.claims.last_name || req.user.claims.name?.split(' ')[1] || '',
-            profileImageUrl: req.user.claims.profile_image_url || null,
-            role: 'owner',
-            businessName: 'Replit Framing Co.',
-            emailVerified: true,
-            isAuthenticated: true
-          }
-        };
-        return res.json(userResponse);
-      }
-      
-      return res.status(401).json({ message: "Not authenticated", isAuthenticated: false });
-    } catch (error) {
-      console.error("Error fetching user:", error);
-      res.status(500).json({ message: "Failed to fetch user", isAuthenticated: false });
-    }
-  });
+  // The /api/auth/user endpoint is now handled by authRoutes (authMongoDB.ts)
 
   // Dashboard metrics
   app.get('/api/dashboard/metrics', isAuthenticated, async (req, res) => {

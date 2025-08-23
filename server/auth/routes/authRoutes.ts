@@ -244,6 +244,30 @@ router.post('/logout-all',
 router.post('/refresh', refreshToken);
 
 /**
+ * @route   GET /api/auth/user
+ * @desc    Get current user (alias for /me)
+ * @access  Private or Public (returns null for unauthenticated)
+ */
+router.get('/user',
+  async (req: Request & { user?: any }, res: Response) => {
+    // For development, return a mock user if not authenticated
+    if (process.env.NODE_ENV === 'development' && !req.user) {
+      return res.json({
+        id: 'local-dev-user',
+        email: 'dev@localhost',
+        firstName: 'Local',
+        lastName: 'Developer',
+        businessName: 'Dev Business',
+        role: 'owner'
+      });
+    }
+    
+    // Return authenticated user or null
+    res.json(req.user || null);
+  }
+);
+
+/**
  * @route   GET /api/auth/me
  * @desc    Get current user
  * @access  Private

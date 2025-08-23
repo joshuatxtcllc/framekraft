@@ -47,19 +47,33 @@ export function useAuth() {
 
   const logoutMutation = useMutation({
     mutationFn: async () => {
-      const response = await fetch('/api/logout', {
-        credentials: 'include'
+      const response = await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        }
       });
       if (!response.ok && response.status !== 302) {
         throw new Error('Logout failed');
       }
+      return response.json();
     },
     onSuccess: () => {
       // Clear the user query cache
       queryClient.setQueryData(['/api/auth/user'], null);
       queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
-      // Redirect to login page
-      setLocation('/login');
+      // Clear any cached data
+      queryClient.clear();
+      // Redirect to landing page
+      setLocation('/landing');
+    },
+    onError: (error) => {
+      console.error('Logout error:', error);
+      // Even on error, clear auth and redirect
+      queryClient.setQueryData(['/api/auth/user'], null);
+      queryClient.clear();
+      setLocation('/landing');
     }
   });
 
