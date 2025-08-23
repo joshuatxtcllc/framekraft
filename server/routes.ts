@@ -105,22 +105,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Auth user endpoint
   app.get('/api/auth/user', async (req: any, res) => {
     try {
-      // For local development, return a mock user
-      if (process.env.NODE_ENV === 'development' && !process.env.REPL_ID?.startsWith('repl-')) {
-        const mockUser = {
+      // Check for actual authentication tokens
+      const accessToken = req.cookies?.accessToken || req.headers?.authorization?.replace('Bearer ', '');
+      
+      // If no token, user is not authenticated
+      if (!accessToken) {
+        return res.status(401).json({ message: "Not authenticated", isAuthenticated: false });
+      }
+      
+      // For demo mode only
+      if (accessToken === 'demo-token') {
+        const demoUser = {
           user: {
-            id: 'local-dev-user',
-            email: 'dev@localhost',
-            firstName: 'Local',
-            lastName: 'Developer',
+            id: '1',
+            email: 'demo@framecraft.com',
+            firstName: 'Demo',
+            lastName: 'User',
             profileImageUrl: null,
             role: 'owner',
-            businessName: 'Dev Framing Co.',
+            businessName: 'Demo Framing Co.',
             emailVerified: true,
             isAuthenticated: true
           }
         };
-        return res.json(mockUser);
+        return res.json(demoUser);
       }
       
       // Check for Replit authentication
