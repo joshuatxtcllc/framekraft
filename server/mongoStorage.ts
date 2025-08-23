@@ -16,6 +16,9 @@ import {
   InvoiceItem,
   Payment,
   PricingRule,
+  BusinessSettings,
+  NotificationSettings,
+  DisplaySettings,
   IUser,
   ICustomer,
   IOrder,
@@ -23,7 +26,10 @@ import {
   IWholesaler,
   IWholesalerProduct,
   IPriceStructure,
-  IInventory
+  IInventory,
+  IBusinessSettings,
+  INotificationSettings,
+  IDisplaySettings
 } from './models';
 import mongoose from 'mongoose';
 
@@ -482,6 +488,15 @@ export async function getBusinessMetrics(metricType?: string, startDate?: Date, 
   return await BusinessMetric.find(query).sort({ date: -1 });
 }
 
+export async function storeBusinessMetric(metricType: string, value: number): Promise<void> {
+  await createBusinessMetric({
+    metricType,
+    value: value.toString(),
+    date: new Date(),
+    updatedAt: new Date()
+  });
+}
+
 // AI Insights operations
 export async function createAIInsight(insightData: any): Promise<any> {
   const insight = new AIInsight(insightData);
@@ -633,4 +648,61 @@ export async function getDashboardMetrics(): Promise<any> {
     recentOrders,
     lowInventory
   };
+}
+
+// Business Settings operations
+export async function getBusinessSettings(): Promise<IBusinessSettings> {
+  let settings = await BusinessSettings.findOne();
+  if (!settings) {
+    settings = new BusinessSettings({});
+    await settings.save();
+  }
+  return settings;
+}
+
+export async function updateBusinessSettings(settingsData: Partial<IBusinessSettings>): Promise<IBusinessSettings> {
+  const settings = await BusinessSettings.findOneAndUpdate(
+    {},
+    settingsData,
+    { new: true, upsert: true }
+  );
+  return settings!;
+}
+
+// Notification Settings operations
+export async function getNotificationSettings(): Promise<INotificationSettings> {
+  let settings = await NotificationSettings.findOne();
+  if (!settings) {
+    settings = new NotificationSettings({});
+    await settings.save();
+  }
+  return settings;
+}
+
+export async function updateNotificationSettings(settingsData: Partial<INotificationSettings>): Promise<INotificationSettings> {
+  const settings = await NotificationSettings.findOneAndUpdate(
+    {},
+    settingsData,
+    { new: true, upsert: true }
+  );
+  return settings!;
+}
+
+// Display Settings operations
+export async function getDisplaySettings(): Promise<IDisplaySettings> {
+  let settings = await DisplaySettings.findOne();
+  if (!settings) {
+    settings = new DisplaySettings({});
+    await settings.save();
+  }
+  return settings;
+}
+
+export async function updateDisplaySettings(settingsData: Partial<IDisplaySettings>): Promise<IDisplaySettings> {
+  const settings = await DisplaySettings.findOneAndUpdate(
+    {},
+    settingsData,
+    { new: true, upsert: true }
+  );
+  return settings!;
 }

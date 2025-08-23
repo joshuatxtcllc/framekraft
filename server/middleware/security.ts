@@ -37,12 +37,16 @@ export function sanitizeRequest(req: Request, res: Response, next: NextFunction)
 
 // API security for sensitive endpoints
 export function apiSecurity(req: Request, res: Response, next: NextFunction) {
-  // Require Content-Type for POST/PUT requests
+  // Require Content-Type for POST/PUT requests (but allow multipart for file uploads)
   if (['POST', 'PUT', 'PATCH'].includes(req.method)) {
-    const contentType = req.get('Content-Type');
-    if (!contentType || !contentType.includes('application/json')) {
+    const contentType = req.get('Content-Type') || '';
+    const isMultipart = contentType.includes('multipart/form-data');
+    const isJson = contentType.includes('application/json');
+    
+    // Allow multipart for file uploads and JSON for regular requests
+    if (!isMultipart && !isJson) {
       return res.status(415).json({
-        message: 'Content-Type must be application/json'
+        message: 'Content-Type must be application/json or multipart/form-data'
       });
     }
   }

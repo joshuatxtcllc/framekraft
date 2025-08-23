@@ -42,6 +42,45 @@ const upload = multer({
 });
 
 export function registerWholesalerRoutes(app: Express, isAuthenticated: any) {
+  // Download CSV template - MUST BE BEFORE :id routes
+  app.get("/api/wholesalers/csv-template", isAuthenticated, async (req, res) => {
+    try {
+      const template = await generateCSVTemplate();
+      res.setHeader("Content-Type", "text/csv");
+      res.setHeader("Content-Disposition", "attachment; filename=product_import_template.csv");
+      res.send(template);
+    } catch (error) {
+      console.error("Error generating CSV template:", error);
+      res.status(500).json({ message: "Failed to generate template" });
+    }
+  });
+
+  // Download CSV example - MUST BE BEFORE :id routes
+  app.get("/api/wholesalers/csv-example", isAuthenticated, async (req, res) => {
+    try {
+      const example = await generateExampleCSV();
+      res.setHeader("Content-Type", "text/csv");
+      res.setHeader("Content-Disposition", "attachment; filename=product_import_example.csv");
+      res.send(example);
+    } catch (error) {
+      console.error("Error generating CSV example:", error);
+      res.status(500).json({ message: "Failed to generate example" });
+    }
+  });
+  
+  // Download catalog template - MUST BE BEFORE :id routes
+  app.get("/api/wholesalers/catalog-template", isAuthenticated, async (req, res) => {
+    try {
+      const template = await generateCSVTemplate();
+      res.setHeader("Content-Type", "text/csv");
+      res.setHeader("Content-Disposition", "attachment; filename=catalog_template.csv");
+      res.send(template);
+    } catch (error) {
+      console.error("Error generating catalog template:", error);
+      res.status(500).json({ message: "Failed to generate template" });
+    }
+  });
+
   // Get all wholesalers
   app.get("/api/wholesalers", isAuthenticated, async (req, res) => {
     try {
@@ -297,31 +336,6 @@ export function registerWholesalerRoutes(app: Express, isAuthenticated: any) {
     }
   });
 
-  // Download CSV template
-  app.get("/api/wholesalers/csv-template", isAuthenticated, async (req, res) => {
-    try {
-      const template = await generateCSVTemplate();
-      res.setHeader("Content-Type", "text/csv");
-      res.setHeader("Content-Disposition", "attachment; filename=product_import_template.csv");
-      res.send(template);
-    } catch (error) {
-      console.error("Error generating CSV template:", error);
-      res.status(500).json({ message: "Failed to generate template" });
-    }
-  });
-
-  // Download CSV example
-  app.get("/api/wholesalers/csv-example", isAuthenticated, async (req, res) => {
-    try {
-      const example = await generateExampleCSV();
-      res.setHeader("Content-Type", "text/csv");
-      res.setHeader("Content-Disposition", "attachment; filename=product_import_example.csv");
-      res.send(example);
-    } catch (error) {
-      console.error("Error generating CSV example:", error);
-      res.status(500).json({ message: "Failed to generate example" });
-    }
-  });
 
   // Configure multer for CSV uploads
   const csvUpload = multer({
@@ -387,6 +401,316 @@ export function registerWholesalerRoutes(app: Express, isAuthenticated: any) {
       res.status(400).json({ message: error.message || "Failed to validate CSV" });
     }
   });
+
+  // Get catalog statistics
+  app.get("/api/wholesalers/:id/catalog-stats", isAuthenticated, async (req, res) => {
+    try {
+      const products = await storage.getWholesalerProductsByWholesaler(req.params.id);
+      
+      const stats = {
+        totalProducts: products.length,
+        categories: {} as { [key: string]: number },
+        priceRange: {
+          min: products.length > 0 ? Math.min(...products.map(p => p.wholesalePrice)) : 0,
+          max: products.length > 0 ? Math.max(...products.map(p => p.wholesalePrice)) : 0,
+        },
+        lastUpdated: products.length > 0 
+          ? products.reduce((latest, p) => 
+              p.lastUpdated > latest ? p.lastUpdated : latest, products[0].lastUpdated
+            )
+          : null,
+      };
+      
+      // Count products by category
+      products.forEach(product => {
+        stats.categories[product.category] = (stats.categories[product.category] || 0) + 1;
+      });
+      
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching catalog stats:", error);
+      res.status(500).json({ message: "Failed to fetch catalog statistics" });
+    }
+  });
+
+  // Validate catalog CSV
+  app.post("/api/wholesalers/:id/validate-catalog", isAuthenticated, csvUpload.single("csv"), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      const csvContent = req.file.buffer.toString("utf-8");
+      const validation = await parseAndValidateCSV(csvContent);
+
+      // Get existing products
+      const existingProducts = await storage.getWholesalerProductsByWholesaler(req.params.id);
+      const existingMap = new Map(existingProducts.map(p => [p.productCode, p]));
+
+      // Categorize products
+      let duplicates = 0;
+      let updates = 0;
+      const preview = validation.valid.slice(0, 100).map(row => {
+        const existing = existingMap.get(row.productCode);
+        let status: 'valid' | 'duplicate' | 'update';
+        
+        if (existing) {
+          // Check if prices or details differ
+          if (existing.wholesalePrice !== parseFloat(row.wholesalePrice)) {
+            status = 'update';
+            updates++;
+          } else {
+            status = 'duplicate';
+            duplicates++;
+          }
+        } else {
+          status = 'valid';
+        }
+        
+        return {
+          productCode: row.productCode,
+          productName: row.productName,
+          category: row.category,
+          wholesalePrice: parseFloat(row.wholesalePrice),
+          suggestedRetail: row.suggestedRetail ? parseFloat(row.suggestedRetail) : undefined,
+          status,
+        };
+      });
+
+      // Add invalid rows to preview
+      validation.invalid.slice(0, 10).forEach(({ row }) => {
+        preview.push({
+          productCode: row.productCode || 'N/A',
+          productName: row.productName || 'N/A',
+          category: row.category || 'N/A',
+          wholesalePrice: parseFloat(row.wholesalePrice) || 0,
+          status: 'invalid' as const,
+        });
+      });
+
+      // Calculate statistics
+      const validProducts = validation.valid;
+      const stats = {
+        categories: {} as { [key: string]: number },
+        priceRange: {
+          min: validProducts.length > 0 
+            ? Math.min(...validProducts.map(p => parseFloat(p.wholesalePrice)))
+            : 0,
+          max: validProducts.length > 0
+            ? Math.max(...validProducts.map(p => parseFloat(p.wholesalePrice)))
+            : 0,
+        },
+      };
+      
+      validProducts.forEach(product => {
+        stats.categories[product.category] = (stats.categories[product.category] || 0) + 1;
+      });
+
+      res.json({
+        valid: validation.valid.length - duplicates,
+        invalid: validation.invalid.length,
+        duplicates,
+        warnings: validation.warnings,
+        errors: validation.invalid.map(({ row, errors }, idx) => ({
+          row: idx + 2,
+          errors,
+        })),
+        preview,
+        stats,
+      });
+    } catch (error: any) {
+      console.error("Error validating catalog:", error);
+      res.status(400).json({ message: error.message || "Failed to validate catalog" });
+    }
+  });
+
+  // Import catalog CSV
+  app.post("/api/wholesalers/:id/import-catalog", isAuthenticated, csvUpload.single("csv"), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      const wholesalerId = req.params.id;
+      const importMode = req.body.importMode || "replace";
+
+      // Verify wholesaler exists
+      const wholesaler = await storage.getWholesalerById(wholesalerId);
+      if (!wholesaler) {
+        return res.status(404).json({ message: "Wholesaler not found" });
+      }
+
+      // Parse and validate CSV
+      const csvContent = req.file.buffer.toString("utf-8");
+      const validation = await parseAndValidateCSV(csvContent);
+
+      if (validation.valid.length === 0) {
+        return res.status(400).json({ 
+          message: "No valid products found in catalog",
+          errors: validation.invalid,
+        });
+      }
+
+      // Handle different import modes
+      if (importMode === "replace") {
+        // Delete all existing products first
+        const existingProducts = await storage.getWholesalerProductsByWholesaler(wholesalerId);
+        for (const product of existingProducts) {
+          await storage.deleteWholesalerProduct(product._id.toString());
+        }
+      }
+
+      // Get existing products for append/update modes
+      const existingProducts = importMode !== "replace" 
+        ? await storage.getWholesalerProductsByWholesaler(wholesalerId)
+        : [];
+      const existingMap = new Map(existingProducts.map(p => [p.productCode, p]));
+
+      // Convert CSV rows to product data
+      const productData = convertToProductData(validation.valid, wholesalerId);
+      
+      let imported = 0;
+      let updated = 0;
+      let skipped = 0;
+      const errors: string[] = [];
+
+      // Set up SSE for progress updates
+      res.writeHead(200, {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+      });
+
+      const total = productData.length;
+      let processed = 0;
+
+      // Process each product
+      for (const product of productData) {
+        const existing = existingMap.get(product.productCode!);
+        
+        if (existing) {
+          if (importMode === "update") {
+            try {
+              await storage.updateWholesalerProduct(existing._id.toString(), product);
+              updated++;
+            } catch (error: any) {
+              errors.push(`Failed to update ${product.productCode}: ${error.message}`);
+            }
+          } else if (importMode === "append") {
+            skipped++;
+          }
+        } else {
+          try {
+            await storage.createWholesalerProduct(product);
+            imported++;
+          } catch (error: any) {
+            errors.push(`Failed to import ${product.productCode}: ${error.message}`);
+          }
+        }
+        
+        processed++;
+        if (processed % 10 === 0 || processed === total) {
+          const progress = Math.round((processed / total) * 100);
+          res.write(`data: ${JSON.stringify({ progress })}\n\n`);
+        }
+      }
+
+      res.write(`data: ${JSON.stringify({
+        complete: true,
+        imported,
+        updated,
+        skipped,
+        total: productData.length,
+        errors: errors.length > 0 ? errors : undefined,
+      })}\n\n`);
+      
+      res.end();
+    } catch (error: any) {
+      console.error("Error importing catalog:", error);
+      res.status(500).json({ message: error.message || "Failed to import catalog" });
+    }
+  });
+
+  // Export catalog as CSV
+  app.get("/api/wholesalers/:id/export-catalog", isAuthenticated, async (req, res) => {
+    try {
+      const products = await storage.getWholesalerProductsByWholesaler(req.params.id);
+      
+      if (products.length === 0) {
+        return res.status(404).json({ message: "No products in catalog" });
+      }
+
+      // Convert products to CSV format
+      const csvRows = products.map(product => ({
+        'Product Code': product.productCode,
+        'Product Name': product.productName,
+        'Category': product.category,
+        'Subcategory': product.subcategory || '',
+        'Description': product.description || '',
+        'Unit Type': product.unitType,
+        'Wholesale Price': product.wholesalePrice.toString(),
+        'Suggested Retail': product.suggestedRetail?.toString() || '',
+        'Min Quantity': product.minQuantity.toString(),
+        'Pack Size': product.packSize.toString(),
+        'Lead Time': product.leadTime || '',
+        'Stock Status': product.stockStatus,
+        'Catalog Page': product.vendorCatalogPage || '',
+      }));
+
+      // Generate CSV
+      const { stringify } = await import('csv-stringify');
+      stringify(csvRows, { 
+        header: true,
+        columns: [
+          'Product Code',
+          'Product Name',
+          'Category',
+          'Subcategory',
+          'Description',
+          'Unit Type',
+          'Wholesale Price',
+          'Suggested Retail',
+          'Min Quantity',
+          'Pack Size',
+          'Lead Time',
+          'Stock Status',
+          'Catalog Page'
+        ]
+      }, (err, output) => {
+        if (err) {
+          console.error("Error generating CSV:", err);
+          return res.status(500).json({ message: "Failed to generate CSV" });
+        }
+        
+        res.setHeader("Content-Type", "text/csv");
+        res.setHeader("Content-Disposition", `attachment; filename=catalog_export.csv`);
+        res.send(output);
+      });
+    } catch (error) {
+      console.error("Error exporting catalog:", error);
+      res.status(500).json({ message: "Failed to export catalog" });
+    }
+  });
+
+  // Delete all catalog products
+  app.delete("/api/wholesalers/:id/catalog-products", isAuthenticated, async (req, res) => {
+    try {
+      const products = await storage.getWholesalerProductsByWholesaler(req.params.id);
+      
+      for (const product of products) {
+        await storage.deleteWholesalerProduct(product._id.toString());
+      }
+      
+      res.json({ 
+        message: "Catalog cleared successfully",
+        deleted: products.length 
+      });
+    } catch (error) {
+      console.error("Error clearing catalog:", error);
+      res.status(500).json({ message: "Failed to clear catalog" });
+    }
+  });
+
 
   // Import CSV file
   app.post("/api/wholesalers/:id/import-csv", isAuthenticated, csvUpload.single("csv"), async (req, res) => {

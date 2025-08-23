@@ -68,12 +68,13 @@ const headerMapping: Record<string, keyof CSVProductRow> = {
  */
 export async function generateExampleCSV(): Promise<string> {
   const exampleData = [
+    // Frames
     {
       'Product Code': 'LJ-W001',
       'Product Name': 'Classic Oak Frame 1.5"',
       'Category': 'frame',
       'Subcategory': 'wood',
-      'Description': 'Premium oak wood frame with natural finish',
+      'Description': 'Premium oak wood frame with natural finish, suitable for traditional artwork',
       'Unit Type': 'linear_foot',
       'Wholesale Price': '12.50',
       'Suggested Retail': '25.00',
@@ -83,6 +84,38 @@ export async function generateExampleCSV(): Promise<string> {
       'Stock Status': 'available',
       'Catalog Page': '15'
     },
+    {
+      'Product Code': 'LJ-W002',
+      'Product Name': 'Rustic Pine Frame 2"',
+      'Category': 'frame',
+      'Subcategory': 'wood',
+      'Description': 'Distressed pine frame with vintage appeal',
+      'Unit Type': 'linear_foot',
+      'Wholesale Price': '9.75',
+      'Suggested Retail': '19.50',
+      'Min Quantity': '8',
+      'Pack Size': '8',
+      'Lead Time': '2-3 days',
+      'Stock Status': 'available',
+      'Catalog Page': '16'
+    },
+    {
+      'Product Code': 'AL-M101',
+      'Product Name': 'Modern Aluminum Frame 1"',
+      'Category': 'frame',
+      'Subcategory': 'metal',
+      'Description': 'Sleek brushed aluminum frame for contemporary art',
+      'Unit Type': 'linear_foot',
+      'Wholesale Price': '15.00',
+      'Suggested Retail': '30.00',
+      'Min Quantity': '12',
+      'Pack Size': '12',
+      'Lead Time': '1 week',
+      'Stock Status': 'available',
+      'Catalog Page': '25'
+    },
+    
+    // Mats
     {
       'Product Code': 'CR-M002',
       'Product Name': 'Conservation Mat Board 32x40',
@@ -99,6 +132,38 @@ export async function generateExampleCSV(): Promise<string> {
       'Catalog Page': '42'
     },
     {
+      'Product Code': 'ST-M003',
+      'Product Name': 'Standard White Mat 32x40',
+      'Category': 'mat',
+      'Subcategory': 'standard',
+      'Description': 'Clean white mat board for general framing',
+      'Unit Type': 'sheet',
+      'Wholesale Price': '4.50',
+      'Suggested Retail': '9.00',
+      'Min Quantity': '50',
+      'Pack Size': '50',
+      'Lead Time': '2-3 days',
+      'Stock Status': 'available',
+      'Catalog Page': '44'
+    },
+    {
+      'Product Code': 'BL-M004',
+      'Product Name': 'Black Core Mat 32x40',
+      'Category': 'mat',
+      'Subcategory': 'specialty',
+      'Description': 'Black core mat for dramatic effect',
+      'Unit Type': 'sheet',
+      'Wholesale Price': '6.25',
+      'Suggested Retail': '12.50',
+      'Min Quantity': '25',
+      'Pack Size': '25',
+      'Lead Time': '3-5 days',
+      'Stock Status': 'available',
+      'Catalog Page': '45'
+    },
+    
+    // Glazing
+    {
       'Product Code': 'TG-UV003',
       'Product Name': 'UV Protection Glass 24x36',
       'Category': 'glazing',
@@ -112,6 +177,100 @@ export async function generateExampleCSV(): Promise<string> {
       'Lead Time': '3-5 days',
       'Stock Status': 'low_stock',
       'Catalog Page': '78'
+    },
+    {
+      'Product Code': 'PL-AC001',
+      'Product Name': 'Clear Acrylic 24x36',
+      'Category': 'glazing',
+      'Subcategory': 'acrylic',
+      'Description': 'Lightweight, shatter-resistant acrylic',
+      'Unit Type': 'each',
+      'Wholesale Price': '28.00',
+      'Suggested Retail': '55.00',
+      'Min Quantity': '5',
+      'Pack Size': '5',
+      'Lead Time': '2-3 days',
+      'Stock Status': 'available',
+      'Catalog Page': '80'
+    },
+    {
+      'Product Code': 'GL-ST001',
+      'Product Name': 'Standard Glass 24x36',
+      'Category': 'glazing',
+      'Subcategory': 'standard',
+      'Description': 'Regular picture frame glass',
+      'Unit Type': 'each',
+      'Wholesale Price': '12.00',
+      'Suggested Retail': '24.00',
+      'Min Quantity': '10',
+      'Pack Size': '10',
+      'Lead Time': '1-2 days',
+      'Stock Status': 'available',
+      'Catalog Page': '82'
+    },
+    
+    // Hardware
+    {
+      'Product Code': 'HW-WH001',
+      'Product Name': 'D-Ring Hangers (100 pack)',
+      'Category': 'hardware',
+      'Subcategory': 'hanging',
+      'Description': 'Heavy-duty D-ring hangers with screws',
+      'Unit Type': 'box',
+      'Wholesale Price': '15.00',
+      'Suggested Retail': '30.00',
+      'Min Quantity': '1',
+      'Pack Size': '1',
+      'Lead Time': 'In stock',
+      'Stock Status': 'available',
+      'Catalog Page': '95'
+    },
+    {
+      'Product Code': 'HW-WR002',
+      'Product Name': 'Picture Wire 100ft',
+      'Category': 'hardware',
+      'Subcategory': 'hanging',
+      'Description': 'Braided picture hanging wire, 30lb capacity',
+      'Unit Type': 'roll',
+      'Wholesale Price': '8.50',
+      'Suggested Retail': '17.00',
+      'Min Quantity': '1',
+      'Pack Size': '1',
+      'Lead Time': 'In stock',
+      'Stock Status': 'available',
+      'Catalog Page': '96'
+    },
+    
+    // Mounting
+    {
+      'Product Code': 'MT-FB001',
+      'Product Name': 'Foam Board 32x40 White',
+      'Category': 'mounting',
+      'Subcategory': 'backing',
+      'Description': '3/16" white foam core backing board',
+      'Unit Type': 'sheet',
+      'Wholesale Price': '3.75',
+      'Suggested Retail': '7.50',
+      'Min Quantity': '25',
+      'Pack Size': '25',
+      'Lead Time': '2-3 days',
+      'Stock Status': 'available',
+      'Catalog Page': '110'
+    },
+    {
+      'Product Code': 'MT-AT001',
+      'Product Name': 'Acid-Free Mounting Tape',
+      'Category': 'mounting',
+      'Subcategory': 'adhesive',
+      'Description': 'Archival quality mounting tape, 1" x 150ft',
+      'Unit Type': 'roll',
+      'Wholesale Price': '22.00',
+      'Suggested Retail': '44.00',
+      'Min Quantity': '1',
+      'Pack Size': '1',
+      'Lead Time': '3-5 days',
+      'Stock Status': 'available',
+      'Catalog Page': '112'
     }
   ];
 
@@ -319,5 +478,36 @@ export function convertToProductData(
  * Generate CSV template (headers only)
  */
 export async function generateCSVTemplate(): Promise<string> {
-  return CSV_HEADERS.join(',') + '\n';
+  // Create an empty row template with helpful placeholders
+  const templateData = [
+    {
+      'Product Code': 'SKU001',
+      'Product Name': 'Product name here',
+      'Category': 'frame',
+      'Subcategory': 'wood',
+      'Description': 'Product description (optional)',
+      'Unit Type': 'linear_foot',
+      'Wholesale Price': '10.00',
+      'Suggested Retail': '20.00',
+      'Min Quantity': '1',
+      'Pack Size': '1',
+      'Lead Time': '2-3 days',
+      'Stock Status': 'available',
+      'Catalog Page': '1'
+    }
+  ];
+
+  return new Promise((resolve, reject) => {
+    stringify(templateData, { 
+      header: true,
+      columns: CSV_HEADERS
+    }, (err, output) => {
+      if (err) reject(err);
+      else {
+        // Remove the data row, keep only headers
+        const lines = output.split('\n');
+        resolve(lines[0] + '\n');
+      }
+    });
+  });
 }

@@ -19,6 +19,7 @@ import ai from "./routes/ai.js";
 import giclee from "./routes/giclee.js";
 import communication from "./routes/communication.js";
 import authRoutes from "./routes/authMongoDB";
+import searchRoutes from "./routes/search";
 import { rateLimit } from "./middleware/rateLimiting";
 import { requestLogger } from "./middleware/logging";
 
@@ -675,6 +676,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const { publicRoutes } = await import("./routes/public.js");
   app.use("/api/public", publicRoutes);
 
+  // Register search routes
+  app.use("/api", searchRoutes);
+  
   // Register other routes that were not covered by the new registration system
   app.use("/api/settings", settingsRoutes);
   app.use("/api/vendor-catalog", vendorCatalogRoutes);

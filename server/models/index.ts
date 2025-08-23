@@ -595,3 +595,82 @@ const PricingRuleSchema = new Schema({
 }, { timestamps: true });
 
 export const PricingRule = mongoose.model<IPricingRule>('PricingRule', PricingRuleSchema);
+
+// Business Settings Model
+export interface IBusinessSettings extends Document {
+  companyName: string;
+  address: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  phone: string;
+  email: string;
+  website: string;
+  taxRate: number;
+  defaultMarkup: number;
+  laborRate: number;
+  overheadCost: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const BusinessSettingsSchema = new Schema({
+  companyName: { type: String, default: "Jay's Frames" },
+  address: { type: String, default: '' },
+  city: { type: String, default: '' },
+  state: { type: String, default: '' },
+  zipCode: { type: String, default: '' },
+  phone: { type: String, default: '' },
+  email: { type: String, default: '' },
+  website: { type: String, default: '' },
+  taxRate: { type: Number, default: 8.25 },
+  defaultMarkup: { type: Number, default: 3.5 },
+  laborRate: { type: Number, default: 38 },
+  overheadCost: { type: Number, default: 54 },
+}, { timestamps: true });
+
+export const BusinessSettings = mongoose.model<IBusinessSettings>('BusinessSettings', BusinessSettingsSchema);
+
+// Notification Settings Model
+export interface INotificationSettings extends Document {
+  emailNotifications: boolean;
+  orderUpdates: boolean;
+  paymentReminders: boolean;
+  lowInventory: boolean;
+  dailyReports: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const NotificationSettingsSchema = new Schema({
+  emailNotifications: { type: Boolean, default: true },
+  orderUpdates: { type: Boolean, default: true },
+  paymentReminders: { type: Boolean, default: true },
+  lowInventory: { type: Boolean, default: true },
+  dailyReports: { type: Boolean, default: false },
+}, { timestamps: true });
+
+export const NotificationSettings = mongoose.model<INotificationSettings>('NotificationSettings', NotificationSettingsSchema);
+
+// Display Settings Model
+export interface IDisplaySettings extends Document {
+  theme: 'light' | 'dark' | 'system';
+  compactMode: boolean;
+  showPriceBreakdown: boolean;
+  defaultCurrency: string;
+  dateFormat: string;
+  timeFormat: '12h' | '24h';
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const DisplaySettingsSchema = new Schema({
+  theme: { type: String, enum: ['light', 'dark', 'system'], default: 'system' },
+  compactMode: { type: Boolean, default: false },
+  showPriceBreakdown: { type: Boolean, default: true },
+  defaultCurrency: { type: String, default: 'USD' },
+  dateFormat: { type: String, default: 'MM/DD/YYYY' },
+  timeFormat: { type: String, enum: ['12h', '24h'], default: '12h' },
+}, { timestamps: true });
+
+export const DisplaySettings = mongoose.model<IDisplaySettings>('DisplaySettings', DisplaySettingsSchema);

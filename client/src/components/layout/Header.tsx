@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { Search, Bell, Brain, Menu, X, User, LogOut, LogIn } from "lucide-react";
+import { Brain, Menu, X, LogOut, LogIn } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import SearchBar from "@/components/SearchBar";
 import { Link } from "wouter";
-import { Frame, LayoutDashboard, ShoppingBag, Users, Package, DollarSign, Settings, BarChart3, Building2, FileText, Database } from "lucide-react";
+import { Frame, LayoutDashboard, ShoppingBag, Package, DollarSign, Settings, BarChart3, Building2, FileText, Database, Users } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -44,30 +44,16 @@ export default function Header() {
           {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
         </button>
 
-        <div className="flex-1 px-4 flex justify-between">
+        <div className="flex-1 px-4 flex justify-between items-center">
         {/* Search */}
-        <div className="flex-1 flex">
-          <div className="w-full flex md:ml-0">
-            <div className="relative w-full text-muted-foreground focus-within:text-foreground">
-              <div className="absolute inset-y-0 left-0 flex items-center pointer-events-none">
-                <Search className="h-5 w-5" />
-              </div>
-              <Input
-                className="block w-full h-full pl-8 pr-3 py-2 border-transparent text-foreground placeholder-muted-foreground focus:outline-none focus:placeholder-muted-foreground focus:ring-0 focus:border-transparent sm:text-sm"
-                placeholder="Search orders, customers, or products..."
-                type="search"
-              />
-            </div>
+        <div className="flex-1 flex items-center">
+          <div className="w-full flex md:ml-0 max-w-2xl">
+            <SearchBar className="w-full" />
           </div>
         </div>
 
         {/* Right side actions */}
         <div className="ml-4 flex items-center md:ml-6 space-x-2">
-          {/* Notifications */}
-          <Button variant="ghost" size="icon">
-            <Bell className="h-5 w-5" />
-          </Button>
-
           {/* AI Assistant Quick Access */}
           <Link href="/ai-assistant">
             <Button
@@ -109,14 +95,8 @@ export default function Header() {
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
                   <Link href="/settings">
-                    <User className="mr-2 h-4 w-4" />
-                    <span>Profile Settings</span>
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="/settings">
                     <Settings className="mr-2 h-4 w-4" />
-                    <span>Preferences</span>
+                    <span>Settings</span>
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />

@@ -16,7 +16,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { 
   Plus, Building2, Package, Phone, Mail, Globe, MapPin, Upload, 
-  FileText, Download, Trash2, Edit, MoreVertical, Search, X, FileSpreadsheet
+  FileText, Download, Trash2, Edit, MoreVertical, Search, X, FileSpreadsheet, Eye
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -28,7 +28,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import Sidebar from "@/components/layout/Sidebar";
 import Header from "@/components/layout/Header";
-import CSVUploadModal from "@/components/wholesalers/CSVUploadModal";
+import CatalogCSVUploadModal from "@/components/wholesalers/CatalogCSVUploadModal";
 
 const wholesalerSchema = z.object({
   companyName: z.string().min(1, "Company name is required"),
@@ -70,8 +70,8 @@ export default function Wholesalers() {
   const [productDialogOpen, setProductDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any>(null);
   const [activeTab, setActiveTab] = useState("list");
-  const [csvUploadOpen, setCsvUploadOpen] = useState(false);
-  const [csvUploadWholesaler, setCsvUploadWholesaler] = useState<{ id: string; name: string } | null>(null);
+  const [catalogUploadOpen, setCatalogUploadOpen] = useState(false);
+  const [catalogUploadWholesaler, setCatalogUploadWholesaler] = useState<{ id: string; name: string } | null>(null);
   const { toast } = useToast();
 
   const { data: wholesalers, isLoading } = useQuery({
@@ -648,15 +648,6 @@ export default function Wholesalers() {
                                     View Products
                                   </DropdownMenuItem>
                                   <DropdownMenuItem 
-                                    onClick={() => {
-                                      setCsvUploadWholesaler({ id: wholesaler._id, name: wholesaler.companyName });
-                                      setCsvUploadOpen(true);
-                                    }}
-                                  >
-                                    <FileSpreadsheet className="mr-2 h-4 w-4" />
-                                    Import CSV
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem 
                                     className="text-destructive"
                                     onClick={() => {
                                       if (confirm(`Are you sure you want to delete ${wholesaler.companyName}?`)) {
@@ -741,71 +732,44 @@ export default function Wholesalers() {
                                 )}
                               </div>
 
-                              {/* Catalog Upload Section */}
+                              {/* Product Catalog Section */}
                               <div className="pt-3 border-t">
                                 <div className="flex items-center justify-between">
                                   <div className="flex items-center gap-2">
-                                    <FileText className="w-4 h-4 text-muted-foreground" />
-                                    <span className="text-sm font-medium">Catalog</span>
+                                    <Package className="w-4 h-4 text-muted-foreground" />
+                                    <span className="text-sm font-medium">Product Catalog</span>
                                   </div>
-                                  {wholesaler.catalogFileName ? (
-                                    <div className="flex gap-1">
-                                      <Button
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          downloadCatalog(wholesaler._id, wholesaler.catalogFileName);
-                                        }}
-                                      >
-                                        <Download className="w-3 h-3" />
-                                      </Button>
-                                      <Button
-                                        size="sm"
-                                        variant="ghost"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          if (confirm("Delete this catalog?")) {
-                                            deleteCatalogMutation.mutate(wholesaler._id);
-                                          }
-                                        }}
-                                      >
-                                        <X className="w-3 h-3" />
-                                      </Button>
-                                    </div>
-                                  ) : (
-                                    <div className="relative">
-                                      <input
-                                        type="file"
-                                        accept=".pdf,.xlsx,.xls,.csv"
-                                        onChange={(e) => handleFileUpload(wholesaler._id, e)}
-                                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                        disabled={uploadingCatalog === wholesaler._id}
-                                        onClick={(e) => e.stopPropagation()}
-                                      />
-                                      <Button
-                                        size="sm"
-                                        variant="outline"
-                                        disabled={uploadingCatalog === wholesaler._id}
-                                        className="pointer-events-none"
-                                      >
-                                        <Upload className="w-3 h-3 mr-1" />
-                                        Upload
-                                      </Button>
-                                    </div>
-                                  )}
+                                  <div className="flex gap-1">
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setSelectedWholesaler(wholesaler._id);
+                                        setActiveTab("products");
+                                      }}
+                                      title="View Products"
+                                    >
+                                      <Eye className="w-3 h-3" />
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setCatalogUploadWholesaler({ id: wholesaler._id, name: wholesaler.companyName });
+                                        setCatalogUploadOpen(true);
+                                      }}
+                                      title="Manage Catalog via CSV"
+                                    >
+                                      <FileSpreadsheet className="w-3 h-3" />
+                                    </Button>
+                                  </div>
                                 </div>
-                                
-                                {wholesaler.catalogFileName && (
-                                  <div className="mt-2 text-xs text-muted-foreground">
-                                    {wholesaler.catalogFileName}
-                                  </div>
-                                )}
-                                
-                                {uploadingCatalog === wholesaler._id && (
-                                  <div className="flex items-center gap-2 mt-2">
-                                    <div className="animate-spin w-3 h-3 border-2 border-primary border-t-transparent rounded-full" />
-                                    <span className="text-xs">Uploading...</span>
+                                {/* Show product count if available */}
+                                {wholesaler.productCount !== undefined && (
+                                  <div className="mt-1 text-xs text-muted-foreground">
+                                    {wholesaler.productCount} products in catalog
                                   </div>
                                 )}
                               </div>
@@ -834,13 +798,13 @@ export default function Wholesalers() {
                             onClick={() => {
                               const wholesaler = (wholesalers as any[])?.find((w: any) => w._id === selectedWholesaler);
                               if (wholesaler) {
-                                setCsvUploadWholesaler({ id: wholesaler._id, name: wholesaler.companyName });
-                                setCsvUploadOpen(true);
+                                setCatalogUploadWholesaler({ id: wholesaler._id, name: wholesaler.companyName });
+                                setCatalogUploadOpen(true);
                               }
                             }}
                           >
                             <FileSpreadsheet className="w-4 h-4 mr-2" />
-                            Import CSV
+                            Manage Catalog
                           </Button>
                           <Dialog open={productDialogOpen} onOpenChange={(open) => {
                             setProductDialogOpen(open);
@@ -1203,12 +1167,12 @@ export default function Wholesalers() {
         </main>
       </div>
       
-      {csvUploadWholesaler && (
-        <CSVUploadModal
-          open={csvUploadOpen}
-          onOpenChange={setCsvUploadOpen}
-          wholesalerId={csvUploadWholesaler.id}
-          wholesalerName={csvUploadWholesaler.name}
+      {catalogUploadWholesaler && (
+        <CatalogCSVUploadModal
+          open={catalogUploadOpen}
+          onOpenChange={setCatalogUploadOpen}
+          wholesalerId={catalogUploadWholesaler.id}
+          wholesalerName={catalogUploadWholesaler.name}
         />
       )}
     </div>

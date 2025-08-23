@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,14 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { 
   Settings as SettingsIcon, 
   Building2, 
@@ -19,13 +27,18 @@ import {
   Mail,
   Printer,
   Save,
-  ExternalLink
+  ExternalLink,
+  Download,
+  Key,
+  Trash2,
+  AlertTriangle
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import Sidebar from "@/components/layout/Sidebar";
 import Header from "@/components/layout/Header";
+import { useLocation } from "wouter";
 
 interface BusinessSettings {
   companyName: string;
@@ -63,8 +76,17 @@ export default function Settings() {
   const { toast } = useToast();
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const [, setLocation] = useLocation();
 
   const [activeTab, setActiveTab] = useState("business");
+  const [changePasswordDialogOpen, setChangePasswordDialogOpen] = useState(false);
+  const [deleteAccountDialogOpen, setDeleteAccountDialogOpen] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: ""
+  });
+  const [deleteConfirmation, setDeleteConfirmation] = useState("");
 
   // Business Settings
   const { data: businessSettings, isLoading: businessLoading } = useQuery({
@@ -130,20 +152,40 @@ export default function Settings() {
     },
   });
 
-  const [businessForm, setBusinessForm] = useState<BusinessSettings>({
-    companyName: businessSettings?.companyName || "Jay's Frames",
-    address: businessSettings?.address || "",
-    city: businessSettings?.city || "",
-    state: businessSettings?.state || "",
-    zipCode: businessSettings?.zipCode || "",
-    phone: businessSettings?.phone || "",
-    email: businessSettings?.email || "",
-    website: businessSettings?.website || "",
-    taxRate: businessSettings?.taxRate || 8.25,
-    defaultMarkup: businessSettings?.defaultMarkup || 3.5,
-    laborRate: businessSettings?.laborRate || 38,
-    overheadCost: businessSettings?.overheadCost || 54,
-  });
+  const [businessForm, setBusinessForm] = useState<BusinessSettings>(() => ({
+    companyName: "Jay's Frames",
+    address: "",
+    city: "",
+    state: "",
+    zipCode: "",
+    phone: "",
+    email: "",
+    website: "",
+    taxRate: 8.25,
+    defaultMarkup: 3.5,
+    laborRate: 38,
+    overheadCost: 54,
+  }));
+
+  // Update form when data is loaded
+  React.useEffect(() => {
+    if (businessSettings) {
+      setBusinessForm({
+        companyName: businessSettings.companyName || "Jay's Frames",
+        address: businessSettings.address || "",
+        city: businessSettings.city || "",
+        state: businessSettings.state || "",
+        zipCode: businessSettings.zipCode || "",
+        phone: businessSettings.phone || "",
+        email: businessSettings.email || "",
+        website: businessSettings.website || "",
+        taxRate: businessSettings.taxRate || 8.25,
+        defaultMarkup: businessSettings.defaultMarkup || 3.5,
+        laborRate: businessSettings.laborRate || 38,
+        overheadCost: businessSettings.overheadCost || 54,
+      });
+    }
+  }, [businessSettings]);
 
   const handleBusinessSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -158,6 +200,131 @@ export default function Settings() {
   const handleDisplayChange = (key: keyof DisplaySettings, value: any) => {
     const newSettings = { ...displaySettings, [key]: value };
     updateDisplayMutation.mutate(newSettings);
+  };
+
+  // Account Actions Mutations
+  const changePasswordMutation = useMutation({
+    mutationFn: async (data: { currentPassword: string; newPassword: string }) => {
+      const response = await apiRequest("PUT", "/api/auth/change-password", data);
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to change password");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Password changed successfully",
+      });
+      setChangePasswordDialogOpen(false);
+      setPasswordForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const downloadDataMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("GET", "/api/auth/download-data");
+      if (!response.ok) throw new Error("Failed to download data");
+      const blob = await response.blob();
+      return blob;
+    },
+    onSuccess: (blob) => {
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `framecraft-data-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+      
+      toast({
+        title: "Success",
+        description: "Your data has been downloaded",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to download data",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteAccountMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("DELETE", "/api/auth/delete-account");
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to delete account");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Account Deleted",
+        description: "Your account has been permanently deleted",
+      });
+      // Redirect to login page after a short delay
+      setTimeout(() => {
+        setLocation("/login");
+      }, 2000);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handlePasswordChange = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      toast({
+        title: "Error",
+        description: "New passwords do not match",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (passwordForm.newPassword.length < 8) {
+      toast({
+        title: "Error",
+        description: "Password must be at least 8 characters long",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    changePasswordMutation.mutate({
+      currentPassword: passwordForm.currentPassword,
+      newPassword: passwordForm.newPassword,
+    });
+  };
+
+  const handleDeleteAccount = () => {
+    if (deleteConfirmation.toLowerCase() !== "delete my account") {
+      toast({
+        title: "Error",
+        description: "Please type 'delete my account' to confirm",
+        variant: "destructive",
+      });
+      return;
+    }
+    deleteAccountMutation.mutate();
   };
 
   return (
@@ -527,21 +694,63 @@ export default function Settings() {
                     <Separator />
 
                     <div className="pt-4">
-                      <h3 className="text-lg font-medium mb-2">Account Actions</h3>
-                      <div className="flex flex-col sm:flex-row gap-2">
-                        <Button variant="outline" disabled>
-                          Change Password
-                        </Button>
-                        <Button variant="outline" disabled>
-                          Download Data
-                        </Button>
-                        <Button variant="destructive" disabled>
-                          Delete Account
-                        </Button>
+                      <h3 className="text-lg font-medium mb-4">Account Actions</h3>
+                      <div className="space-y-4">
+                        <div className="flex items-start space-x-3">
+                          <Key className="w-5 h-5 text-muted-foreground mt-0.5" />
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="font-medium">Change Password</p>
+                                <p className="text-sm text-muted-foreground">Update your account password</p>
+                              </div>
+                              <Button 
+                                variant="outline" 
+                                onClick={() => setChangePasswordDialogOpen(true)}
+                              >
+                                Change Password
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-start space-x-3">
+                          <Download className="w-5 h-5 text-muted-foreground mt-0.5" />
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="font-medium">Download Your Data</p>
+                                <p className="text-sm text-muted-foreground">Export all your data in JSON format</p>
+                              </div>
+                              <Button 
+                                variant="outline"
+                                onClick={() => downloadDataMutation.mutate()}
+                                disabled={downloadDataMutation.isPending}
+                              >
+                                {downloadDataMutation.isPending ? "Downloading..." : "Download Data"}
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-start space-x-3">
+                          <Trash2 className="w-5 h-5 text-destructive mt-0.5" />
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="font-medium text-destructive">Delete Account</p>
+                                <p className="text-sm text-muted-foreground">Permanently delete your account and all data</p>
+                              </div>
+                              <Button 
+                                variant="destructive"
+                                onClick={() => setDeleteAccountDialogOpen(true)}
+                              >
+                                Delete Account
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                      <p className="text-sm text-muted-foreground mt-2">
-                        Account management features are handled by Replit authentication
-                      </p>
                     </div>
                   </CardContent>
                 </Card>
@@ -550,6 +759,121 @@ export default function Settings() {
           </div>
         </main>
       </div>
+
+      {/* Change Password Dialog */}
+      <Dialog open={changePasswordDialogOpen} onOpenChange={setChangePasswordDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Change Password</DialogTitle>
+            <DialogDescription>
+              Enter your current password and choose a new password.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handlePasswordChange}>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="current-password">Current Password</Label>
+                <Input
+                  id="current-password"
+                  type="password"
+                  value={passwordForm.currentPassword}
+                  onChange={(e) => setPasswordForm(prev => ({ ...prev, currentPassword: e.target.value }))}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="new-password">New Password</Label>
+                <Input
+                  id="new-password"
+                  type="password"
+                  value={passwordForm.newPassword}
+                  onChange={(e) => setPasswordForm(prev => ({ ...prev, newPassword: e.target.value }))}
+                  placeholder="Minimum 8 characters"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="confirm-password">Confirm New Password</Label>
+                <Input
+                  id="confirm-password"
+                  type="password"
+                  value={passwordForm.confirmPassword}
+                  onChange={(e) => setPasswordForm(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                  required
+                />
+              </div>
+            </div>
+            <DialogFooter className="mt-6">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => setChangePasswordDialogOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button 
+                type="submit"
+                disabled={changePasswordMutation.isPending}
+              >
+                {changePasswordMutation.isPending ? "Changing..." : "Change Password"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Account Dialog */}
+      <Dialog open={deleteAccountDialogOpen} onOpenChange={setDeleteAccountDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center space-x-2">
+              <AlertTriangle className="w-5 h-5 text-destructive" />
+              <span>Delete Account</span>
+            </DialogTitle>
+            <DialogDescription>
+              This action cannot be undone. This will permanently delete your account
+              and remove all of your data from our servers.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4">
+              <p className="text-sm font-medium text-destructive">Warning</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                All your data including customers, orders, invoices, and settings will be permanently deleted.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="delete-confirmation">
+                Type <span className="font-mono font-semibold">delete my account</span> to confirm
+              </Label>
+              <Input
+                id="delete-confirmation"
+                value={deleteConfirmation}
+                onChange={(e) => setDeleteConfirmation(e.target.value)}
+                placeholder="delete my account"
+              />
+            </div>
+          </div>
+          <DialogFooter className="mt-6">
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setDeleteAccountDialogOpen(false);
+                setDeleteConfirmation("");
+              }}
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive"
+              onClick={handleDeleteAccount}
+              disabled={deleteAccountMutation.isPending}
+            >
+              {deleteAccountMutation.isPending ? "Deleting..." : "Delete Account"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

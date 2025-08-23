@@ -1,0 +1,41 @@
+Product Code,Product Name,Category,Subcategory,Description,Unit Type,Wholesale Price,Suggested Retail,Min Quantity,Pack Size,Lead Time,Stock Status,Catalog Page
+FR-OAK-001,Premium Oak Frame 2",frame,wood,Solid oak frame with walnut stain finish,linear_foot,18.50,37.00,8,8,3-5 days,available,12
+FR-OAK-002,Natural Oak Frame 1.5",frame,wood,Light oak frame with clear protective coating,linear_foot,15.75,31.50,10,10,2-3 days,available,13
+FR-MAP-003,Maple Frame 2.5",frame,wood,Premium maple hardwood with honey finish,linear_foot,22.00,44.00,6,6,1 week,available,14
+FR-WAL-004,Walnut Frame 3",frame,wood,Dark walnut luxury frame for large artwork,linear_foot,28.50,57.00,4,4,1 week,low_stock,15
+FR-ALU-005,Brushed Aluminum 1",frame,metal,Modern brushed aluminum profile,linear_foot,14.00,28.00,12,12,2-3 days,available,20
+FR-BLK-006,Matte Black Metal 1.5",frame,metal,Contemporary black metal frame,linear_foot,16.50,33.00,10,10,3-5 days,available,21
+FR-GLD-007,Antique Gold Frame 2",frame,metal,Ornate gold-leafed decorative frame,linear_foot,35.00,70.00,4,4,2 weeks,available,22
+MAT-WHT-001,White Core Mat 32x40,mat,standard,Standard white matboard for general use,sheet,3.50,7.00,50,50,In stock,available,30
+MAT-BLK-002,Black Core Mat 32x40,mat,standard,Deep black matboard for contrast,sheet,3.75,7.50,50,50,In stock,available,31
+MAT-CRM-003,Cream Mat 32x40,mat,standard,Warm cream colored matboard,sheet,3.50,7.00,50,50,In stock,available,32
+MAT-CON-004,Museum Conservation Mat 32x40,mat,conservation,100% cotton rag acid-free mat,sheet,12.00,24.00,25,25,3-5 days,available,35
+MAT-ARC-005,Archival White Mat 32x40,mat,conservation,Archival quality bright white mat,sheet,10.50,21.00,25,25,3-5 days,available,36
+MAT-SUE-006,Suede Mat 32x40,mat,specialty,Textured suede finish matboard,sheet,8.00,16.00,20,20,1 week,available,38
+GL-STD-001,Clear Glass 16x20,glazing,standard,Standard 2mm picture glass,each,6.00,12.00,20,20,In stock,available,50
+GL-STD-002,Clear Glass 24x36,glazing,standard,Standard 2mm picture glass,each,15.00,30.00,10,10,In stock,available,51
+GL-UV-003,Museum Glass 16x20,glazing,specialty,99% UV protection anti-reflective,each,32.00,64.00,5,5,1 week,available,55
+GL-UV-004,Museum Glass 24x36,glazing,specialty,99% UV protection anti-reflective,each,58.00,116.00,3,3,1 week,low_stock,56
+GL-UV-005,Conservation Clear 24x36,glazing,specialty,UV filtering conservation glass,each,42.00,84.00,5,5,5-7 days,available,57
+AC-CLR-001,Clear Acrylic 16x20,glazing,acrylic,Lightweight shatter-resistant,each,18.00,36.00,10,10,2-3 days,available,60
+AC-CLR-002,Clear Acrylic 24x36,glazing,acrylic,Lightweight shatter-resistant,each,32.00,64.00,5,5,2-3 days,available,61
+AC-UV-003,UV Acrylic 24x36,glazing,acrylic,UV filtering acrylic glazing,each,45.00,90.00,3,3,1 week,available,62
+HW-HNG-001,D-Ring Hangers Pack,hardware,hanging,Heavy duty D-rings with screws (50 pack),box,8.50,17.00,5,5,In stock,available,70
+HW-HNG-002,Sawtooth Hangers Pack,hardware,hanging,Sawtooth picture hangers (100 pack),box,6.00,12.00,10,10,In stock,available,71
+HW-WIR-003,Picture Wire 50ft,hardware,hanging,Stainless steel picture wire 20lb,roll,5.50,11.00,5,5,In stock,available,72
+HW-WIR-004,Heavy Wire 50ft,hardware,hanging,Braided wire 50lb capacity,roll,9.00,18.00,3,3,In stock,available,73
+HW-COR-005,Frame Corner Brackets,hardware,assembly,Metal corner brackets (20 pack),box,12.00,24.00,2,2,In stock,available,75
+HW-SPC-006,Point Driver Points,hardware,assembly,Glazier points (500 pack),box,4.50,9.00,5,5,In stock,available,76
+HW-BMP-007,Rubber Bumpers,hardware,protection,Self-adhesive bumpers (100 pack),box,3.00,6.00,10,10,In stock,available,77
+MT-FOM-001,White Foam Core 32x40,mounting,backing,3/16" acid-free foam board,sheet,2.85,5.70,50,50,In stock,available,80
+MT-FOM-002,Black Foam Core 32x40,mounting,backing,3/16" black foam board,sheet,3.25,6.50,25,25,In stock,available,81
+MT-COR-003,Corrugated Board 32x40,mounting,backing,Archival corrugated backing,sheet,4.50,9.00,25,25,2-3 days,available,82
+MT-TAP-004,ATG Tape 1/2",mounting,adhesive,Acid-free adhesive transfer tape,roll,18.00,36.00,2,2,3-5 days,available,85
+MT-TAP-005,Double-Sided Tape,mounting,adhesive,Permanent mounting tape 1",roll,8.50,17.00,5,5,In stock,available,86
+MT-HNG-006,Linen Hinging Tape,mounting,adhesive,Archival linen tape,roll,24.00,48.00,1,1,1 week,available,87
+OT-CLN-001,Glass Cleaner 32oz,other,supplies,Professional streak-free cleaner,each,4.50,9.00,12,12,In stock,available,90
+OT-CLN-002,Frame Polish 16oz,other,supplies,Wood frame polish and protectant,each,6.00,12.00,6,6,In stock,available,91
+OT-TOL-003,Mat Cutter Blades,other,tools,Replacement blades (10 pack),box,15.00,30.00,2,2,In stock,available,92
+OT-TOL-004,Glass Cutter,other,tools,Professional glass cutting tool,each,22.00,44.00,1,1,3-5 days,available,93
+OT-PKG-005,Frame Boxes 16x20,other,packaging,Corrugated shipping boxes,box,2.50,5.00,25,25,1 week,available,95
+OT-PKG-006,Bubble Wrap Roll,other,packaging,Small bubble wrap 24" x 100ft,roll,18.00,36.00,1,1,In stock,available,96

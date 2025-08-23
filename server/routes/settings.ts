@@ -1,90 +1,70 @@
-
 import { Router } from 'express';
 import { isAuthenticated } from '../replitAuth';
+import * as storage from '../mongoStorage';
 
 const router = Router();
 
-// In-memory storage for demo purposes
-// In production, these would be stored in the database
-let businessSettings = {
-  companyName: "Jay's Frames",
-  address: "123 Main St",
-  city: "Houston",
-  state: "TX",
-  zipCode: "77008",
-  phone: "(713) 555-0123",
-  email: "info@jaysframes.com",
-  website: "https://jaysframes.com",
-  taxRate: 8.25,
-  defaultMarkup: 3.5,
-  laborRate: 38,
-  overheadCost: 54,
-};
-
-let notificationSettings = {
-  emailNotifications: true,
-  orderUpdates: true,
-  paymentReminders: true,
-  lowInventory: true,
-  dailyReports: false,
-};
-
-// Add routes here
-router.get('/business', (req, res) => {
-  res.json(businessSettings);
-});
-
-router.put('/business', (req, res) => {
-  businessSettings = { ...businessSettings, ...req.body };
-  res.json(businessSettings);
-});
-
-router.get('/notifications', (req, res) => {
-  res.json(notificationSettings);
-});
-
-router.put('/notifications', (req, res) => {
-  notificationSettings = { ...notificationSettings, ...req.body };
-  res.json(notificationSettings);
-});
-
-let displaySettings = {
-  theme: 'light',
-  compactMode: false,
-  showPriceBreakdown: true,
-  defaultCurrency: 'USD',
-  dateFormat: 'MM/DD/YYYY',
-  timeFormat: '12h',
-};
-
 // Business Settings Routes
-router.get('/business', isAuthenticated, (req, res) => {
-  res.json(businessSettings);
+router.get('/business', isAuthenticated, async (req, res) => {
+  try {
+    const settings = await storage.getBusinessSettings();
+    res.json(settings);
+  } catch (error) {
+    console.error('Error fetching business settings:', error);
+    res.status(500).json({ message: 'Failed to fetch business settings' });
+  }
 });
 
-router.put('/business', isAuthenticated, (req, res) => {
-  businessSettings = { ...businessSettings, ...req.body };
-  res.json(businessSettings);
+router.put('/business', isAuthenticated, async (req, res) => {
+  try {
+    const settings = await storage.updateBusinessSettings(req.body);
+    res.json(settings);
+  } catch (error) {
+    console.error('Error updating business settings:', error);
+    res.status(500).json({ message: 'Failed to update business settings' });
+  }
 });
 
 // Notification Settings Routes
-router.get('/notifications', isAuthenticated, (req, res) => {
-  res.json(notificationSettings);
+router.get('/notifications', isAuthenticated, async (req, res) => {
+  try {
+    const settings = await storage.getNotificationSettings();
+    res.json(settings);
+  } catch (error) {
+    console.error('Error fetching notification settings:', error);
+    res.status(500).json({ message: 'Failed to fetch notification settings' });
+  }
 });
 
-router.put('/notifications', isAuthenticated, (req, res) => {
-  notificationSettings = { ...notificationSettings, ...req.body };
-  res.json(notificationSettings);
+router.put('/notifications', isAuthenticated, async (req, res) => {
+  try {
+    const settings = await storage.updateNotificationSettings(req.body);
+    res.json(settings);
+  } catch (error) {
+    console.error('Error updating notification settings:', error);
+    res.status(500).json({ message: 'Failed to update notification settings' });
+  }
 });
 
 // Display Settings Routes
-router.get('/display', isAuthenticated, (req, res) => {
-  res.json(displaySettings);
+router.get('/display', isAuthenticated, async (req, res) => {
+  try {
+    const settings = await storage.getDisplaySettings();
+    res.json(settings);
+  } catch (error) {
+    console.error('Error fetching display settings:', error);
+    res.status(500).json({ message: 'Failed to fetch display settings' });
+  }
 });
 
-router.put('/display', isAuthenticated, (req, res) => {
-  displaySettings = { ...displaySettings, ...req.body };
-  res.json(displaySettings);
+router.put('/display', isAuthenticated, async (req, res) => {
+  try {
+    const settings = await storage.updateDisplaySettings(req.body);
+    res.json(settings);
+  } catch (error) {
+    console.error('Error updating display settings:', error);
+    res.status(500).json({ message: 'Failed to update display settings' });
+  }
 });
 
 export default router;

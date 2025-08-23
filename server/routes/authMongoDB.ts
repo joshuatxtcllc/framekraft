@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { User, Session } from '../models';
 import { z } from 'zod';
+import * as storage from '../mongoStorage';
 
 const router = Router();
 
@@ -467,6 +468,266 @@ router.post('/check-email', async (req, res) => {
     res.status(500).json({ 
       success: false, 
       message: 'Failed to check email' 
+    });
+  }
+});
+
+// Change password route
+router.put('/change-password', async (req, res) => {
+  try {
+    // Get current user
+    const sessionId = req.cookies.sessionId;
+    const token = req.cookies.accessToken || req.headers.authorization?.replace('Bearer ', '');
+
+    // Demo user cannot change password
+    if (sessionId === 'demo-session' || token === 'demo-token') {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Demo account password cannot be changed' 
+      });
+    }
+
+    let userId: string | null = null;
+
+    // Get user ID from session or token
+    if (sessionId) {
+      const session = await Session.findOne({ sid: sessionId });
+      if (session && session.expire > new Date()) {
+        userId = session.sess.userId;
+      }
+    }
+
+    if (!userId && token) {
+      try {
+        const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
+        userId = decoded.userId;
+      } catch (error) {
+        // Token is invalid
+      }
+    }
+
+    if (!userId) {
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Not authenticated' 
+      });
+    }
+
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Current password and new password are required' 
+      });
+    }
+
+    if (newPassword.length < 8) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Password must be at least 8 characters long' 
+      });
+    }
+
+    // Get user with password
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'User not found' 
+      });
+    }
+
+    // Verify current password
+    const isValid = await user.comparePassword(currentPassword);
+    if (!isValid) {
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Current password is incorrect' 
+      });
+    }
+
+    // Update password
+    user.password = newPassword;
+    await user.save();
+
+    res.json({ 
+      success: true, 
+      message: 'Password changed successfully' 
+    });
+  } catch (error) {
+    console.error('Change password error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to change password' 
+    });
+  }
+});
+
+// Download user data route
+router.get('/download-data', async (req, res) => {
+  try {
+    // Get current user
+    const sessionId = req.cookies.sessionId;
+    const token = req.cookies.accessToken || req.headers.authorization?.replace('Bearer ', '');
+
+    let userId: string | null = null;
+
+    // Handle demo user
+    if (sessionId === 'demo-session' || token === 'demo-token') {
+      userId = 'demo-user-id';
+    } else {
+      // Get user ID from session or token
+      if (sessionId) {
+        const session = await Session.findOne({ sid: sessionId });
+        if (session && session.expire > new Date()) {
+          userId = session.sess.userId;
+        }
+      }
+
+      if (!userId && token) {
+        try {
+          const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
+          userId = decoded.userId;
+        } catch (error) {
+          // Token is invalid
+        }
+      }
+    }
+
+    if (!userId) {
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Not authenticated' 
+      });
+    }
+
+    // Collect all user data
+    const userData: any = {};
+
+    if (userId === 'demo-user-id') {
+      // Return demo data
+      userData.user = {
+        email: 'demo@framecraft.com',
+        firstName: 'Demo',
+        lastName: 'User',
+        businessName: 'Demo Framing Co.',
+      };
+      userData.customers = await storage.getCustomers();
+      userData.orders = await storage.getOrders();
+      userData.invoices = await storage.getInvoices();
+      userData.inventory = await storage.getInventory();
+      userData.settings = {
+        business: await storage.getBusinessSettings(),
+        notifications: await storage.getNotificationSettings(),
+        display: await storage.getDisplaySettings(),
+      };
+    } else {
+      // Get real user data
+      const user = await User.findById(userId).select('-password');
+      if (!user) {
+        return res.status(404).json({ 
+          success: false, 
+          message: 'User not found' 
+        });
+      }
+
+      userData.user = user;
+      userData.customers = await storage.getCustomers();
+      userData.orders = await storage.getOrders();
+      userData.invoices = await storage.getInvoices();
+      userData.inventory = await storage.getInventory();
+      userData.wholesalers = await storage.getWholesalers();
+      userData.settings = {
+        business: await storage.getBusinessSettings(),
+        notifications: await storage.getNotificationSettings(),
+        display: await storage.getDisplaySettings(),
+      };
+    }
+
+    // Send as JSON file download
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename="framecraft-data-${new Date().toISOString().split('T')[0]}.json"`);
+    res.json(userData);
+  } catch (error) {
+    console.error('Download data error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to download data' 
+    });
+  }
+});
+
+// Delete account route
+router.delete('/delete-account', async (req, res) => {
+  try {
+    // Get current user
+    const sessionId = req.cookies.sessionId;
+    const token = req.cookies.accessToken || req.headers.authorization?.replace('Bearer ', '');
+
+    // Demo user cannot be deleted
+    if (sessionId === 'demo-session' || token === 'demo-token') {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Demo account cannot be deleted' 
+      });
+    }
+
+    let userId: string | null = null;
+
+    // Get user ID from session or token
+    if (sessionId) {
+      const session = await Session.findOne({ sid: sessionId });
+      if (session && session.expire > new Date()) {
+        userId = session.sess.userId;
+      }
+    }
+
+    if (!userId && token) {
+      try {
+        const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
+        userId = decoded.userId;
+      } catch (error) {
+        // Token is invalid
+      }
+    }
+
+    if (!userId) {
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Not authenticated' 
+      });
+    }
+
+    // Delete all user data
+    // Note: In a real application, you'd want to cascade delete all related data
+    // For now, we'll just delete the user account
+    const user = await User.findByIdAndDelete(userId);
+    if (!user) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'User not found' 
+      });
+    }
+
+    // Delete session
+    if (sessionId) {
+      await Session.deleteOne({ sid: sessionId });
+    }
+
+    // Clear cookies
+    res.clearCookie('sessionId');
+    res.clearCookie('accessToken');
+
+    res.json({ 
+      success: true, 
+      message: 'Account deleted successfully' 
+    });
+  } catch (error) {
+    console.error('Delete account error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to delete account' 
     });
   }
 });
