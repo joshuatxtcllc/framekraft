@@ -768,3 +768,61 @@ const DisplaySettingsSchema = new Schema({
 }, { timestamps: true });
 
 export const DisplaySettings = mongoose.model<IDisplaySettings>('DisplaySettings', DisplaySettingsSchema);
+
+// AI Chat History Model
+export interface IAIChatMessage {
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+  timestamp: Date;
+  metadata?: {
+    model?: string;
+    tokens?: number;
+    processingTime?: number;
+  };
+}
+
+export interface IAIChatSession extends Document {
+  userId: mongoose.Types.ObjectId;
+  sessionName: string;
+  messages: IAIChatMessage[];
+  context: string; // Business context for the conversation
+  totalTokens: number;
+  lastActivity: Date;
+  isActive: boolean;
+  metadata?: {
+    orderContext?: mongoose.Types.ObjectId;
+    customerContext?: mongoose.Types.ObjectId;
+    tags?: string[];
+  };
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const AIChatSessionSchema = new Schema({
+  userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  sessionName: { type: String, required: true },
+  messages: [{
+    role: { type: String, enum: ['user', 'assistant', 'system'], required: true },
+    content: { type: String, required: true },
+    timestamp: { type: Date, default: Date.now },
+    metadata: {
+      model: String,
+      tokens: Number,
+      processingTime: Number
+    }
+  }],
+  context: { type: String, default: 'general' },
+  totalTokens: { type: Number, default: 0 },
+  lastActivity: { type: Date, default: Date.now },
+  isActive: { type: Boolean, default: true },
+  metadata: {
+    orderContext: { type: Schema.Types.ObjectId, ref: 'Order' },
+    customerContext: { type: Schema.Types.ObjectId, ref: 'Customer' },
+    tags: [String]
+  }
+}, { timestamps: true });
+
+AIChatSessionSchema.index({ userId: 1, lastActivity: -1 });
+AIChatSessionSchema.index({ isActive: 1 });
+
+export const AIChatSession = mongoose.model<IAIChatSession>('AIChatSession', AIChatSessionSchema);

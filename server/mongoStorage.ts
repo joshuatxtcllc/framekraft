@@ -35,7 +35,8 @@ import {
   Transaction,
   ITransaction,
   FinancialSummary,
-  IFinancialSummary
+  IFinancialSummary,
+  Session
 } from './models';
 import mongoose from 'mongoose';
 
@@ -731,6 +732,9 @@ export async function updateDisplaySettings(settingsData: Partial<IDisplaySettin
   );
   return settings!;
 }
+// Export Session for direct access
+export { Session };
+
 // Financial operations
 
 // Expense operations

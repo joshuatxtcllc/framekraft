@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -43,8 +43,13 @@ export default function Pricing() {
     resolver: zodResolver(priceSchema),
     defaultValues: {
       category: "frame",
+      subcategory: "",
+      itemName: "",
       unitType: "linear_foot",
+      basePrice: "",
       markupPercentage: "50.00",
+      retailPrice: "",
+      notes: "",
     },
   });
 
@@ -93,7 +98,7 @@ export default function Pricing() {
 
   const onSubmit = (data: PriceFormData) => {
     if (editingPrice) {
-      updateMutation.mutate({ id: editingPrice.id, data });
+      updateMutation.mutate({ id: editingPrice.id || editingPrice._id, data });
     } else {
       createMutation.mutate(data);
     }
@@ -144,8 +149,13 @@ export default function Pricing() {
                     setEditingPrice(null);
                     form.reset({
                       category: "frame",
+                      subcategory: "",
+                      itemName: "",
                       unitType: "linear_foot",
+                      basePrice: "",
                       markupPercentage: "50.00",
+                      retailPrice: "",
+                      notes: "",
                     });
                   }}>
                     <Plus className="w-4 h-4 mr-2" />
@@ -157,6 +167,11 @@ export default function Pricing() {
                     <DialogTitle>
                       {editingPrice ? "Edit Price Item" : "Add New Price Item"}
                     </DialogTitle>
+                    <DialogDescription>
+                      {editingPrice 
+                        ? "Update the details of this price item"
+                        : "Create a new pricing item for your products and services"}
+                    </DialogDescription>
                   </DialogHeader>
                   
                   <Form {...form}>
@@ -379,7 +394,7 @@ export default function Pricing() {
                       </TableHeader>
                       <TableBody>
                         {(priceStructure as any[])?.map((price: any) => (
-                          <TableRow key={price.id}>
+                          <TableRow key={price.id || price._id}>
                             <TableCell>
                               <div className="font-medium capitalize">{price.category}</div>
                               {price.subcategory && (

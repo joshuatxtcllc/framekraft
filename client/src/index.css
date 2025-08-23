@@ -48,6 +48,47 @@
   }
 }
 
+/* Drag and Drop Styles for Kanban Board */
+@media (min-width: 1024px) {
+  /* Draggable card styles */
+  .kanban-card-draggable {
+    cursor: move;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  
+  .kanban-card-draggable:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+  
+  /* Dragging state */
+  .kanban-card-dragging {
+    opacity: 0.5;
+    transform: rotate(2deg);
+  }
+  
+  /* Drop zone highlight */
+  .kanban-column-drop-active {
+    background-color: rgba(59, 130, 246, 0.1) !important;
+    border: 2px dashed rgba(59, 130, 246, 0.5);
+  }
+  
+  /* Drag handle */
+  .drag-handle {
+    cursor: grab;
+    opacity: 0.5;
+    transition: opacity 0.2s;
+  }
+  
+  .drag-handle:hover {
+    opacity: 1;
+  }
+  
+  .drag-handle:active {
+    cursor: grabbing;
+  }
+}
+
 :root {
   --background: hsl(0, 0%, 98%);
   --foreground: hsl(186, 20%, 31%);

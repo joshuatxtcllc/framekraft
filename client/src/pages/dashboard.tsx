@@ -4,8 +4,12 @@ import Header from "@/components/layout/Header";
 import MetricsCards from "@/components/dashboard/MetricsCards";
 import RecentOrders from "@/components/dashboard/RecentOrders";
 import AIRecommendations from "@/components/dashboard/AIRecommendations";
+import AIQuickChat from "@/components/dashboard/AIQuickChat";
+import AIInsightsWidget from "@/components/dashboard/AIInsightsWidget";
 import ProjectTracking from "@/components/dashboard/ProjectTracking";
 import ReceivablesAlert from "@/components/dashboard/ReceivablesAlert";
+import CustomerAnalytics from "@/components/dashboard/CustomerAnalytics";
+import TopCustomers from "@/components/dashboard/TopCustomers";
 import { useAuth } from "@/hooks/useAuth";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
@@ -26,10 +30,6 @@ export default function Dashboard() {
 
   const { data: orders, isLoading: ordersLoading } = useQuery({
     queryKey: ["/api/orders"],
-  });
-
-  const { data: customers, isLoading: customersLoading } = useQuery({
-    queryKey: ["/api/customers"],
   });
 
   const refreshMetrics = useMutation({
@@ -123,68 +123,26 @@ export default function Dashboard() {
                 <AIRecommendations />
               </div>
 
-              {/* Project Tracking */}
-              <ProjectTracking />
+              {/* AI Quick Chat and Project Tracking */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                <AIQuickChat />
+                <ProjectTracking />
+              </div>
+
+              {/* AI Intelligence Dashboard */}
+              <div className="mb-8">
+                <AIInsightsWidget />
+              </div>
 
               {/* Customer Insights */}
-              <div className="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Analytics Chart Placeholder */}
-                <div className="lg:col-span-2 bg-card shadow rounded-lg">
-                  <div className="px-4 py-5 sm:p-6">
-                    <h3 className="text-lg leading-6 font-medium text-foreground mb-4">
-                      Customer Analytics
-                    </h3>
-                    <div className="h-64 bg-muted rounded-lg flex items-center justify-center border-2 border-dashed border-border">
-                      <div className="text-center">
-                        <h4 className="mt-2 text-sm font-medium text-foreground">
-                          Revenue & Customer Growth Chart
-                        </h4>
-                        <p className="mt-1 text-sm text-muted-foreground">
-                          Interactive chart showing business trends
-                        </p>
-                      </div>
-                    </div>
-                  </div>
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Customer Analytics Chart */}
+                <div className="lg:col-span-2">
+                  <CustomerAnalytics />
                 </div>
 
                 {/* Top Customers */}
-                <div className="bg-card shadow rounded-lg">
-                  <div className="px-4 py-5 sm:p-6">
-                    <h3 className="text-lg leading-6 font-medium text-foreground mb-4">
-                      Top Customers
-                    </h3>
-                    {customersLoading ? (
-                      <div className="space-y-3">
-                        {[...Array(4)].map((_, i) => (
-                          <Skeleton key={i} className="h-12 rounded" />
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="space-y-3">
-                        {customers?.slice(0, 4).map((customer: any) => (
-                          <div key={customer.id} className="flex items-center space-x-3">
-                            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                              <span className="text-sm font-medium text-primary">
-                                {customer.firstName[0]}{customer.lastName[0]}
-                              </span>
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-foreground truncate">
-                                {customer.firstName} {customer.lastName}
-                              </p>
-                              <p className="text-sm text-muted-foreground">
-                                {customer.orderCount} orders
-                              </p>
-                            </div>
-                            <div className="text-sm font-medium text-foreground">
-                              ${parseFloat(customer.totalSpent || "0").toFixed(0)}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
+                <TopCustomers />
               </div>
             </div>
           </div>

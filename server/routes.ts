@@ -21,6 +21,7 @@ import communication from "./routes/communication.js";
 import authRoutes from "./routes/authMongoDB";
 import searchRoutes from "./routes/search";
 import financeRoutes from "./routes/finance";
+import aiAssistantRoutes from "./routes/ai-assistant";
 import { rateLimit } from "./middleware/rateLimiting";
 import { requestLogger } from "./middleware/logging";
 
@@ -672,6 +673,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Register AI routes
   const aiRoutes = await import('./routes/ai.js');
   app.use('/api/ai', aiRoutes.default);
+  
+  // Register AI Assistant routes (Claude integration)
+  app.use('/api/ai', aiAssistantRoutes);
 
   // Public routes (no authentication required)
   const { publicRoutes } = await import("./routes/public.js");
@@ -691,9 +695,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const receivablesRoutes = await import('./routes/receivables');
   app.use('/api/receivables', receivablesRoutes.default);
   
+  // Add email configuration routes
+  const emailConfigRoutes = await import('./routes/email-config');
+  app.use('/api/email', emailConfigRoutes.default);
+  
   // Add system routes for validation
-  const systemRoutes = await import('./routes/system.js');
-  app.use('/api/system', systemRoutes.default);
+  const validationRoutes = await import('./routes/validation');
+  app.use('/api/system', validationRoutes.default);
   
   // Finance routes
   app.use('/api/finance', financeRoutes);

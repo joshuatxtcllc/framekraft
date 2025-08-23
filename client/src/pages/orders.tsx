@@ -176,6 +176,90 @@ FrameCraft`;
     });
   };
 
+  const handleExportOrders = () => {
+    try {
+      // Prepare CSV headers
+      const headers = [
+        'Order Number',
+        'Customer Name', 
+        'Customer Email',
+        'Customer Phone',
+        'Description',
+        'Status',
+        'Priority',
+        'Total Amount',
+        'Deposit Amount',
+        'Balance Due',
+        'Due Date',
+        'Created Date',
+        'Frame Style',
+        'Mat Color',
+        'Glazing',
+        'Dimensions',
+        'Notes'
+      ];
+
+      // Convert orders to CSV rows
+      const rows = orders.map(order => [
+        order.orderNumber,
+        `${order.customer.firstName} ${order.customer.lastName}`,
+        order.customer.email || '',
+        order.customer.phone || '',
+        order.description,
+        order.status,
+        order.priority,
+        parseFloat(order.totalAmount).toFixed(2),
+        order.depositAmount ? parseFloat(order.depositAmount).toFixed(2) : '0.00',
+        (parseFloat(order.totalAmount) - parseFloat(order.depositAmount || '0')).toFixed(2),
+        order.dueDate ? new Date(order.dueDate).toLocaleDateString() : '',
+        new Date(order.createdAt).toLocaleDateString(),
+        order.frameStyle || '',
+        order.matColor || '',
+        order.glazing || '',
+        order.dimensions || '',
+        order.notes || ''
+      ]);
+
+      // Create CSV content
+      const csvContent = [
+        headers.join(','),
+        ...rows.map(row => 
+          row.map(cell => 
+            // Escape cells containing commas, quotes, or newlines
+            typeof cell === 'string' && (cell.includes(',') || cell.includes('"') || cell.includes('\n'))
+              ? `"${cell.replace(/"/g, '""')}"`
+              : cell
+          ).join(',')
+        )
+      ].join('\n');
+
+      // Create blob and download
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      
+      link.setAttribute('href', url);
+      link.setAttribute('download', `orders_export_${new Date().toISOString().split('T')[0]}.csv`);
+      link.style.visibility = 'hidden';
+      
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      toast({
+        title: "Export Successful",
+        description: `Exported ${orders.length} orders to CSV file.`,
+      });
+    } catch (error) {
+      console.error('Export error:', error);
+      toast({
+        title: "Export Failed",
+        description: "Failed to export orders. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
     // Placeholder function for payment processing
     const handleProcessPayment = (order: any) => {
         toast({
@@ -192,73 +276,118 @@ FrameCraft`;
         <Header />
         
         <main className="flex-1">
-          <div className="py-6">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
+          <div className="py-4 sm:py-6">
+            <div className="mx-auto px-4 sm:px-6 lg:px-8">
               
 
 
               {/* Page Header */}
-              <div className="flex flex-col space-y-4 mb-8">
+              <div className="flex flex-col space-y-4 mb-6">
                 <div>
-                  <h2 className="text-2xl font-bold leading-7 text-foreground sm:text-3xl">
+                  <h2 className="text-xl font-bold leading-7 text-foreground sm:text-2xl lg:text-3xl">
                     Orders
                   </h2>
-                  <p className="mt-1 text-sm text-muted-foreground">
+                  <p className="mt-1 text-xs sm:text-sm text-muted-foreground">
                     Manage all your custom framing orders and track their progress.
                   </p>
                 </div>
                 
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                  {/* Export Orders Button */}
-                  <Button 
-                    variant="outline" 
-                    className="h-10 px-6 font-semibold"
-                    onClick={() => {
-                      toast({
-                        title: "Export Orders",
-                        description: "Exporting orders to CSV...",
-                      });
-                      // TODO: Implement CSV export functionality
-                    }}
-                    data-testid="button-export-orders"
-                  >
-                    <Printer className="w-4 h-4 mr-2" />
-                    Export Orders
-                  </Button>
-
-                  {/* View Mode Toggle */}
-                  <div className="flex items-center gap-2 bg-muted rounded-lg p-1">
-                    <Button
-                      size="sm"
-                      variant={viewMode === 'table' ? 'default' : 'ghost'}
-                      onClick={() => setViewMode('table')}
-                      className="h-8 px-3"
-                      data-testid="button-table-view"
+                <div className="flex flex-col gap-3">
+                  {/* Mobile Actions */}
+                  <div className="flex flex-col sm:hidden gap-2">
+                    <div className="flex gap-2">
+                      {/* View Mode Toggle Mobile */}
+                      <div className="flex items-center gap-1 bg-muted rounded-lg p-1 flex-1">
+                        <Button
+                          size="sm"
+                          variant={viewMode === 'table' ? 'default' : 'ghost'}
+                          onClick={() => setViewMode('table')}
+                          className="h-8 px-2 flex-1 text-xs"
+                          data-testid="button-table-view"
+                        >
+                          <Table className="h-3 w-3 mr-1" />
+                          Table
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant={viewMode === 'kanban' ? 'default' : 'ghost'}
+                          onClick={() => setViewMode('kanban')}
+                          className="h-8 px-2 flex-1 text-xs"
+                          data-testid="button-kanban-view"
+                        >
+                          <Kanban className="h-3 w-3 mr-1" />
+                          Kanban
+                        </Button>
+                      </div>
+                      <Button 
+                        className="btn-primary h-8 px-3 font-semibold bg-green-600 hover:bg-green-700 text-white text-xs" 
+                        data-testid="button-new-order"
+                        onClick={() => setLocation('/orders/new')}
+                      >
+                        <Plus className="w-3 h-3 mr-1" />
+                        New
+                      </Button>
+                    </div>
+                    <Button 
+                      variant="outline" 
+                      className="h-8 px-3 font-semibold text-xs w-full"
+                      onClick={handleExportOrders}
+                      disabled={orders.length === 0}
+                      data-testid="button-export-orders"
                     >
-                      <Table className="h-4 w-4 mr-2" />
-                      Table
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant={viewMode === 'kanban' ? 'default' : 'ghost'}
-                      onClick={() => setViewMode('kanban')}
-                      className="h-8 px-3"
-                      data-testid="button-kanban-view"
-                    >
-                      <Kanban className="h-4 w-4 mr-2" />
-                      Kanban
+                      <Printer className="w-3 h-3 mr-1" />
+                      Export Orders
                     </Button>
                   </div>
 
-                  {/* New Order Button */}
-                  <Button 
-                    className="btn-primary h-10 px-6 font-semibold bg-green-600 hover:bg-green-700 text-white" 
-                    data-testid="button-new-order"
-                    onClick={() => setLocation('/orders/new')}
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    New Order
-                  </Button>
+                  {/* Desktop Actions */}
+                  <div className="hidden sm:flex sm:items-center sm:justify-between gap-4">
+                    {/* Export Orders Button */}
+                    <Button 
+                      variant="outline" 
+                      className="h-9 px-4 font-semibold text-sm"
+                      onClick={handleExportOrders}
+                      disabled={orders.length === 0}
+                      data-testid="button-export-orders-desktop"
+                    >
+                      <Printer className="w-4 h-4 mr-2" />
+                      Export Orders
+                    </Button>
+
+                    {/* View Mode Toggle Desktop */}
+                    <div className="flex items-center gap-2 bg-muted rounded-lg p-1">
+                      <Button
+                        size="sm"
+                        variant={viewMode === 'table' ? 'default' : 'ghost'}
+                        onClick={() => setViewMode('table')}
+                        className="h-8 px-3 text-sm"
+                        data-testid="button-table-view-desktop"
+                      >
+                        <Table className="h-4 w-4 mr-2" />
+                        Table
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant={viewMode === 'kanban' ? 'default' : 'ghost'}
+                        onClick={() => setViewMode('kanban')}
+                        className="h-8 px-3 text-sm"
+                        data-testid="button-kanban-view-desktop"
+                      >
+                        <Kanban className="h-4 w-4 mr-2" />
+                        Kanban
+                      </Button>
+                    </div>
+
+                    {/* New Order Button Desktop */}
+                    <Button 
+                      className="btn-primary h-9 px-4 font-semibold bg-green-600 hover:bg-green-700 text-white text-sm" 
+                      data-testid="button-new-order-desktop"
+                      onClick={() => setLocation('/orders/new')}
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      New Order
+                    </Button>
+                  </div>
                 </div>
               </div>
 

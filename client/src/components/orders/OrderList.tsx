@@ -409,19 +409,19 @@ FrameCraft`;
         <CardTitle>Orders ({orders.length})</CardTitle>
 
         {/* Filters */}
-        <div className="flex flex-col sm:flex-row gap-4 pt-4">
-          <div className="relative flex-1">
+        <div className="flex flex-col gap-4 pt-4">
+          <div className="relative w-full">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search orders..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
+              className="pl-10 w-full"
             />
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2 w-full">
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-40">
+              <SelectTrigger className="w-full sm:w-40">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
@@ -433,7 +433,7 @@ FrameCraft`;
               </SelectContent>
             </Select>
             <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-              <SelectTrigger className="w-40">
+              <SelectTrigger className="w-full sm:w-40">
                 <SelectValue placeholder="Priority" />
               </SelectTrigger>
               <SelectContent>
@@ -455,62 +455,70 @@ FrameCraft`;
             </p>
           </div>
         ) : (
-          <div className="w-full">
+          <div className="w-full overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="min-w-[100px]">Order #</TableHead>
-                  <TableHead className="min-w-[150px]">Customer</TableHead>
-                  <TableHead className="min-w-[200px]">Description</TableHead>
-                  <TableHead className="min-w-[100px]">Status</TableHead>
-                  <TableHead className="min-w-[100px]">Priority</TableHead>
-                  <TableHead className="min-w-[120px]">Due Date</TableHead>
-                  <TableHead className="min-w-[120px]">Amount</TableHead>
-                  <TableHead className="min-w-[100px]">Actions</TableHead>
+                  <TableHead className="w-24">Order #</TableHead>
+                  <TableHead className="hidden sm:table-cell">Customer</TableHead>
+                  <TableHead className="hidden md:table-cell">Description</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="hidden lg:table-cell">Priority</TableHead>
+                  <TableHead className="hidden xl:table-cell">Due Date</TableHead>
+                  <TableHead>Amount</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredOrders.map((order) => (
                   <TableRow key={order.id}>
-                    <TableCell className="font-medium whitespace-nowrap">
-                      {order.orderNumber}
+                    <TableCell className="font-medium">
+                      <div className="flex flex-col">
+                        <span className="text-sm">{order.orderNumber}</span>
+                        <span className="text-xs text-muted-foreground sm:hidden">
+                          {order.customer.firstName} {order.customer.lastName}
+                        </span>
+                        <span className="text-xs text-muted-foreground md:hidden">
+                          {order.description.substring(0, 30)}{order.description.length > 30 ? '...' : ''}
+                        </span>
+                      </div>
                     </TableCell>
-                    <TableCell className="whitespace-nowrap">
-                      <div className="max-w-[150px] truncate" title={`${order.customer.firstName} ${order.customer.lastName}`}>
+                    <TableCell className="hidden sm:table-cell">
+                      <div className="truncate max-w-[120px]" title={`${order.customer.firstName} ${order.customer.lastName}`}>
                         {order.customer.firstName} {order.customer.lastName}
                       </div>
                     </TableCell>
-                    <TableCell>
-                      <div className="max-w-[200px] truncate" title={order.description}>
+                    <TableCell className="hidden md:table-cell">
+                      <div className="truncate max-w-[180px]" title={order.description}>
                         {order.description}
                       </div>
                     </TableCell>
                     <TableCell>
                       {getStatusBadge(order.status)}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden lg:table-cell">
                       {getPriorityBadge(order.priority)}
                     </TableCell>
-                    <TableCell className="whitespace-nowrap">
+                    <TableCell className="hidden xl:table-cell">
                       {order.dueDate ? (
-                        <span className={new Date(order.dueDate) < new Date() ? 'text-red-600 font-medium' : ''}>
+                        <span className={new Date(order.dueDate) < new Date() ? 'text-red-600 font-medium text-sm' : 'text-sm'}>
                           {new Date(order.dueDate).toLocaleDateString()}
                         </span>
                       ) : (
-                        <span className="text-gray-400">No due date</span>
+                        <span className="text-gray-400 text-sm">No date</span>
                       )}
                     </TableCell>
                     <TableCell>
-                      <div>
-                        <div className="font-medium whitespace-nowrap">
+                      <div className="text-right sm:text-left">
+                        <div className="font-medium text-sm">
                           {formatCurrency(order.totalAmount)}
                         </div>
                         {order.depositAmount && parseFloat(order.depositAmount) > 0 && (
-                          <div className="text-xs space-y-1">
-                            <div className="text-muted-foreground whitespace-nowrap">
+                          <div className="text-xs space-y-0.5 hidden sm:block">
+                            <div className="text-muted-foreground">
                               Dep: {formatCurrency(order.depositAmount)}
                             </div>
-                            <div className="text-red-600 font-medium whitespace-nowrap">
+                            <div className="text-red-600 font-medium">
                               Bal: {formatCurrency((parseFloat(order.totalAmount) - parseFloat(order.depositAmount)).toString())}
                             </div>
                           </div>
@@ -518,13 +526,13 @@ FrameCraft`;
                       </div>
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center justify-end gap-1">
                         <Button
                           variant="ghost"
                           size="icon"
                           onClick={() => handleViewOrder(order)}
                           title="View Details"
-                          className="h-8 w-8"
+                          className="h-8 w-8 hidden sm:inline-flex"
                         >
                           <Eye className="w-4 h-4" />
                         </Button>
@@ -533,7 +541,7 @@ FrameCraft`;
                           size="icon"
                           onClick={() => onEdit(order)}
                           title="Edit Order"
-                          className="h-8 w-8"
+                          className="h-8 w-8 hidden sm:inline-flex"
                         >
                           <Edit className="w-4 h-4" />
                         </Button>

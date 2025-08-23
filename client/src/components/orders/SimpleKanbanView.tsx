@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -16,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Eye, Edit, ArrowRight, FileText } from "lucide-react";
+import { Eye, Edit, ArrowRight, FileText, GripVertical } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -47,8 +47,22 @@ export default function SimpleKanbanView({
   const [statusChangeOrder, setStatusChangeOrder] = useState<Order | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [newStatus, setNewStatus] = useState<Order['status']>('pending');
+  const [draggedOrder, setDraggedOrder] = useState<Order | null>(null);
+  const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
+  const [isDesktop, setIsDesktop] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
+
+  // Check if screen is desktop size (lg and above)
+  useEffect(() => {
+    const checkScreenSize = () => {
+      setIsDesktop(window.innerWidth >= 1024); // lg breakpoint
+    };
+    
+    checkScreenSize();
+    window.addEventListener('resize', checkScreenSize);
+    return () => window.removeEventListener('resize', checkScreenSize);
+  }, []);
 
   const updateOrderMutation = useMutation({
     mutationFn: async ({ id, ...data }: any) => {
@@ -132,106 +146,196 @@ export default function SimpleKanbanView({
     }
   };
 
+  // Drag and Drop handlers
+  const handleDragStart = (e: React.DragEvent, order: Order) => {
+    setDraggedOrder(order);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDragEnter = (e: React.DragEvent, stageId: string) => {
+    e.preventDefault();
+    setDragOverColumn(stageId);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    // Only clear if we're leaving the column entirely
+    if (e.currentTarget === e.target) {
+      setDragOverColumn(null);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent, targetStatus: Order['status']) => {
+    e.preventDefault();
+    setDragOverColumn(null);
+    
+    if (draggedOrder && draggedOrder.status !== targetStatus) {
+      const updatedOrder = { 
+        ...draggedOrder, 
+        status: targetStatus,
+        id: draggedOrder.id 
+      };
+      console.log('Dropping order from', draggedOrder.status, 'to', targetStatus);
+      updateOrderMutation.mutate(updatedOrder);
+    }
+    setDraggedOrder(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedOrder(null);
+    setDragOverColumn(null);
+  };
+
   return (
     <>
       {/* Simple Instructions */}
-      <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-4">
-        <p className="text-sm text-green-800">
-          <strong>Easy Controls:</strong> Use the blue arrow button (→) on each order card to move it between stages. Simple and reliable!
+      <div className="bg-green-50 border border-green-200 rounded-lg p-2 sm:p-3 mb-3 sm:mb-4">
+        <p className="text-xs sm:text-sm text-green-800">
+          <strong>Easy Controls:</strong> 
+          {isDesktop 
+            ? "Drag and drop orders between columns or use the arrow button to move them between stages."
+            : "Use the blue arrow button (→) on each order card to move it between stages."
+          }
         </p>
       </div>
 
-      <div className="kanban-container h-[calc(100vh-300px)]">
-        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 h-full">
+      <div className="kanban-container" style={{ height: 'calc(100vh - 280px)' }}>
+        <div className="grid gap-2 sm:gap-3 lg:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 h-full overflow-x-auto">
           {stages.map((stage) => {
             const stageOrders = getOrdersByStatus(stage.id);
             return (
-              <div key={stage.id} className="flex flex-col h-full max-h-[600px]">
+              <div 
+                key={stage.id} 
+                className="flex flex-col h-full min-h-[200px] sm:min-h-[400px] max-h-[500px] sm:max-h-[600px]"
+                onDragOver={handleDragOver}
+                onDragEnter={(e) => handleDragEnter(e, stage.id)}
+                onDragLeave={handleDragLeave}
+                onDrop={(e) => handleDrop(e, stage.id)}
+              >
                 {/* Stage Header */}
-                <div className={`${stage.color} text-white p-3 rounded-t-lg flex items-center justify-between flex-shrink-0`}>
-                  <h3 className="font-semibold text-sm">{stage.title}</h3>
-                  <Badge variant="secondary" className="bg-white/20 text-white">
+                <div className={`${stage.color} text-white p-2 sm:p-3 rounded-t-lg flex items-center justify-between flex-shrink-0`}>
+                  <h3 className="font-semibold text-xs sm:text-sm">{stage.title}</h3>
+                  <Badge variant="secondary" className="bg-white/20 text-white text-xs">
                     {stageOrders.length}
                   </Badge>
                 </div>
 
                 {/* Orders Column - Scrollable */}
-                <div className="flex-1 p-2 bg-muted/30 rounded-b-lg overflow-y-auto space-y-2 kanban-column-scroll">
+                <div 
+                  className={`flex-1 p-1.5 sm:p-2 rounded-b-lg overflow-y-auto space-y-1.5 sm:space-y-2 kanban-column-scroll transition-all duration-200 ${
+                    dragOverColumn === stage.id 
+                      ? 'bg-blue-50 dark:bg-blue-950/20 ring-2 ring-blue-400 ring-opacity-50' 
+                      : 'bg-muted/30'
+                  }`}
+                >
+                  {/* Drop indicator when dragging */}
+                  {dragOverColumn === stage.id && stageOrders.length === 0 && (
+                    <div className="flex items-center justify-center h-20 border-2 border-dashed border-blue-400 rounded-lg bg-blue-50/50">
+                      <p className="text-sm text-blue-600 font-medium">Drop here</p>
+                    </div>
+                  )}
+                  
                   {stageOrders.map((order) => (
-                    <Card key={order.id} className="cursor-pointer hover:shadow-md transition-shadow">
-                      <CardContent className="p-3">
-                        <div className="space-y-2">
-                          {/* Order Number & Priority */}
+                    <Card 
+                      key={order.id} 
+                      className={`cursor-pointer hover:shadow-md transition-all duration-200 ${
+                        draggedOrder?.id === order.id ? 'opacity-50' : ''
+                      } ${isDesktop ? 'cursor-move' : ''}`}
+                      draggable={isDesktop}
+                      onDragStart={(e) => handleDragStart(e, order)}
+                      onDragEnd={handleDragEnd}
+                    >
+                      <CardContent className="p-2 sm:p-3">
+                        <div className="space-y-1.5 sm:space-y-2">
+                          {/* Drag Handle for Desktop */}
+                          {isDesktop && (
+                            <div className="flex items-center justify-between mb-1">
+                              <GripVertical className="h-4 w-4 text-muted-foreground cursor-move" />
+                              <Badge className={`${getPriorityColor(order.priority)} text-white text-[10px] sm:text-xs px-1 sm:px-2 py-0.5 sm:py-1`}>
+                                {order.priority}
+                              </Badge>
+                            </div>
+                          )}
+                          
+                          {/* Order Number & Priority (Priority only on mobile) */}
                           <div className="flex items-center justify-between">
-                            <span className="font-medium text-sm">{order.orderNumber}</span>
-                            <Badge className={`${getPriorityColor(order.priority)} text-white text-xs px-2 py-1`}>
-                              {order.priority}
-                            </Badge>
+                            <span className="font-medium text-xs sm:text-sm truncate">{order.orderNumber}</span>
+                            {!isDesktop && (
+                              <Badge className={`${getPriorityColor(order.priority)} text-white text-[10px] sm:text-xs px-1 sm:px-2 py-0.5 sm:py-1`}>
+                                {order.priority}
+                              </Badge>
+                            )}
                           </div>
 
                           {/* Customer */}
-                          <p className="text-sm text-muted-foreground">
+                          <p className="text-xs sm:text-sm text-muted-foreground truncate">
                             {order.customer.firstName} {order.customer.lastName}
                           </p>
 
                           {/* Description */}
-                          <p className="text-xs text-foreground line-clamp-2">
+                          <p className="text-[10px] sm:text-xs text-foreground line-clamp-2">
                             {order.description}
                           </p>
 
                           {/* Amount */}
                           <div className="flex items-center justify-between">
-                            <span className="text-sm font-semibold text-green-600">
+                            <span className="text-xs sm:text-sm font-semibold text-green-600">
                               ${parseFloat(order.totalAmount).toFixed(2)}
                             </span>
                             {order.dueDate && (
-                              <span className="text-xs text-muted-foreground">
+                              <span className="text-[10px] sm:text-xs text-muted-foreground hidden sm:block">
                                 Due: {new Date(order.dueDate).toLocaleDateString()}
                               </span>
                             )}
                           </div>
 
                           {/* Action Buttons */}
-                          <div className="flex gap-2 pt-2">
+                          <div className="flex gap-1 sm:gap-1.5 pt-1 sm:pt-2">
                             <Button
                               size="sm"
                               variant="outline"
                               onClick={() => handleViewOrder(order)}
-                              className="h-8 w-8 p-0"
+                              className="h-6 w-6 sm:h-7 sm:w-7 p-0"
                               title="View Details"
                             >
-                              <Eye className="h-4 w-4" />
+                              <Eye className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                             </Button>
                             <Button
                               size="sm"
                               variant="outline"
                               onClick={() => onEdit(order)}
-                              className="h-8 w-8 p-0"
+                              className="h-6 w-6 sm:h-7 sm:w-7 p-0"
                               title="Edit Order"
                             >
-                              <Edit className="h-4 w-4" />
+                              <Edit className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                             </Button>
-                            {/* Move Order Button */}
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => {
-                                setStatusChangeOrder(order);
-                                setNewStatus(order.status);
-                              }}
-                              className="h-8 w-8 p-0 bg-blue-50 hover:bg-blue-100 border-blue-300"
-                              title="Move Order"
-                            >
-                              <ArrowRight className="h-4 w-4 text-blue-600" />
-                            </Button>
+                            {/* Move Order Button - Only show on mobile/tablet or when drag is not available */}
+                            {!isDesktop && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  setStatusChangeOrder(order);
+                                  setNewStatus(order.status);
+                                }}
+                                className="h-6 w-6 sm:h-7 sm:w-7 p-0 bg-blue-50 hover:bg-blue-100 border-blue-300"
+                                title="Move Order"
+                              >
+                                <ArrowRight className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-blue-600" />
+                              </Button>
+                            )}
                             {onGenerateInvoice && (
                               <Button
                                 size="sm"
                                 variant="outline"
                                 onClick={() => onGenerateInvoice(order)}
-                                className="h-6 w-6 p-0"
+                                className="h-6 w-6 sm:h-7 sm:w-7 p-0 hidden sm:inline-flex"
                               >
-                                <FileText className="h-3 w-3" />
+                                <FileText className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                               </Button>
                             )}
                           </div>
@@ -248,7 +352,7 @@ export default function SimpleKanbanView({
 
       {/* Move Order Dialog */}
       <Dialog open={!!statusChangeOrder} onOpenChange={() => setStatusChangeOrder(null)}>
-        <DialogContent>
+        <DialogContent className="w-[90vw] max-w-md">
           <DialogHeader>
             <DialogTitle>Move Order</DialogTitle>
             <DialogDescription>
@@ -293,7 +397,7 @@ export default function SimpleKanbanView({
 
       {/* Order Details Dialog */}
       <Dialog open={!!selectedOrder} onOpenChange={() => setSelectedOrder(null)}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="w-[95vw] max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Order Details - {selectedOrder?.orderNumber}</DialogTitle>
           </DialogHeader>
