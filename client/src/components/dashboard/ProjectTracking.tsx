@@ -12,9 +12,12 @@ export default function ProjectTracking() {
   const getOrderCounts = () => {
     if (!orders) return { pending: 0, inProgress: 0, completed: 0 };
     
-    const pending = orders.filter((order: any) => order.status === 'pending' || order.status === 'measuring').length;
-    const inProgress = orders.filter((order: any) => order.status === 'production').length;
-    const completed = orders.filter((order: any) => order.status === 'ready').length;
+    // Type guard to ensure we have an array
+    const ordersArray = Array.isArray(orders) ? orders : [];
+    
+    const pending = ordersArray.filter((order: any) => order.status === 'pending' || order.status === 'measuring').length;
+    const inProgress = ordersArray.filter((order: any) => order.status === 'production').length;
+    const completed = ordersArray.filter((order: any) => order.status === 'ready').length;
     
     return { pending, inProgress, completed };
   };
@@ -22,7 +25,10 @@ export default function ProjectTracking() {
   const getRecentActivity = () => {
     if (!orders) return [];
     
-    const recentOrders = orders
+    // Type guard to ensure we have an array
+    const ordersArray = Array.isArray(orders) ? orders : [];
+    
+    const recentOrders = ordersArray
       .slice(0, 5)
       .map((order: any) => {
         let activityType = 'info';

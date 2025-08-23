@@ -116,7 +116,7 @@ export default function Dashboard() {
                 {ordersLoading ? (
                   <Skeleton className="h-96 rounded-lg" />
                 ) : (
-                  <RecentOrders orders={orders?.slice(0, 5) || []} />
+                  <RecentOrders orders={Array.isArray(orders) ? orders.slice(0, 5) : []} />
                 )}
 
                 {/* AI Recommendations */}

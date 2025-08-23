@@ -39,10 +39,16 @@ export default function TopCustomers() {
   // Process and rank customers
   const getTopCustomers = (): TopCustomer[] => {
     if (!customers || !orders) return [];
+    
+    // Type guard to ensure we have arrays
+    const customersArray = Array.isArray(customers) ? customers : [];
+    const ordersArray = Array.isArray(orders) ? orders : [];
+    
+    if (customersArray.length === 0 || ordersArray.length === 0) return [];
 
     // Calculate customer metrics
-    const customerMetrics = customers.map((customer: any) => {
-      const customerOrders = orders.filter((order: any) => 
+    const customerMetrics = customersArray.map((customer: any) => {
+      const customerOrders = ordersArray.filter((order: any) => 
         order.customerId === customer.id || order.customerId === customer._id?.toString()
       );
       
@@ -70,7 +76,7 @@ export default function TopCustomers() {
       }
       
       // Calculate trend (mock data for demonstration)
-      const trend = Math.random() > 0.5 ? 'up' : Math.random() > 0.3 ? 'stable' : 'down';
+      const trend: 'up' | 'down' | 'stable' = Math.random() > 0.5 ? 'up' : Math.random() > 0.3 ? 'stable' : 'down';
       
       return {
         id: customer.id || customer._id?.toString(),

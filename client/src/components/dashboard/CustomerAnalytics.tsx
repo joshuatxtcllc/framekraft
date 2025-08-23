@@ -46,6 +46,12 @@ export default function CustomerAnalytics() {
   // Calculate customer analytics
   const calculateAnalytics = () => {
     if (!customers || !orders) return null;
+    
+    // Type guards to ensure we have arrays
+    const customersArray = Array.isArray(customers) ? customers : [];
+    const ordersArray = Array.isArray(orders) ? orders : [];
+    
+    if (customersArray.length === 0 && ordersArray.length === 0) return null;
 
     const now = new Date();
     const thisMonth = now.getMonth();
@@ -67,7 +73,7 @@ export default function CustomerAnalytics() {
     }
 
     // Process orders
-    orders.forEach((order: any) => {
+    ordersArray.forEach((order: any) => {
       const orderDate = new Date(order.createdAt);
       const monthKey = orderDate.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
       
@@ -79,7 +85,7 @@ export default function CustomerAnalytics() {
 
     // Count unique customers per month
     const customersByMonth: { [key: string]: Set<string> } = {};
-    orders.forEach((order: any) => {
+    ordersArray.forEach((order: any) => {
       const orderDate = new Date(order.createdAt);
       const monthKey = orderDate.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
       
@@ -103,20 +109,26 @@ export default function CustomerAnalytics() {
   // Calculate key metrics
   const calculateMetrics = (): CustomerMetric[] => {
     if (!customers || !orders) return [];
+    
+    // Type guards to ensure we have arrays
+    const customersArray = Array.isArray(customers) ? customers : [];
+    const ordersArray = Array.isArray(orders) ? orders : [];
+    
+    if (customersArray.length === 0 && ordersArray.length === 0) return [];
 
-    const totalCustomers = customers.length;
-    const activeCustomers = new Set(orders.map((o: any) => o.customerId)).size;
-    const totalRevenue = orders.reduce((sum: number, o: any) => sum + parseFloat(o.totalAmount || 0), 0);
-    const avgOrderValue = orders.length > 0 ? totalRevenue / orders.length : 0;
+    const totalCustomers = customersArray.length;
+    const activeCustomers = new Set(ordersArray.map((o: any) => o.customerId)).size;
+    const totalRevenue = ordersArray.reduce((sum: number, o: any) => sum + parseFloat(o.totalAmount || 0), 0);
+    const avgOrderValue = ordersArray.length > 0 ? totalRevenue / ordersArray.length : 0;
 
     // Calculate month-over-month changes
-    const thisMonthOrders = orders.filter((o: any) => {
+    const thisMonthOrders = ordersArray.filter((o: any) => {
       const orderDate = new Date(o.createdAt);
       const now = new Date();
       return orderDate.getMonth() === now.getMonth() && orderDate.getFullYear() === now.getFullYear();
     });
 
-    const lastMonthOrders = orders.filter((o: any) => {
+    const lastMonthOrders = ordersArray.filter((o: any) => {
       const orderDate = new Date(o.createdAt);
       const now = new Date();
       const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
@@ -130,7 +142,7 @@ export default function CustomerAnalytics() {
       ? ((thisMonthRevenue - lastMonthRevenue) / lastMonthRevenue) * 100 
       : 0;
 
-    const customerChange = ((activeCustomers - (customers.length - activeCustomers)) / customers.length) * 100;
+    const customerChange = customersArray.length > 0 ? ((activeCustomers - (customersArray.length - activeCustomers)) / customersArray.length) * 100 : 0;
 
     return [
       {

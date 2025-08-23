@@ -21,12 +21,12 @@ export default function ReceivablesAlert() {
     }).format(amount);
   };
 
-  if (!metrics || (metrics.criticalReceivablesCount === 0 && metrics.totalOutstanding === 0)) {
+  if (!metrics || ((metrics as any).criticalReceivablesCount === 0 && (metrics as any).totalOutstanding === 0)) {
     return null;
   }
 
-  const hasCritical = metrics.criticalReceivablesCount > 0;
-  const hasHighPriority = metrics.highPriorityReceivablesCount > 0;
+  const hasCritical = (metrics as any).criticalReceivablesCount > 0;
+  const hasHighPriority = (metrics as any).highPriorityReceivablesCount > 0;
 
   return (
     <Card className={`border-l-4 ${hasCritical ? 'border-l-red-500' : hasHighPriority ? 'border-l-orange-500' : 'border-l-yellow-500'}`}>
@@ -52,14 +52,14 @@ export default function ReceivablesAlert() {
           <div className="flex items-center gap-6">
             <div>
               <div className="text-2xl font-bold text-red-600">
-                {formatCurrency(metrics.totalOutstanding || 0)}
+                {formatCurrency((metrics as any).totalOutstanding || 0)}
               </div>
               <div className="text-xs text-muted-foreground">Total Outstanding</div>
             </div>
             
             <div>
               <div className="text-2xl font-bold text-blue-600">
-                {metrics.totalReceivablesCount || 0}
+                {(metrics as any).totalReceivablesCount || 0}
               </div>
               <div className="text-xs text-muted-foreground">Total Accounts</div>
             </div>

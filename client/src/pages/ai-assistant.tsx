@@ -53,7 +53,7 @@ interface AICapability {
   id: string;
   name: string;
   description: string;
-  icon: React.ComponentType<{ size?: number; className?: string }>;
+  icon: React.ComponentType<any>;
   enabled: boolean;
   category: 'business' | 'production' | 'customer' | 'analytics' | 'creative';
   prompt: string;
@@ -440,8 +440,8 @@ What would you like to work on today?`,
                   <div className="flex justify-center py-4">
                     <Loader2 className="animate-spin" size={20} />
                   </div>
-                ) : sessionsData?.sessions?.length > 0 ? (
-                  sessionsData.sessions.map((session: any) => (
+                ) : (sessionsData as any)?.sessions && Array.isArray((sessionsData as any).sessions) && (sessionsData as any).sessions.length > 0 ? (
+                  (sessionsData as any).sessions.map((session: any) => (
                     <Card
                       key={session._id}
                       className={`cursor-pointer transition-colors hover:bg-accent/50 ${
@@ -489,15 +489,15 @@ What would you like to work on today?`,
                 <div className="space-y-2 text-xs">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Today's Chats</span>
-                    <span className="font-medium">{statsData.todaySessions}</span>
+                    <span className="font-medium">{(statsData as any).todaySessions || 0}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Total Sessions</span>
-                    <span className="font-medium">{statsData.totalSessions}</span>
+                    <span className="font-medium">{(statsData as any).totalSessions || 0}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Tokens Used</span>
-                    <span className="font-medium">{statsData.totalTokens.toLocaleString()}</span>
+                    <span className="font-medium">{((statsData as any).totalTokens || 0).toLocaleString()}</span>
                   </div>
                 </div>
               </div>

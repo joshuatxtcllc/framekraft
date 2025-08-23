@@ -110,9 +110,9 @@ export function MainNavigation({ className }: MainNavigationProps) {
 
   // Update receivables badge based on actual data
   const getReceivablesBadge = () => {
-    if (!metrics?.totalOutstanding) return null;
+    if (!(metrics as any)?.totalOutstanding) return null;
     
-    const amount = metrics.totalOutstanding;
+    const amount = (metrics as any).totalOutstanding;
     if (amount > 3000) return { text: `$${(amount/1000).toFixed(1)}k`, urgency: 'critical' as const };
     if (amount > 1000) return { text: `$${(amount/1000).toFixed(1)}k`, urgency: 'high' as const };
     if (amount > 0) return { text: `$${amount.toFixed(0)}`, urgency: 'normal' as const };

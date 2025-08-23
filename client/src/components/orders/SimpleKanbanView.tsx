@@ -20,7 +20,25 @@ import { Eye, Edit, ArrowRight, FileText, GripVertical } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import type { Order } from "@/shared/schema";
+// Define Order type locally instead of importing from shared
+interface Order {
+  id: number;
+  orderNumber: string;
+  customer: {
+    firstName: string;
+    lastName: string;
+  };
+  status: 'pending' | 'measuring' | 'production' | 'ready' | 'completed' | 'designing' | 'cutting' | 'assembly';
+  description: string;
+  totalAmount: string;
+  priority: string;
+  dueDate?: string;
+  createdAt: string;
+  frameStyle?: string;
+  matColor?: string;
+  glassType?: string;
+  dimensions?: string;
+}
 
 interface SimpleKanbanViewProps {
   orders: Order[];
@@ -108,7 +126,7 @@ export default function SimpleKanbanView({
     onError: (error) => {
       console.error('Update failed - Full error:', error);
       console.error('Error message:', error?.message);
-      console.error('Error response:', error?.response);
+      console.error('Error response:', (error as any)?.response);
       toast({
         title: "Error",
         description: `Failed to update order status: ${error?.message || 'Unknown error'}`,

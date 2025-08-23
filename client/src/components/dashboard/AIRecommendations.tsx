@@ -38,12 +38,12 @@ export default function AIRecommendations() {
     queryFn: async () => {
       const response = await apiRequest("POST", "/api/ai/business-insights", {
         businessData: {
-          recentOrders: orders?.slice(-50) || [],
-          monthlyRevenue: dashboardData?.totalRevenue || 0,
-          customerCount: dashboardData?.totalCustomers || 0,
-          averageOrderValue: dashboardData?.averageOrderValue || 0,
-          popularFrames: dashboardData?.popularFrames || [],
-          seasonalData: dashboardData?.seasonalTrends || {}
+          recentOrders: Array.isArray(orders) ? orders.slice(-50) : [],
+          monthlyRevenue: (dashboardData as any)?.totalRevenue || 0,
+          customerCount: (dashboardData as any)?.totalCustomers || 0,
+          averageOrderValue: (dashboardData as any)?.averageOrderValue || 0,
+          popularFrames: (dashboardData as any)?.popularFrames || [],
+          seasonalData: (dashboardData as any)?.seasonalTrends || {}
         }
       });
       return response.json();
@@ -126,9 +126,9 @@ export default function AIRecommendations() {
     );
   }
 
-  const activeInsights = insights?.filter((insight: BusinessInsight) => 
-    !dismissedInsights.includes(insight.title)
-  ) || [];
+  const activeInsights = Array.isArray(insights) 
+    ? insights.filter((insight: BusinessInsight) => !dismissedInsights.includes(insight.title))
+    : [];
 
   return (
     <Card>

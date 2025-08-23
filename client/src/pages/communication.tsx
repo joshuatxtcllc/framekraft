@@ -19,27 +19,29 @@ export default function Communication() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const { data: settings, isLoading: settingsLoading } = useQuery({
+  const { data: settings, isLoading: settingsLoading, error: settingsError } = useQuery({
     queryKey: ["/api/communication/settings"],
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to load communication settings",
-        variant: "destructive",
-      });
-    },
   });
 
-  const { data: callLogs, isLoading: logsLoading } = useQuery({
+  if (settingsError) {
+    toast({
+      title: "Error",
+      description: (settingsError as any).message || "Failed to load communication settings",
+      variant: "destructive",
+    });
+  }
+
+  const { data: callLogs, isLoading: logsLoading, error: logsError } = useQuery({
     queryKey: ["/api/communication/call-logs"],
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to load communication logs",
-        variant: "destructive",
-      });
-    },
   });
+
+  if (logsError) {
+    toast({
+      title: "Error",
+      description: (logsError as any).message || "Failed to load communication logs",
+      variant: "destructive",
+    });
+  }
 
   const updateSettingsMutation = useMutation({
     mutationFn: async (data: any) => {

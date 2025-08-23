@@ -179,7 +179,7 @@ export default function Customers() {
 
               {/* Customers List */}
               <CustomerList 
-                customers={customers || []} 
+                customers={Array.isArray(customers) ? customers : []} 
                 isLoading={isLoading}
                 onEdit={handleEdit}
                 onDelete={handleDelete}

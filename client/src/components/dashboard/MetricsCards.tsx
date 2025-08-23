@@ -17,6 +17,8 @@ interface MetricsCardsProps {
     monthlyPaidRevenue?: number;
     paymentRate?: number;
     outstandingAmount?: number;
+    criticalReceivablesCount?: number;
+    totalCriticalAmount?: number;
   } | undefined;
 }
 
@@ -76,10 +78,10 @@ export default function MetricsCards({ metrics }: MetricsCardsProps) {
     },
     {
       title: "Average Order Value",
-      value: formatCurrency(metrics.averageOrderValue),
+      value: formatCurrency(metrics.averageOrderValue || 0),
       icon: CheckCircle,
       iconColor: "text-primary",
-      change: `${metrics.totalOrders} total`,
+      change: `${metrics.totalOrders || 0} total`,
       changeType: "neutral",
       subtitle: "all orders",
     },
@@ -106,9 +108,9 @@ export default function MetricsCards({ metrics }: MetricsCardsProps) {
       value: formatCurrency(metrics.outstandingAmount || 0),
       icon: DollarSign,
       iconColor: (metrics.totalCriticalAmount || 0) > 0 ? "text-red-600" : (metrics.outstandingAmount || 0) > 0 ? "text-orange-600" : "text-gray-500",
-      change: metrics.criticalReceivablesCount > 0 ? `${metrics.criticalReceivablesCount} CRITICAL` : `${((metrics.outstandingAmount || 0) / (metrics.monthlyRevenue || 1) * 100).toFixed(1)}%`,
+      change: (metrics.criticalReceivablesCount || 0) > 0 ? `${metrics.criticalReceivablesCount || 0} CRITICAL` : `${((metrics.outstandingAmount || 0) / (metrics.monthlyRevenue || 1) * 100).toFixed(1)}%`,
       changeType: (metrics.criticalReceivablesCount || 0) > 0 ? "decrease" : (metrics.outstandingAmount || 0) > 0 ? "decrease" : "neutral",
-      subtitle: metrics.criticalReceivablesCount > 0 ? "accounts 30+ days overdue" : "awaiting payment",
+      subtitle: (metrics.criticalReceivablesCount || 0) > 0 ? "accounts 30+ days overdue" : "awaiting payment",
     },
     {
       title: "Completion Rate",
