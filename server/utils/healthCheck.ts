@@ -1,6 +1,5 @@
 import { Request, Response } from 'express'
-import { db } from '../db'
-import { sql } from 'drizzle-orm'
+import { getMongoDb } from '../mongodb'
 
 interface HealthCheckResponse {
   status: 'healthy' | 'unhealthy'
@@ -39,15 +38,17 @@ export async function healthCheck(req: Request, res: Response) {
     environment: process.env.NODE_ENV || 'development'
   }
 
+  // Check database connection
   try {
-    // Test database connection
     const dbStart = Date.now()
-    await db.execute(sql`SELECT 1`)
-    const dbResponseTime = Date.now() - dbStart
+    const db = await getMongoDb()
+    // Perform a simple ping to check connection
+    await db.admin().ping()
+    const responseTime = Date.now() - dbStart
     
     healthData.database = {
       status: 'connected',
-      responseTime: dbResponseTime
+      responseTime
     }
   } catch (error) {
     healthData.status = 'unhealthy'
@@ -57,19 +58,22 @@ export async function healthCheck(req: Request, res: Response) {
     }
   }
 
-  // Memory usage
+  // Check memory usage
   const memUsage = process.memoryUsage()
-  const totalMem = memUsage.heapTotal
-  const usedMem = memUsage.heapUsed
+  const totalMemory = require('os').totalmem()
+  const usedMemory = memUsage.heapUsed + memUsage.external
   
   healthData.memory = {
-    used: Math.round(usedMem / 1024 / 1024), // MB
-    total: Math.round(totalMem / 1024 / 1024), // MB
-    percentage: Math.round((usedMem / totalMem) * 100)
+    used: Math.round(usedMemory / 1024 / 1024), // MB
+    total: Math.round(totalMemory / 1024 / 1024), // MB
+    percentage: Math.round((usedMemory / totalMemory) * 100)
   }
 
-  // Set response status
+  // Determine overall health status
+  if (healthData.database.status === 'disconnected') {
+    healthData.status = 'unhealthy'
+  }
+
   const statusCode = healthData.status === 'healthy' ? 200 : 503
-  
   res.status(statusCode).json(healthData)
 }

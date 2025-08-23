@@ -1,5 +1,5 @@
 import AWS from 'aws-sdk';
-import { storage } from '../storage';
+import * as storage from '../mongoStorage';
 import { settingsService } from './settingsService';
 
 // Configure AWS SES

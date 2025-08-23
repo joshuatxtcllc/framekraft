@@ -1,6 +1,6 @@
 import { Request, Response, Router } from 'express';
 import { isAuthenticated } from '../middleware/auth';
-import { storage } from '../storage';
+import * as storage from '../mongoStorage';
 import { metricsAuditService } from '../services/metricsAuditService';
 
 const router = Router();

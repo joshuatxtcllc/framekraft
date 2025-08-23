@@ -1,8 +1,6 @@
 import { Router } from 'express'
 import { z } from 'zod'
-import { db } from '../db'
-import { orders, customers } from '../../shared/schema'
-import { eq } from 'drizzle-orm'
+import * as storage from '../mongoStorage'
 import { validateQuery } from '../middleware/validation'
 
 const router = Router()
@@ -19,54 +17,26 @@ router.get('/track-order', validateQuery(orderTrackingSchema), async (req, res) 
     const { orderNumber, lastName } = req.query as { orderNumber: string; lastName?: string }
 
     // Find order by order number
-    const orderResults = await db
-      .select({
-        id: orders.id,
-        orderNumber: orders.orderNumber,
-        status: orders.status,
-        description: orders.description,
-        frameStyle: orders.frameStyle,
-        matColor: orders.matColor,
-        glassType: orders.glassType,
-        totalPrice: orders.totalPrice,
-        estimatedCompletion: orders.estimatedCompletion,
-        createdAt: orders.createdAt,
-        priority: orders.priority,
-        customerId: orders.customerId,
-      })
-      .from(orders)
-      .where(eq(orders.orderNumber, orderNumber))
-      .limit(1)
+    const orders = await storage.getOrders()
+    const order = orders.find(o => o.orderNumber === orderNumber)
 
-    if (orderResults.length === 0) {
+    if (!order) {
       return res.status(404).json({ 
         message: 'Order not found',
         error: 'ORDER_NOT_FOUND'
       })
     }
 
-    const order = orderResults[0]
+    // Get customer info for verification
+    const customers = await storage.getCustomers()
+    const customer = customers.find(c => c.id === order.customerId)
 
-    // Get customer info for verification (optional last name check)
-    const customerResults = await db
-      .select({
-        firstName: customers.firstName,
-        lastName: customers.lastName,
-        email: customers.email,
-        phone: customers.phone,
-      })
-      .from(customers)
-      .where(eq(customers.id, order.customerId))
-      .limit(1)
-
-    if (customerResults.length === 0) {
+    if (!customer) {
       return res.status(404).json({ 
         message: 'Customer information not found',
         error: 'CUSTOMER_NOT_FOUND'
       })
     }
-
-    const customer = customerResults[0]
 
     // Optional last name verification for security
     if (lastName && customer.lastName.toLowerCase() !== lastName.toLowerCase()) {

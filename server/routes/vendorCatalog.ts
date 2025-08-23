@@ -1,8 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { db } from '../db.js';
-import { wholesalers, wholesalerProducts, orderLineItems } from '../../shared/schema.js';
-import { eq, like, and, or, desc, asc, gte, lte, sql } from 'drizzle-orm';
+import * as storage from '../mongoStorage.js';
 import { isAuthenticated } from '../replitAuth.js';
 
 const router = Router();
@@ -10,11 +8,15 @@ const router = Router();
 // Get all wholesalers
 router.get('/wholesalers', isAuthenticated, async (req, res) => {
   try {
-    const allWholesalers = await db.select().from(wholesalers)
-      .where(eq(wholesalers.isActive, true))
-      .orderBy(asc(wholesalers.companyName));
+    const userId = req.user?.id;
+    const allWholesalers = await storage.getWholesalersByUserId(userId);
     
-    res.json(allWholesalers);
+    // Filter only active wholesalers and sort by company name
+    const activeWholesalers = allWholesalers
+      .filter(w => w.isActive)
+      .sort((a, b) => a.companyName.localeCompare(b.companyName));
+    
+    res.json(activeWholesalers);
   } catch (error) {
     console.error('Error fetching wholesalers:', error);
     res.status(500).json({ message: 'Failed to fetch wholesalers' });
@@ -24,6 +26,7 @@ router.get('/wholesalers', isAuthenticated, async (req, res) => {
 // Search vendor products with filters
 router.get('/products/search', isAuthenticated, async (req, res) => {
   try {
+    const userId = req.user?.id;
     const { 
       category, 
       subcategory, 
@@ -36,70 +39,70 @@ router.get('/products/search', isAuthenticated, async (req, res) => {
       offset = 0 
     } = req.query;
 
-    let whereConditions = [eq(wholesalerProducts.isActive, true)];
+    // Get all products
+    let products = await storage.getWholesalerProducts();
+    
+    // Get wholesalers for joining
+    const wholesalersList = await storage.getWholesalersByUserId(userId);
+    const wholesalersMap = new Map(wholesalersList.map(w => [w.id, w]));
 
-    // Add filters
+    // Filter active products
+    products = products.filter(p => p.isActive);
+
+    // Apply filters
     if (category) {
-      whereConditions.push(eq(wholesalerProducts.category, category as string));
+      products = products.filter(p => p.category === category);
     }
     if (subcategory) {
-      whereConditions.push(eq(wholesalerProducts.subcategory, subcategory as string));
+      products = products.filter(p => p.subcategory === subcategory);
     }
     if (stockStatus) {
-      whereConditions.push(eq(wholesalerProducts.stockStatus, stockStatus as string));
+      products = products.filter(p => p.stockStatus === stockStatus);
     }
     if (minPrice) {
-      whereConditions.push(gte(wholesalerProducts.wholesalePrice, minPrice as string));
+      products = products.filter(p => parseFloat(p.wholesalePrice) >= parseFloat(minPrice as string));
     }
     if (maxPrice) {
-      whereConditions.push(lte(wholesalerProducts.wholesalePrice, maxPrice as string));
+      products = products.filter(p => parseFloat(p.wholesalePrice) <= parseFloat(maxPrice as string));
     }
 
-    // Text search across product name, code, and description  
+    // Text search across product name, code, and description
     if (query) {
-      const searchTerm = `%${query}%`;
-      const searchCondition = or(
-        like(wholesalerProducts.productName, searchTerm),
-        like(wholesalerProducts.productCode, searchTerm),
-        like(wholesalerProducts.description, searchTerm)
+      const searchTerm = (query as string).toLowerCase();
+      products = products.filter(p => 
+        p.productName.toLowerCase().includes(searchTerm) ||
+        p.productCode.toLowerCase().includes(searchTerm) ||
+        (p.description && p.description.toLowerCase().includes(searchTerm))
       );
-      if (searchCondition) {
-        whereConditions.push(searchCondition);
-      }
     }
 
-    const products = await db.select({
-      id: wholesalerProducts.id,
-      productCode: wholesalerProducts.productCode,
-      productName: wholesalerProducts.productName,
-      category: wholesalerProducts.category,
-      subcategory: wholesalerProducts.subcategory,
-      description: wholesalerProducts.description,
-      specifications: wholesalerProducts.specifications,
-      unitType: wholesalerProducts.unitType,
-      wholesalePrice: wholesalerProducts.wholesalePrice,
-      suggestedRetail: wholesalerProducts.suggestedRetail,
-      minQuantity: wholesalerProducts.minQuantity,
-      packSize: wholesalerProducts.packSize,
-      leadTime: wholesalerProducts.leadTime,
-      stockStatus: wholesalerProducts.stockStatus,
-      vendorCatalogPage: wholesalerProducts.vendorCatalogPage,
-      wholesalerId: wholesalerProducts.wholesalerId,
-      supplierName: wholesalers.companyName,
-      supplierContact: wholesalers.contactName,
-      supplierPhone: wholesalers.phone,
-      supplierEmail: wholesalers.email,
-      paymentTerms: wholesalers.paymentTerms,
-      minOrderAmount: wholesalers.minOrderAmount
-    })
-    .from(wholesalerProducts)
-    .leftJoin(wholesalers, eq(wholesalerProducts.wholesalerId, wholesalers.id))
-    .where(and(...whereConditions))
-    .orderBy(asc(wholesalerProducts.category), asc(wholesalerProducts.productName))
-    .limit(parseInt(limit as string))
-    .offset(parseInt(offset as string));
+    // Join with wholesaler data
+    const productsWithSupplier = products.map(p => {
+      const wholesaler = wholesalersMap.get(p.wholesalerId);
+      return {
+        ...p,
+        supplierName: wholesaler?.companyName,
+        supplierContact: wholesaler?.contactName,
+        supplierPhone: wholesaler?.phone,
+        supplierEmail: wholesaler?.email,
+        paymentTerms: wholesaler?.paymentTerms,
+        minOrderAmount: wholesaler?.minOrderAmount
+      };
+    });
 
-    res.json(products);
+    // Sort by category and product name
+    productsWithSupplier.sort((a, b) => {
+      const categoryCompare = (a.category || '').localeCompare(b.category || '');
+      if (categoryCompare !== 0) return categoryCompare;
+      return a.productName.localeCompare(b.productName);
+    });
+
+    // Apply pagination
+    const startIndex = parseInt(offset as string);
+    const endIndex = startIndex + parseInt(limit as string);
+    const paginatedProducts = productsWithSupplier.slice(startIndex, endIndex);
+
+    res.json(paginatedProducts);
   } catch (error) {
     console.error('Error searching vendor products:', error);
     res.status(500).json({ message: 'Failed to search products' });
@@ -109,46 +112,32 @@ router.get('/products/search', isAuthenticated, async (req, res) => {
 // Get product details by ID with full specifications
 router.get('/products/:id', isAuthenticated, async (req, res) => {
   try {
-    const productId = parseInt(req.params.id);
+    const userId = req.user?.id;
+    const productId = req.params.id;
     
-    const [product] = await db.select({
-      id: wholesalerProducts.id,
-      productCode: wholesalerProducts.productCode,
-      productName: wholesalerProducts.productName,
-      category: wholesalerProducts.category,
-      subcategory: wholesalerProducts.subcategory,
-      description: wholesalerProducts.description,
-      specifications: wholesalerProducts.specifications,
-      unitType: wholesalerProducts.unitType,
-      wholesalePrice: wholesalerProducts.wholesalePrice,
-      suggestedRetail: wholesalerProducts.suggestedRetail,
-      minQuantity: wholesalerProducts.minQuantity,
-      packSize: wholesalerProducts.packSize,
-      leadTime: wholesalerProducts.leadTime,
-      stockStatus: wholesalerProducts.stockStatus,
-      vendorCatalogPage: wholesalerProducts.vendorCatalogPage,
-      imageUrl: wholesalerProducts.imageUrl,
-      dataSheetUrl: wholesalerProducts.dataSheetUrl,
-      lastUpdated: wholesalerProducts.lastUpdated,
-      wholesalerId: wholesalerProducts.wholesalerId,
-      supplierName: wholesalers.companyName,
-      supplierContact: wholesalers.contactName,
-      supplierPhone: wholesalers.phone,
-      supplierEmail: wholesalers.email,
-      supplierWebsite: wholesalers.website,
-      paymentTerms: wholesalers.paymentTerms,
-      minOrderAmount: wholesalers.minOrderAmount,
-      specialties: wholesalers.specialties
-    })
-    .from(wholesalerProducts)
-    .leftJoin(wholesalers, eq(wholesalerProducts.wholesalerId, wholesalers.id))
-    .where(eq(wholesalerProducts.id, productId));
-
+    const products = await storage.getWholesalerProducts();
+    const product = products.find(p => p.id === productId);
+    
     if (!product) {
       return res.status(404).json({ message: 'Product not found' });
     }
 
-    res.json(product);
+    // Get wholesaler details
+    const wholesaler = await storage.getWholesalerById(product.wholesalerId);
+    
+    const productWithSupplier = {
+      ...product,
+      supplierName: wholesaler?.companyName,
+      supplierContact: wholesaler?.contactName,
+      supplierPhone: wholesaler?.phone,
+      supplierEmail: wholesaler?.email,
+      supplierWebsite: wholesaler?.website,
+      paymentTerms: wholesaler?.paymentTerms,
+      minOrderAmount: wholesaler?.minOrderAmount,
+      specialties: wholesaler?.specialties
+    };
+
+    res.json(productWithSupplier);
   } catch (error) {
     console.error('Error fetching product details:', error);
     res.status(500).json({ message: 'Failed to fetch product details' });
@@ -158,39 +147,54 @@ router.get('/products/:id', isAuthenticated, async (req, res) => {
 // Get products by category with supplier info
 router.get('/categories/:category', isAuthenticated, async (req, res) => {
   try {
+    const userId = req.user?.id;
     const { category } = req.params;
     const { subcategory } = req.query;
 
-    let whereConditions = [
-      eq(wholesalerProducts.category, category),
-      eq(wholesalerProducts.isActive, true)
-    ];
+    // Get all products
+    let products = await storage.getWholesalerProducts();
+    
+    // Get wholesalers for joining
+    const wholesalersList = await storage.getWholesalersByUserId(userId);
+    const wholesalersMap = new Map(wholesalersList.map(w => [w.id, w]));
+
+    // Filter by category and active status
+    products = products.filter(p => 
+      p.category === category && p.isActive
+    );
 
     if (subcategory) {
-      whereConditions.push(eq(wholesalerProducts.subcategory, subcategory as string));
+      products = products.filter(p => p.subcategory === subcategory);
     }
 
-    const products = await db.select({
-      id: wholesalerProducts.id,
-      productCode: wholesalerProducts.productCode,
-      productName: wholesalerProducts.productName,
-      subcategory: wholesalerProducts.subcategory,
-      wholesalePrice: wholesalerProducts.wholesalePrice,
-      suggestedRetail: wholesalerProducts.suggestedRetail,
-      unitType: wholesalerProducts.unitType,
-      leadTime: wholesalerProducts.leadTime,
-      stockStatus: wholesalerProducts.stockStatus,
-      specifications: wholesalerProducts.specifications,
-      supplierName: wholesalers.companyName,
-      minQuantity: wholesalerProducts.minQuantity,
-      packSize: wholesalerProducts.packSize
-    })
-    .from(wholesalerProducts)
-    .leftJoin(wholesalers, eq(wholesalerProducts.wholesalerId, wholesalers.id))
-    .where(and(...whereConditions))
-    .orderBy(asc(wholesalerProducts.wholesalePrice), asc(wholesalerProducts.productName));
+    // Join with wholesaler data
+    const productsWithSupplier = products.map(p => {
+      const wholesaler = wholesalersMap.get(p.wholesalerId);
+      return {
+        id: p.id,
+        productCode: p.productCode,
+        productName: p.productName,
+        subcategory: p.subcategory,
+        wholesalePrice: p.wholesalePrice,
+        suggestedRetail: p.suggestedRetail,
+        unitType: p.unitType,
+        leadTime: p.leadTime,
+        stockStatus: p.stockStatus,
+        specifications: p.specifications,
+        supplierName: wholesaler?.companyName,
+        minQuantity: p.minQuantity,
+        packSize: p.packSize
+      };
+    });
 
-    res.json(products);
+    // Sort by price and name
+    productsWithSupplier.sort((a, b) => {
+      const priceCompare = parseFloat(a.wholesalePrice) - parseFloat(b.wholesalePrice);
+      if (priceCompare !== 0) return priceCompare;
+      return a.productName.localeCompare(b.productName);
+    });
+
+    res.json(productsWithSupplier);
   } catch (error) {
     console.error('Error fetching category products:', error);
     res.status(500).json({ message: 'Failed to fetch category products' });
@@ -200,41 +204,62 @@ router.get('/categories/:category', isAuthenticated, async (req, res) => {
 // Get purchasing recommendations based on order history
 router.get('/recommendations/:category', isAuthenticated, async (req, res) => {
   try {
+    const userId = req.user?.id;
     const { category } = req.params;
     
-    // Get most frequently ordered products in this category
-    const popularProducts = await db.select({
-      productCode: orderLineItems.productCode,
-      productName: orderLineItems.productName,
-      supplierName: orderLineItems.supplierName,
-      orderCount: sql<number>`COUNT(*)::int`,
-      avgWholesalePrice: sql<number>`AVG(${orderLineItems.wholesalePrice})::numeric(8,2)`,
-      avgRetailPrice: sql<number>`AVG(${orderLineItems.retailPrice})::numeric(8,2)`,
-      totalQuantity: sql<number>`SUM(${orderLineItems.quantity})::numeric(8,2)`
-    })
-    .from(orderLineItems)
-    .where(eq(orderLineItems.itemType, category))
-    .groupBy(
-      orderLineItems.productCode, 
-      orderLineItems.productName, 
-      orderLineItems.supplierName
-    )
-    .orderBy(desc(sql`COUNT(*)`))
-    .limit(10);
+    // Get all orders to analyze popular products
+    const orders = await storage.getOrders(userId);
+    const productStats = new Map();
 
-    // Get current vendor products that match popular items
-    const currentProducts = await db.select()
-      .from(wholesalerProducts)
-      .leftJoin(wholesalers, eq(wholesalerProducts.wholesalerId, wholesalers.id))
-      .where(and(
-        eq(wholesalerProducts.category, category),
-        eq(wholesalerProducts.isActive, true)
-      ))
-      .orderBy(asc(wholesalerProducts.wholesalePrice));
+    // Analyze order line items
+    for (const order of orders) {
+      if (order.lineItems) {
+        for (const item of order.lineItems) {
+          if (item.itemType === category) {
+            const key = `${item.productCode}_${item.productName}_${item.supplierName}`;
+            if (!productStats.has(key)) {
+              productStats.set(key, {
+                productCode: item.productCode,
+                productName: item.productName,
+                supplierName: item.supplierName,
+                orderCount: 0,
+                totalQuantity: 0,
+                totalWholesale: 0,
+                totalRetail: 0
+              });
+            }
+            const stats = productStats.get(key);
+            stats.orderCount += 1;
+            stats.totalQuantity += parseFloat(item.quantity || '0');
+            stats.totalWholesale += parseFloat(item.wholesalePrice || '0');
+            stats.totalRetail += parseFloat(item.retailPrice || '0');
+          }
+        }
+      }
+    }
+
+    // Convert to array and calculate averages
+    const popularProducts = Array.from(productStats.values())
+      .map(stats => ({
+        ...stats,
+        avgWholesalePrice: stats.orderCount > 0 ? (stats.totalWholesale / stats.orderCount).toFixed(2) : '0',
+        avgRetailPrice: stats.orderCount > 0 ? (stats.totalRetail / stats.orderCount).toFixed(2) : '0'
+      }))
+      .sort((a, b) => b.orderCount - a.orderCount)
+      .slice(0, 10);
+
+    // Get current vendor products in this category
+    let currentProducts = await storage.getWholesalerProducts();
+    
+    // Filter and sort
+    currentProducts = currentProducts
+      .filter(p => p.category === category && p.isActive)
+      .sort((a, b) => parseFloat(a.wholesalePrice) - parseFloat(b.wholesalePrice))
+      .slice(0, 20);
 
     res.json({
       popularFromHistory: popularProducts,
-      currentAvailable: currentProducts.slice(0, 20) // Top 20 by price
+      currentAvailable: currentProducts
     });
   } catch (error) {
     console.error('Error fetching recommendations:', error);

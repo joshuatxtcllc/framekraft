@@ -1,6 +1,6 @@
 
 import { google } from 'googleapis';
-import { storage } from '../storage';
+import * as storage from '../mongoStorage';
 import { settingsService } from './settingsService';
 
 const oauth2Client = new google.auth.OAuth2(

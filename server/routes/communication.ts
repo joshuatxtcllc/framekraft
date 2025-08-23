@@ -1,7 +1,7 @@
 
 import { Router } from 'express';
 import { twilioService } from '../services/twilioService';
-import { storage } from '../storage';
+import * as storage from '../mongoStorage';
 import { isAuthenticated } from '../replitAuth';
 
 const router = Router();

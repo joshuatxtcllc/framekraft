@@ -1,5 +1,4 @@
-import { db } from './db';
-import { priceStructure } from '@shared/schema';
+import * as storage from './mongoStorage';
 
 // Calculate frame markup based on wholesale price per foot
 function getFrameMarkupFactor(pricePerFoot: number): number {
@@ -165,11 +164,13 @@ export async function seedPricingData() {
   ];
 
   try {
-    // Clear existing pricing data
-    await db.delete(priceStructure);
+    // Clear existing pricing data (if needed, we can implement a clearPriceStructure method)
+    // For now, we'll add pricing data one by one
 
     // Insert new pricing data
-    await db.insert(priceStructure).values(pricingData);
+    for (const price of pricingData) {
+      await storage.createPriceStructure(price);
+    }
 
     console.log('✅ Pricing data seeded successfully');
   } catch (error) {

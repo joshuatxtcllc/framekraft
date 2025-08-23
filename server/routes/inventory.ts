@@ -2,7 +2,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { isAuthenticated } from "../middleware/auth.js";
-import { storage } from "../storage.js";
+import * as storage from "../mongoStorage.js";
 import { insertInventorySchema } from "../../shared/schema.js";
 
 const router = Router();

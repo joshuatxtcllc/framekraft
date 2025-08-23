@@ -1,7 +1,5 @@
-import { db } from "../db";
-import { authUsers } from "../auth/schema";
+import * as storage from "../mongoStorage";
 import { passwordService } from "../auth/services/passwordService";
-import { eq } from "drizzle-orm";
 
 async function createDemoUser() {
   try {
@@ -11,12 +9,9 @@ async function createDemoUser() {
     const password = "demo123456";
     
     // Check if user already exists
-    const existingUser = await db.select()
-      .from(authUsers)
-      .where(eq(authUsers.email, email))
-      .limit(1);
+    const existingUser = await storage.getUserByEmail(email);
     
-    if (existingUser.length > 0) {
+    if (existingUser) {
       console.log("Demo user already exists!");
       return;
     }
@@ -25,15 +20,15 @@ async function createDemoUser() {
     const passwordHash = await passwordService.hashPassword(password);
     
     // Create user
-    const [newUser] = await db.insert(authUsers).values({
+    const newUser = await storage.createUser({
       email,
-      passwordHash,
+      password: passwordHash,
       firstName: "Demo",
       lastName: "User",
       businessName: "Demo Framing Co.",
       role: "owner",
       emailVerified: true,
-    }).returning();
+    });
     
     console.log("Demo user created successfully!");
     console.log("Email:", email);

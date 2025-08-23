@@ -1,6 +1,5 @@
 
-import { db } from './db.js';
-import { wholesalerProducts } from '../shared/schema.js';
+import * as storage from './mongoStorage.js';
 
 // Seed actual Larson-Juhl catalog products with real SKUs and specifications
 export async function seedVendorCatalog() {
@@ -618,11 +617,13 @@ export async function seedVendorCatalog() {
   ];
 
   try {
-    // Clear existing vendor products
-    await db.delete(wholesalerProducts);
+    // Clear existing vendor products (if needed, we can implement a clearWholesalerProducts method)
+    // For now, we'll add products one by one
     
     // Insert new vendor products
-    await db.insert(wholesalerProducts).values(allProducts);
+    for (const product of allProducts) {
+      await storage.createWholesalerProduct(product);
+    }
     
     console.log(`✅ Successfully seeded ${allProducts.length} vendor catalog items`);
     console.log('   - Larson-Juhl frames: 12 items');
